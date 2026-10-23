@@ -115,7 +115,9 @@ The plan, phase by phase. [CLAUDE.md](CLAUDE.md) has the design, contracts and r
   - Compress with `gltf-transform` and measure size and load time.
   - Phase 2 doesn't depend on this, because it uses procedural placeholders.
   - **Done when:** an ADR names the sources and the pipeline.
-- [ ] **P0-08 ADRs & open decisions** (S)
+- [x] **P0-08 ADRs & open decisions** (S) — done: ADRs 0001 (stack), 0002 (event protocol, proposed), 0003
+  (renderer and camera), 0004 (assets) plus `docs/adr/README.md`; the user's answers and the spike findings are
+  recorded as D7–D14 in CLAUDE.md › Decisions; CLAUDE.md status and command table updated.
   - Write ADRs: 0001 stack, 0002 event protocol, 0003 renderer and camera, 0004 assets.
   - Ask the user to settle the open decisions listed in `CLAUDE.md`, then update its Decisions section.
 
@@ -130,6 +132,8 @@ The plan, phase by phase. [CLAUDE.md](CLAUDE.md) has the design, contracts and r
   - In `shared/protocol.ts`, define: `AgentEvent`, `ProviderId`, capabilities, `OfficeSnapshot`, `AgentInfo`,
     `RoomInfo`, `FeedItem`, `Notice`, `AgentDetail`, `AgentStatus` and `ActivityKind`.
   - Add a JSON Schema and a hand-written validator for `AgentEvent` (no dependencies).
+  - Include ADR 0002's changes: `job.start`/`job.end`, `session.start.continues`, `tool.error`, and slugged
+    `account` ids. Then update the sketch in CLAUDE.md and mark ADR 0002 accepted.
   - **Ref:** `shared/types.ts`.
   - **Done when:** tests cover valid and invalid events.
 - [ ] **P1-02 Activity layer** (M)
@@ -140,7 +144,8 @@ The plan, phase by phase. [CLAUDE.md](CLAUDE.md) has the design, contracts and r
   - **Done when:** the ported masking tests pass, and each provider's fixture tools map to the expected kinds.
 - [ ] **P1-03 Office reducer** (L)
   - `server/model/office.ts`: `apply(event)` updates the agent and room records.
-  - Implement the status machine from `CLAUDE.md`, including the offline and done grace periods.
+  - Implement the status machine from `CLAUDE.md`, including the offline and done grace periods, plus `shell`
+    while `job.*` events leave a background job open (ADR 0002). Duplicate `session.end` events must be harmless.
   - Tie subagents to their parent.
   - Keep activity history: the last 8 in the snapshot, the last 200 in the detail.
   - Produce the feed and notices ("needs you", "finished").

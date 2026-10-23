@@ -3,6 +3,41 @@
 A running log of what was done while you were away, what was decided on your behalf, and what needs your eyes.
 Newest task at the bottom. Branch: `phase-0` (pushed to `origin`; `main` is untouched).
 
+## Start here
+
+**Phase 0 is complete: all 8 tasks are ticked in TASKS.md, each with its own commit, all pushed.** I stopped
+before Phase 1, as you asked, so you can review first.
+
+**Your to-do list (about 15 minutes):**
+
+1. **Check CI**: GitHub → Actions → the `phase-0` runs (Ubuntu + Windows). The repo is private and `gh` isn't
+   installed, so I couldn't see the result. Locally, typecheck, test (14 tests) and build all pass.
+2. **Review the plan changes** the spikes forced (under P0-04, P0-05 and P0-07 below). The big ones:
+   - Gemini hooks cost ~0.4 s each on Windows, so there's a `light` hook profile;
+   - a denied Gemini permission fires no hook, so we must read Gemini's chat files;
+   - the protocol gains background-job events (ADR 0002, still "proposed").
+3. **Merge `phase-0` into `main`** when you're happy, or tell me to.
+4. **Before Phase 1 ends:** upgrade and sign in to Gemini CLI (`npm i -g @google/gemini-cli@latest`, then run
+   `gemini` once). Your global install is 0.15.1, which has hooks off.
+5. **Before Phase 3:** download Quaternius "Universal Base Characters [Standard]" from itch.io ($0). It needs a
+   browser.
+6. Optional: put your name in `LICENSE`'s copyright line.
+
+**Exit criteria check:**
+
+- ADRs written: ✅ 0001–0004 (0002 is "proposed" until P1-01 finalizes the types).
+- Fixtures for Claude Code and Gemini CLI: ✅. Codex moved to P5-01 by your decision.
+- Spike numbers recorded: ✅ `docs/spikes/`.
+- No open decisions remain: ✅ D7–D14 in CLAUDE.md.
+
+**Nothing irreversible was done:**
+
+- No global installs; the Gemini 0.65 test ran from a scratch folder.
+- Your `~/.gemini` and `~/.claude` were only read. I never opened `*.key` files, credentials, or the
+  `credential_org` contents.
+- No assets are committed.
+- Nothing contacted Habblaud World.
+
 ## Decisions you made before signing off
 
 | Open decision | Answer |
@@ -154,3 +189,22 @@ The protocol didn't need to change. Denials map to `tool.end {ok:false}` + `turn
   fetch it.
 - Not tested: KTX2 texture compression (needs KTX-Software's `toktx`, not installed; nothing textured yet). It
   moves to P3-01.
+
+### P0-08 ADRs & open decisions — done
+
+- `docs/adr/`:
+  - 0001 stack;
+  - 0002 event protocol (proposed);
+  - 0003 renderer and camera;
+  - 0004 assets;
+  - plus an index.
+- ADR 0002 proposes protocol additions from the spikes:
+  - `job.start` / `job.end` (otherwise the "waiting on a background shell" state could never end);
+  - `continues` on `session.start` (so `/clear` keeps the same character instead of one leaving and one arriving);
+  - a short `tool.error` kind;
+  - account ids as short hashes instead of folder paths.
+- CLAUDE.md:
+  - your answers and the spike results are recorded as decisions D7–D14;
+  - the status line now says Phase 0 is done;
+  - the command table separates what exists from what's planned.
+- TASKS.md: P1-01 and P1-03 now include the ADR 0002 changes.

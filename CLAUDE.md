@@ -1,6 +1,8 @@
 # Agent Office — guide for AI agents
 
-> **Status: planning, no code yet.** The phased plan lives in [TASKS.md](TASKS.md). Start at Phase 0.
+> **Status: Phase 0 (foundation and spikes) done; Phase 1 next.** The phased plan lives in [TASKS.md](TASKS.md).
+> Provider facts: [docs/providers/](docs/providers/). Decisions: [docs/adr/](docs/adr/). Spike results:
+> [docs/spikes/](docs/spikes/).
 
 ## What we're building
 
@@ -382,15 +384,17 @@ These rules come from Habblaud's `mod/habblaud-codex/hook.mjs`.
 
 ## Commands
 
-These are planned. Update this table as they land.
+Update this table as commands land. *(planned)* marks the ones that don't exist yet.
 
 | Command | Purpose |
 | --- | --- |
-| `npm run dev` | Server and Vite at http://127.0.0.1:4848 |
-| `npm run demo` | Dev mode with simulated agents from several providers |
+| `npm run dev` | Server and Vite at http://127.0.0.1:4848 (`AGENT_OFFICE_PORT` overrides the port) |
 | `npm test` · `npm run typecheck` · `npm run build` | Checks to run before a task is done |
-| `npm run hooks:install -- --provider gemini-cli` | Install a provider's hook shim (also `status`, `uninstall`) |
-| `npm run theme:check` · `npm run theme:new -- <id>` | Validate theme packs and scaffold a new one |
+| `npm start` | Runs the built server (`dist/server/index.js`) |
+| `node spikes/renderer/measure.mjs` · `node spikes/assets/measure.mjs <dir>` | Re-run the Phase 0 measurements |
+| `npm run demo` *(planned)* | Dev mode with simulated agents from several providers |
+| `npm run hooks:install -- --provider gemini-cli` *(planned)* | Install a provider's hook shim (also `status`, `uninstall`) |
+| `npm run theme:check` · `npm run theme:new -- <id>` *(planned)* | Validate theme packs and scaffold a new one |
 
 ## How to work in this repo
 
@@ -416,10 +420,21 @@ These are planned. Update this table as they land.
   industrial, traditional, startup.
 - **D6:** Version 1 supports Claude Code and Gemini CLI. Codex and the generic SDK follow in Phase 5.
 
-**Open (resolve in P0-08 by asking the user):**
+**Settled in Phase 0 (2026-10-24; the user answered the open questions, the spikes supplied the evidence):**
 
-- the final project name;
-- the default camera: orthographic isometric diorama or perspective;
-- where the character assets come from;
-- which UI languages to support;
-- one package or npm workspaces.
+- **D7:** The final name is **Agent Office**. The env prefix stays `AGENT_OFFICE_`.
+- **D8:** The default camera is **orthographic isometric**, with perspective only as an optional follow-cam. The
+  cutaway cuts camera-facing walls to ~0.4 m. See [ADR 0003](docs/adr/0003-renderer-and-camera.md).
+- **D9:** Characters come from **Quaternius** (Universal Base Characters + Universal Animation Library, CC0).
+  Furniture comes from the **Kenney Furniture Kit** (CC0), with a meshopt pipeline. See
+  [ADR 0004](docs/adr/0004-assets.md).
+- **D10:** The UI ships in **English only** for v1. Every string still goes through `t()`.
+- **D11:** **One npm package**, no workspaces. Folder rules are enforced by tsconfigs and
+  `test/boundaries.test.ts`. See [ADR 0001](docs/adr/0001-stack.md).
+- **D12:** Codex verification and fixtures move to P5-01, because Codex isn't installed on the development machine.
+- **D13:** The event protocol gains `job.start`/`job.end`, `session.start.continues`, `tool.error` and slugged
+  account ids. See [ADR 0002](docs/adr/0002-event-protocol.md) (proposed; P1-01 finalizes it).
+- **D14:** Gemini CLI ≥ 0.65.0 is supported, with `light` (default on Windows) and `full` hook profiles. Tailing the
+  chat file is mandatory. See [docs/providers/gemini-cli.md](docs/providers/gemini-cli.md).
+
+ADRs are listed in [docs/adr/README.md](docs/adr/README.md).

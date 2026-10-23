@@ -44,3 +44,12 @@ Newest task at the bottom. Branch: `phase-0` (pushed to `origin`; `main` is unto
   `node:*`/relative, `shared/` and `client/src/core/` never import `three`, hook shims import only `node:*`.
 - `.gitattributes` forces LF (shims and fixtures must be byte-identical across OSes).
 - Checks: `npm run typecheck`, `npm test` (9 tests), `npm run build` all pass locally on Windows / Node 26.7.
+- **Needs you:** the repo is private and `gh` isn't installed, so I couldn't read the CI result. Check the Actions
+  tab for the `phase-0` run (Ubuntu + Windows).
+
+### P0-03 Reference access — done
+
+- `docs/reference.md`: Habblaud path and full commit hash, a porting checklist, and a table of **Habblaud World code
+  that leaks into files we do port** (`client/src/world/sim/visitor.ts` is imported by `sim.ts`;
+  `client/src/net/world*.ts`; World fields in `shared/types.ts`, `server/model/office.ts`, `server/http/app.ts`).
+- CLAUDE.md's exclusion list now names those files explicitly.

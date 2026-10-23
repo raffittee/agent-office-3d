@@ -55,7 +55,8 @@ The plan, phase by phase. [CLAUDE.md](CLAUDE.md) has the design, contracts and r
   - **Ref:** `package.json`, `tsconfig.json`, `server/tsconfig.json`, `vite.config.ts`, `vitest.config.ts`,
     `.github/workflows/ci.yml`, `scripts/build-server.mjs`.
   - **Done when:** all three checks pass in CI on the empty skeleton.
-- [ ] **P0-03 Reference access** (S)
+- [x] **P0-03 Reference access** (S) — done: `docs/reference.md` records the local path and commit, a porting
+  checklist, and the World code that leaks into ported files (`sim/visitor.ts`, `net/world*.ts`, `types.ts`, …).
   - Confirm Habblaud is at the path above. If it isn't, clone it read-only into `reference/habblaud` at commit
     `faa1a01` (v1.0.3).
   - Write down which path is in use in `docs/reference.md`.

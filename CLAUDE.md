@@ -37,7 +37,9 @@ idea for Claude Code and Codex. Use it as the reference for behavior, data sourc
 - **Attribution:** every ported file starts with `// Ported from habblaud <path> (MIT, © 2026 Márcio Junior)`, and
   `NOTICE.md` carries Habblaud's MIT license text.
 - **Never port or contact Habblaud World.** Skip `shared/world/`, `server/world/`, `client/src/world/city/`,
-  `client/src/world/visit*`, `client/src/ui/world/` and `docs/world/`. Habblaud World is Habblaud's hosted
+  `client/src/world/visit*`, `client/src/world/sim/visitor.ts`, `client/src/world/sim/world-visit.test.ts`,
+  `client/src/net/world*`, `client/src/ui/world/`, `server/test/fake-world.ts` and `docs/world/`, and strip World
+  references from files you do port (see [docs/reference.md](docs/reference.md)). Habblaud World is Habblaud's hosted
   multiplayer service, with its own terms of use. This project must not talk to `habblaud.com` servers or act as a
   Habblaud client.
 - **Don't use Habblaud's brand.** That covers its name, logo, screenshots and the AI-generated images in

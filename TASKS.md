@@ -44,7 +44,9 @@ The plan, phase by phase. [CLAUDE.md](CLAUDE.md) has the design, contracts and r
     (`node_modules/`, `dist/`, `reference/`, `.env`).
   - If the name changes, rename the `AGENT_OFFICE_` env prefix in `CLAUDE.md`.
   - **Done when:** the first commit exists.
-- [ ] **P0-02 Tooling scaffold** (M)
+- [x] **P0-02 Tooling scaffold** (M) — done: `package.json` (no runtime deps, exact pins), `tsconfig.json` +
+  `server/tsconfig.json`, `vite.config.ts`, `vitest.config.ts`, `scripts/build-server.mjs`, skeleton `server/` and
+  `client/`, `test/boundaries.test.ts`, `.github/workflows/ci.yml` (Ubuntu + Windows).
   - Write `package.json` (`"type": "module"`, `engines.node >= 22.12`, exact versions pinned).
   - Write `tsconfig.json` with separate server and client configs.
   - Add a Vite config (dev middleware or proxy to the server), a Vitest config, and the scripts `dev`, `test`,

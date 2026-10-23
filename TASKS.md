@@ -79,11 +79,14 @@ The plan, phase by phase. [CLAUDE.md](CLAUDE.md) has the design, contracts and r
     - whether hooks need an enable flag.
   - Commit sanitized fixtures to `test/fixtures/gemini-cli/`.
   - **Done when:** the mapping table in `CLAUDE.md` is confirmed or corrected.
-- [ ] **P0-05 Spike: Claude Code & Codex check** (S)
+- [x] **P0-05 Spike: Claude Code & Codex check** (S) — done: `docs/providers/claude-code.md` (2.1.306–2.1.309:
+  registry `procStart`/`.key` files, `api-request*` records, `credential_org`, `PowerShell` tool, permission
+  decisions, drive-letter case), 8 redacted fixtures in `test/fixtures/claude-code/`; `docs/providers/codex.md`
+  records the deferral. No subagent transcript exists on this machine: captured in P1-09 instead.
   - Check Habblaud's notes (in `CLAUDE.md` › Provider notes) against the installed versions.
   - Capture sanitized fixtures:
     - Claude Code: a session registry JSON, transcript slices with tool calls, and a subagent with its `.meta.json`;
-    - Codex: a lock file and a rollout slice.
+    - Codex: a lock file and a rollout slice. *(Moved to P5-01: Codex isn't installed here.)*
   - Write `docs/providers/claude-code.md` and `docs/providers/codex.md`.
   - **Ref:** `server/README.md`, `server/test/fixtures.ts`, `server/test/codex-fixtures.ts`.
 - [ ] **P0-06 Spike: 3D renderer** (M)
@@ -109,8 +112,8 @@ The plan, phase by phase. [CLAUDE.md](CLAUDE.md) has the design, contracts and r
   - Write ADRs: 0001 stack, 0002 event protocol, 0003 renderer and camera, 0004 assets.
   - Ask the user to settle the open decisions listed in `CLAUDE.md`, then update its Decisions section.
 
-**Exit:** the ADRs are merged; fixtures exist for Claude Code, Gemini CLI and Codex; the spike numbers are recorded;
-no open decisions remain.
+**Exit:** the ADRs are merged; fixtures exist for Claude Code and Gemini CLI (Codex fixtures moved to P5-01 on
+2026-10-24 because Codex isn't installed); the spike numbers are recorded; no open decisions remain.
 
 ---
 
@@ -175,6 +178,10 @@ no open decisions remain.
   - Port the session registry, watcher, tail, transcript parser, subagents and shells into
     `server/adapters/claude-code/`, emitting `AgentEvent`s.
   - Keep Habblaud's boot behavior: read the last ~1 MB of each transcript, then the rest in the background.
+  - Apply P0-05: liveness by (pid, `procStart`); skip `api-request*` records and `credential_org`; map
+    `PowerShell` like `Bash`; read `permissionDecision`; match `cwd` case-insensitively on Windows.
+  - Before porting `subagents.ts`, capture a real subagent transcript and its `.meta.json` into
+    `test/fixtures/claude-code/` (none existed in P0-05).
   - **Ref:** `server/sources/{registry,watcher,tail,transcript,subagents,shells}.ts` and their tests.
   - **Done when:** the fixture tests pass, and a real session appears.
 - [ ] **P1-10 Gemini CLI adapter** (L)
@@ -340,6 +347,8 @@ without touching code.
 ## Phase 5: More providers & generic ingest
 
 - [ ] **P5-01 Codex adapter** (L)
+  - First, the check moved here from P0-05: install Codex, run a session, capture a sanitized lock file and rollout
+    slice into `test/fixtures/codex/`, and rewrite `docs/providers/codex.md` from the real files.
   - Port the locks, rollouts, hook shim and installer into `server/adapters/codex/` and `hooks/codex.mjs`.
   - **Ref:** `server/sources/codex/*`, `mod/habblaud-codex/hook.mjs`, `scripts/codex-install.ts` and their tests.
 - [ ] **P5-02 SDK emitters** (M)

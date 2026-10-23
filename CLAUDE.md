@@ -226,10 +226,16 @@ These facts were verified on 2026-10-24. Re-check them against the installed ver
 
 ### Claude Code
 
-Source: Habblaud, tested with Claude Code 2.1.293.
+Source: Habblaud, tested with Claude Code 2.1.293. **Re-checked against 2.1.306–2.1.309 in P0-05**; see
+[docs/providers/claude-code.md](docs/providers/claude-code.md).
 
 - **Open sessions and status:** `<config>/sessions/<pid>.json` (busy, idle, waiting or shell). Outside Docker,
-  check that the PID is alive.
+  check that the PID is alive, and that it is still the same process: compare `procStart` (Windows FILETIME of
+  the process start), which 2.1.30x writes. **Never open the `<pid>.<hash>.key` files** in the same folder.
+- **Transcripts also contain** `api-request*` records (full API request bodies) and `credential_org` attachments.
+  Skip both without parsing. On Windows, `PowerShell` is a tool like `Bash`, including background jobs. The
+  encoded project folder keeps the `cwd`'s drive-letter case (`c--…` from VS Code, `C--…` from the desktop app), so
+  match paths case-insensitively.
 - **Transcripts:** `<config>/projects/<encoded-cwd>/<sessionId>.jsonl`. Subagents are in
   `<sessionId>/subagents/**/agent-*.jsonl`, with a `.meta.json` next to each.
 - **Accounts:** `~/.claude*` folders that contain `projects/` or `sessions/`, plus `CLAUDE_CONFIG_DIR`. From
@@ -303,7 +309,8 @@ points below summarize it.
 
 ### Codex
 
-Source: Habblaud.
+Source: Habblaud. **Not verified**: Codex isn't installed on this machine, so the check moved to P5-01 (see
+[docs/providers/codex.md](docs/providers/codex.md)).
 
 - **Open sessions:** `<CODEX_HOME>/thread-writer-locks/<threadId>.lock`.
 - **Rollouts:** `sessions/YYYY/MM/DD/rollout-*-<threadId>.jsonl`.

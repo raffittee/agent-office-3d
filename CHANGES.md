@@ -93,3 +93,24 @@ The protocol didn't need to change. Denials map to `tool.end {ok:false}` + `turn
 
 **Needs you (before P1-10's exit check):** upgrade Gemini (`npm i -g @google/gemini-cli@latest`) and sign in once
 (`gemini`), so a real session can be tested in Phase 1. The spike didn't need it.
+
+### P0-05 Spike: Claude Code & Codex check — done
+
+- Checked Habblaud's Claude Code notes (written for 2.1.293) against your real files (2.1.306 and 2.1.309, VS Code
+  extension). The core still matches: the session registry, transcripts, background shells, compaction.
+  `docs/providers/claude-code.md` lists what's new:
+  - `procStart` in the registry → liveness can't be fooled by PID reuse;
+  - **`<pid>.<hash>.key` files in `sessions/`**, never to be read;
+  - transcripts now embed full **API request bodies** (`api-request*` records) and a **`credential_org`**
+    attachment, both to be skipped;
+  - a **`PowerShell`** tool on Windows;
+  - permission accept/reject decisions recorded in the transcript;
+  - VS Code writes `c:\` and the desktop app `C:\` for the same folder, so paths must match case-insensitively.
+- 8 fixtures in `test/fixtures/claude-code/`, **redacted to structure**: ids, types, tool names and decisions are
+  kept; all conversation text is `<redacted:N>`; tool inputs are synthetic; API request bodies and the
+  `credential_org` attachment are dropped. A test enforces this.
+- **Not captured:** a subagent transcript. None exists on this machine, and I didn't start a subagent or a
+  separate `claude` run just to make one (that would use your quota, and needs your OK). It's now the first step
+  of P1-09.
+- Codex: deferred as you decided. `docs/providers/codex.md` says so, and P5-01 now starts with the capture. The
+  Phase 0 exit criteria were edited to match.

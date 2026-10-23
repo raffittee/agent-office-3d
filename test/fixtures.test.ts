@@ -29,6 +29,36 @@ describe('fixtures', () => {
     }
   });
 
+  describe('claude-code', () => {
+    it('registry entries have the fields the reader requires', () => {
+      for (const f of providerFiles('claude-code').filter((f) => /[\\/]registry-[^\\/]+\.json$/.test(f))) {
+        const j = JSON.parse(readFileSync(f, 'utf8')) as Record<string, unknown>;
+        expect(typeof j.pid, f).toBe('number');
+        expect(typeof j.sessionId, f).toBe('string');
+        expect(typeof j.cwd, f).toBe('string');
+        expect(typeof j.procStart, f).toBe('string');
+      }
+    });
+
+    it('transcripts keep record types but no conversation text or api-request bodies', () => {
+      for (const f of providerFiles('claude-code').filter((f) => /[\\/]transcript-[^\\/]+$/.test(f))) {
+        for (const r of jsonl(f) as Record<string, unknown>[]) {
+          expect(typeof r.type, f).toBe('string');
+          if (String(r.type).startsWith('api-request')) {
+            for (const k of Object.keys(r)) expect(['type', 'sessionId', 'timestamp', 'version', '<omitted>'], `${f}: ${k}`).toContain(k);
+          }
+          const content = (r.message as { content?: unknown } | undefined)?.content;
+          if (Array.isArray(content)) {
+            for (const b of content as Record<string, unknown>[]) {
+              if (b.type === 'text') expect(b.text, f).toMatch(/^<redacted:\d+>$/);
+              if (b.type === 'thinking') expect(b.thinking, f).toMatch(/^<redacted:\d+>$/);
+            }
+          }
+        }
+      }
+    });
+  });
+
   describe('gemini-cli', () => {
     const base = ['session_id', 'transcript_path', 'cwd', 'hook_event_name', 'timestamp'];
 

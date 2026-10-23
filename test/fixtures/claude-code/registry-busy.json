@@ -1,0 +1,23 @@
+{
+  "pid": 42756,
+  "sessionId": "4bd404c0-6074-4cb6-87d4-24a3e34253c1",
+  "cwd": "C:\\Users\\dev\\code\\project",
+  "startedAt": 1792778634926,
+  "procStart": "134372522336881641",
+  "version": "2.1.309",
+  "peerProtocol": 1,
+  "peerFeatures": [
+    "notify_idle",
+    "artifact_yield"
+  ],
+  "kind": "interactive",
+  "entrypoint": "claude-vscode",
+  "pidDomain": "win32:dev",
+  "messagingSocketPath": "\\\\.\\pipe\\LOCAL\\cc-msg-00000000000000000000000000000000",
+  "name": "project-14",
+  "nameSource": "derived",
+  "nameSince": 1792778634926,
+  "status": "busy",
+  "updatedAt": 1792779385182,
+  "statusUpdatedAt": 1792779385182
+}

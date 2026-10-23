@@ -239,11 +239,20 @@ Source: Habblaud, tested with Claude Code 2.1.293.
 
 ### Gemini CLI
 
-Source: [geminicli.com/docs/hooks/reference](https://geminicli.com/docs/hooks/reference/).
+Source: [geminicli.com/docs/hooks/reference](https://geminicli.com/docs/hooks/reference/), **verified against the
+real CLI 0.65.0 in P0-04**. [docs/providers/gemini-cli.md](docs/providers/gemini-cli.md) is the reference; the
+points below summarize it.
 
+- **Supported version:** ≥ 0.65.0 (hooks on by default). 0.15.1, the version installed globally here, has hooks
+  off unless `tools.enableHooks` and `tools.enableMessageBusIntegration` are set.
 - **Where hooks go:** `settings.json`, either `~/.gemini/settings.json` (user) or `.gemini/settings.json`
-  (project), under
-  `"hooks": { "<Event>": [{ "matcher": "<regex>", "hooks": [{ "type": "command", "command": "…", "timeout": <ms> }] }] }`.
+  (project, ignored in untrusted folders), under
+  `"hooks": { "<Event>": [{ "matcher": "*", "hooks": [{ "type": "command", "command": "node \"<path>\"", "timeout": <ms> }] }] }`.
+  `GEMINI_CLI_HOME` relocates the whole `.gemini` folder, so it identifies the account.
+- **Matcher:** always `"*"`. `SessionStart`, `SessionEnd` and `PreCompress` compare the matcher to the trigger
+  **by exact string equality**, so `.*` never matches them.
+- **Hooks run through a shell** (Windows: PowerShell; elsewhere: `bash -c`) and Gemini **waits for each one**. On
+  Windows a hook costs ~0.4 s, and the shim's `ppid` is the shell, not Gemini.
 - **Events and their fields:**
   - `SessionStart` (`source`: `startup`, `resume` or `clear`) and `SessionEnd` (`reason`)
   - `BeforeAgent` (`prompt`) and `AfterAgent` (`prompt_response`)
@@ -251,32 +260,46 @@ Source: [geminicli.com/docs/hooks/reference](https://geminicli.com/docs/hooks/re
   - `Notification` (`notification_type`, e.g. `ToolPermission`; `message`; `details`)
   - `PreCompress` (`trigger`)
   - `BeforeModel`, `AfterModel` and `BeforeToolSelection`
-- **Fields on every event (stdin):** `session_id`, `transcript_path`, `cwd`, `hook_event_name`, `timestamp`.
+- **Fields on every event (stdin):** `session_id`, `transcript_path`, `cwd`, `hook_event_name`, `timestamp`. Tool
+  events carry **no tool-call id**, so starts and ends are paired by name in order. Nothing in a hook payload names
+  a subagent.
 - **Mapping to `AgentEvent`:**
 
   | Gemini CLI event | `AgentEvent` |
   | --- | --- |
-  | `SessionStart` | `session.start` |
+  | `SessionStart` | `session.start` (`/clear` = `SessionEnd(clear)` + `SessionStart(clear)` with a **new** id, same process) |
   | `BeforeAgent` | `turn.start` |
-  | `BeforeTool` | `tool.start` |
-  | `AfterTool` | `tool.end` |
+  | `BeforeTool` | `tool.start`; `invoke_agent` → `subagent.start` (fires *before* any permission prompt) |
+  | `AfterTool` | `tool.end`; `invoke_agent` → `subagent.end` (shell failures have no `error`: parse `Exit Code: N`) |
   | `Notification` with `notification_type: ToolPermission` | `waiting` (permission) |
+  | chat file: tool call `cancelled` + `info "Request cancelled."` | `tool.end {ok: false}` + `turn.end` (**the only signal after a deny**) |
   | `AfterAgent` | `turn.end` |
-  | `PreCompress` | `compact` |
-  | `SessionEnd` | `session.end` |
+  | chat file: `gemini` message `model` / `tokens` | `usage` (hooks carry neither) |
+  | `SessionEnd` | `session.end` (fires twice on `/quit`) |
 
-- **Events we don't register:** `BeforeModel`, `AfterModel` and `BeforeToolSelection`. They fire on every request
-  or chunk, and they can rewrite model traffic.
+- **Events we don't register:** `BeforeModel`, `AfterModel` and `BeforeToolSelection`, which fire on every request
+  or chunk and can rewrite model traffic; and `PreCompress`, which fires before **every** model request, so it can't
+  signal compaction.
+- **ACP mode** (`gemini --acp`, used by editors) fires no `SessionStart`, tool or `Notification` hooks. Only the
+  chat file shows its activity.
 - **Output contract:** stdout must contain only JSON, and exit code 2 blocks the action. Our shim always prints
   nothing (or `{}`) and exits 0.
 - **Approvals:** `Notification` is observe-only, so it can't approve from the office. Whether a `BeforeTool`
   decision could do it safely is a Phase 7 spike, off by default.
-- **Session files:** saved under `~/.gemini/tmp/<project_hash>/chats/`, with prompts, responses, tool calls and
-  token usage. The file format is **not documented**, so inspect real files in Phase 0. The `transcript_path` in
-  each hook payload points at the live file.
-- **Built-in tool names to map** (verify against the installed version): `read_file`, `read_many_files`,
-  `write_file`, `replace`, `run_shell_command`, `glob`, `search_file_content`, `list_directory`, `web_fetch`,
-  `google_web_search`, `save_memory`, `write_todos`.
+- **Session files:** `~/.gemini/tmp/<project-slug>/chats/session-<YYYY-MM-DDTHH-MM>-<id8>.jsonl`. The slug comes
+  from `~/.gemini/projects.json`, keyed by the lower-cased project path. Subagents are in
+  `chats/<parentSessionId>/<subagentSessionId>.jsonl`. The format is append-only JSONL: messages are re-appended
+  under the same `id` when they change (last write wins), plus `$set`, `$rewindTo` and `$patch` lines. Tool calls
+  are written when they finish. The `transcript_path` in hook payloads points at the live file, except on
+  `SessionStart(resume)`.
+- **Built-in tool names (0.65.0):** `read_file`, `list_directory`, `glob`, `grep_search`, `replace`, `write_file`,
+  `run_shell_command` (with `is_background`), `list_background_processes`, `read_background_output`, `web_fetch`,
+  `google_web_search`, `invoke_agent`, `activate_skill`, `enter_plan_mode`, `update_topic`, and `complete_task`
+  inside subagents. `search_file_content` was renamed to `grep_search`; `read_many_files`, `save_memory` and
+  `write_todos` are no longer declared.
+- **Privacy:** payloads contain prompts, file contents (`write_file`, `Notification.details.newContent`) and tool
+  output (`tool_response.llmContent`). The shim forwards only `tool_input` (truncated), `ok`, the error type, the
+  exit code and a background PID, plus the permission `title` and `command`.
 
 ### Codex
 
@@ -304,7 +327,12 @@ These rules come from Habblaud's `mod/habblaud-codex/hook.mjs`.
   event takes at most 1.5 s.
 - Observe-only events never write to stdout, because some CLIs feed stdout to the model.
 - Talk only to `127.0.0.1:<port>`. Read the port from `~/.agent-office/hooks.json`, then from `AGENT_OFFICE_PORT`.
-- Truncate before sending: at most 8 KB per string and 200 KB per body. Send `process.ppid` as `pid`.
+- Truncate before sending: at most 8 KB per string and 200 KB per body. Drop content the office doesn't need
+  (tool output, file contents) in the shim, before it leaves the agent's process tree.
+- Send the agent's PID as `pid`. That is `process.ppid`, unless the parent is a shell wrapper (`pwsh`,
+  `powershell`, `cmd`, `bash`, `sh`), in which case use the shell's parent. Gemini CLI runs every hook through a
+  shell. Resolve it once, on session start, because the lookup costs ~0.3 s on Windows.
+- Register as few events as possible. Each hook is a blocking process spawn (~0.4 s on Windows through PowerShell).
 - Installers merge into the CLI's config idempotently, back the file up first, and offer `uninstall` and `status`.
 
 ## Security and privacy (non-negotiable)

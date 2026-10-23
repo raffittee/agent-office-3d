@@ -1,0 +1,11 @@
+[
+  { "wait": "Type your message", "delay": 2500, "send": "SCENARIO ask2: write two files" },
+  { "delay": 400, "send": "\r" },
+  { "wait": "Allow once", "delay": 2500, "send": "\r" },
+  { "delay": 2500 },
+  { "wait": "Allow once", "delay": 2500, "send": "\u001b" },
+  { "delay": 6000, "send": "SCENARIO hello: after deny" },
+  { "delay": 400, "send": "\r" },
+  { "delay": 6000, "send": "/quit" },
+  { "delay": 600, "send": "\r" }
+]

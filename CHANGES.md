@@ -53,3 +53,43 @@ Newest task at the bottom. Branch: `phase-0` (pushed to `origin`; `main` is unto
   that leaks into files we do port** (`client/src/world/sim/visitor.ts` is imported by `sim.ts`;
   `client/src/net/world*.ts`; World fields in `shared/types.ts`, `server/model/office.ts`, `server/http/app.ts`).
 - CLAUDE.md's exclusion list now names those files explicitly.
+
+### P0-04 Spike: Gemini CLI data — done, with plan changes
+
+**How:** you have no Gemini login on this machine, and the global Gemini is 0.15.1 (hooks off by default). I ran
+the **real, latest Gemini CLI 0.65.0** from a scratch install against a **local stub of the Gemini API**, using
+`GOOGLE_GEMINI_BASE_URL` and an isolated `GEMINI_CLI_HOME`. Hook payloads and chat files are genuine CLI output;
+only the model's replies are scripted. I drove headless mode, the interactive TUI (through a pseudo-terminal) and
+ACP mode. Your real `~/.gemini` and your global install were **not touched**. Nothing was sent to Google.
+
+**Results:** `docs/providers/gemini-cli.md` answers every question in the task. There are 10 sanitized fixtures in
+`test/fixtures/gemini-cli/` and reusable probe tools in `docs/spikes/gemini-probe/`.
+
+**The spike contradicted the plan in these places. I applied the edits to CLAUDE.md and TASKS.md; please review:**
+
+1. **Matcher `.*` breaks session hooks.** `SessionStart`, `SessionEnd` and `PreCompress` compare the matcher by
+   exact string, so `.*` never fires them. Use `"*"` everywhere.
+2. **`PreCompress` fires before every model request**, so it can't mean "compacted". It's dropped from the mapping
+   and won't be registered.
+3. **A denied (or Esc-cancelled) permission fires no hook at all**: no `AfterTool`, no `AfterAgent`. Only the chat
+   file records it (`status: "cancelled"`, `"Request cancelled."`). Tailing `transcript_path` is now **required**
+   in P1-10, not optional.
+4. **Model and tokens never appear in hooks.** They come from the chat file only.
+5. **`process.ppid` is a PowerShell process, not Gemini.** Gemini runs every hook through a shell, so liveness by
+   `ppid` would mark agents offline right away. The hook shim rule now resolves the agent PID through the shell
+   wrapper.
+6. **Hooks are slow on Windows:** ~0.4 s each (PowerShell startup), and Gemini waits for them. A scripted session
+   went from ~6 s to ~19 s with all hooks on. P1-10 now has a `light` profile (no per-tool hooks; tool activity
+   from the chat file), the default on Windows, and a `full` profile.
+7. **Subagents exist** (`invoke_agent`), but their tool hooks carry the parent's `session_id`, so they're
+   attributed by nesting. Each subagent also has its own chat file.
+8. **`/clear` gives a new `session_id`** in the same process. Resume keeps the id.
+9. **Tool names changed:** `search_file_content` → `grep_search`; `read_many_files`, `save_memory` and
+   `write_todos` are gone; `invoke_agent`, background-shell tools and others are new.
+10. **ACP mode (editor integrations) fires almost no hooks.**
+11. Minimum supported Gemini version set to **0.65.0**.
+
+The protocol didn't need to change. Denials map to `tool.end {ok:false}` + `turn.end`, and tokens map to `usage`.
+
+**Needs you (before P1-10's exit check):** upgrade Gemini (`npm i -g @google/gemini-cli@latest`) and sign in once
+(`gemini`), so a real session can be tested in Phase 1. The spike didn't need it.

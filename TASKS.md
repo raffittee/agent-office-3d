@@ -60,7 +60,10 @@ The plan, phase by phase. [CLAUDE.md](CLAUDE.md) has the design, contracts and r
   - Confirm Habblaud is at the path above. If it isn't, clone it read-only into `reference/habblaud` at commit
     `faa1a01` (v1.0.3).
   - Write down which path is in use in `docs/reference.md`.
-- [ ] **P0-04 Spike: Gemini CLI data** (M)
+- [x] **P0-04 Spike: Gemini CLI data** (M) — done: `docs/providers/gemini-cli.md` (real CLI 0.65.0 driven
+  offline against a stub model: headless, TUI and ACP), 10 sanitized fixtures in `test/fixtures/gemini-cli/`, probe
+  tools in `docs/spikes/gemini-probe/`; CLAUDE.md's Gemini notes and hook shim rules corrected (matcher `"*"`,
+  no `PreCompress`, deny only visible in the chat file, `ppid` is a shell, ~0.4 s per hook on Windows).
   - Record the installed `gemini --version`.
   - Write a throwaway logging shim that appends each raw hook's stdin to a scratch file, and register it for every
     event except `BeforeModel`, `AfterModel` and `BeforeToolSelection`.
@@ -160,6 +163,8 @@ no open decisions remain.
 - [ ] **P1-08 Hook shim kit & installer** (M)
   - Shared shim logic in `hooks/`: read stdin with a timeout and a size cap, look up the config, truncate, POST with
     a timeout, and always exit 0.
+  - Resolve the agent PID: `process.ppid`, or its parent when the parent is a shell wrapper (see CLAUDE.md › Hook
+    shim rules). Only on session start; cache nothing on disk.
   - `scripts/hooks-install.ts` with `--provider` and `install` / `uninstall` / `status`: back up first, merge
     idempotently.
   - **Ref:** `mod/habblaud-codex/hook.mjs`, `scripts/hooks-install.ts`, `scripts/codex-install.ts`,
@@ -173,12 +178,20 @@ no open decisions remain.
   - **Ref:** `server/sources/{registry,watcher,tail,transcript,subagents,shells}.ts` and their tests.
   - **Done when:** the fixture tests pass, and a real session appears.
 - [ ] **P1-10 Gemini CLI adapter** (L)
-  - Write `hooks/gemini-cli.mjs` and an installer that targets `~/.gemini/settings.json`, using matcher `.*` for the
-    tool events.
+  - Write `hooks/gemini-cli.mjs` and an installer that targets `~/.gemini/settings.json` (or
+    `$GEMINI_CLI_HOME/.gemini/settings.json`), using matcher `"*"` for every event. The installer checks
+    `gemini --version` ≥ 0.65.0 and warns otherwise.
+  - Two hook profiles (`--profile`): `full` (`SessionStart`, `SessionEnd`, `BeforeAgent`, `AfterAgent`,
+    `Notification`, `BeforeTool`, `AfterTool`) and `light` (without the two tool events; tool activity comes from the
+    chat file). Default `light` on Windows, `full` elsewhere. Never register `PreCompress`.
+  - The shim strips `tool_response` down to `ok`, error type, exit code and background PID, and
+    `Notification.details` down to `type`, `title`, `fileName` and `command`.
   - Implement the event mapping from `CLAUDE.md`, as corrected by P0-04.
-  - Liveness comes from the `pid` (the shim's `ppid`).
-  - Optionally read `transcript_path` for the model, tokens and history, if P0-04 shows that's feasible.
-  - **Done when:** P0-04's fixtures replay into the expected status sequence, and a real Gemini session appears.
+  - **Tail `transcript_path` (required):** denials and cancels (the only signal after a deny), model and tokens, and
+    subagent files.
+  - Liveness comes from the `pid` (the agent, resolved by the shim through the shell wrapper).
+  - **Done when:** P0-04's fixtures replay into the expected status sequence (including allow, deny, cancel,
+    `/clear` and resume), and a real Gemini session appears.
 - [ ] **P1-11 Demo simulator** (M)
   - Port `shared/demo/simulator.ts`, mixing providers (`claude-code`, `gemini-cli`, `codex`, `custom:demo`).
   - The same seed always produces the same office.

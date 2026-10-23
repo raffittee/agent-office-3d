@@ -1,0 +1,184 @@
+{
+  "work": [
+    {
+      "call": {
+        "name": "read_file",
+        "args": {
+          "file_path": "notes.txt"
+        }
+      }
+    },
+    {
+      "call": {
+        "name": "replace",
+        "args": {
+          "file_path": "notes.txt",
+          "instruction": "Greet the world",
+          "old_string": "hello",
+          "new_string": "hello world"
+        }
+      }
+    },
+    {
+      "call": {
+        "name": "write_file",
+        "args": {
+          "file_path": "config.env",
+          "content": "API_KEY=sk-ant-api03-FAKEFAKEFAKEFAKEFAKEFAKEFAKEFAKE\n"
+        }
+      }
+    },
+    {
+      "call": {
+        "name": "run_shell_command",
+        "args": {
+          "command": "echo hi",
+          "description": "Say hi"
+        }
+      }
+    },
+    {
+      "calls": [
+        {
+          "name": "glob",
+          "args": {
+            "pattern": "*.txt"
+          }
+        },
+        {
+          "name": "grep_search",
+          "args": {
+            "pattern": "hello"
+          }
+        }
+      ]
+    },
+    {
+      "call": {
+        "name": "run_shell_command",
+        "args": {
+          "command": "ping -n 4 127.0.0.1",
+          "description": "Wait a bit",
+          "is_background": true
+        }
+      }
+    },
+    {
+      "call": {
+        "name": "invoke_agent",
+        "args": {
+          "agent_name": "generalist",
+          "prompt": "SCENARIO sub: list the files here and report back."
+        }
+      }
+    },
+    {
+      "text": "All done."
+    }
+  ],
+  "sub": [
+    {
+      "call": {
+        "name": "list_directory",
+        "args": {
+          "dir_path": "."
+        }
+      }
+    },
+    {
+      "call": {
+        "name": "complete_task",
+        "args": {
+          "result": {
+            "response": "Found notes.txt and config.env."
+          }
+        }
+      }
+    },
+    {
+      "text": "ok"
+    }
+  ],
+  "ask": [
+    {
+      "call": {
+        "name": "run_shell_command",
+        "args": {
+          "command": "echo allowed",
+          "description": "Needs approval"
+        }
+      }
+    },
+    {
+      "call": {
+        "name": "write_file",
+        "args": {
+          "file_path": "denied.txt",
+          "content": "should be denied\n"
+        }
+      }
+    },
+    {
+      "text": "Finished the approval test."
+    }
+  ],
+  "fail": [
+    {
+      "call": {
+        "name": "read_file",
+        "args": {
+          "file_path": "missing.txt"
+        }
+      }
+    },
+    {
+      "call": {
+        "name": "run_shell_command",
+        "args": {
+          "command": "exit 3",
+          "description": "Fail on purpose"
+        }
+      }
+    },
+    {
+      "text": "Both failed."
+    }
+  ],
+  "ask2": [
+    {
+      "call": {
+        "name": "write_file",
+        "args": {
+          "file_path": "allowed.txt",
+          "content": "allowed\n"
+        }
+      }
+    },
+    {
+      "call": {
+        "name": "write_file",
+        "args": {
+          "file_path": "denied2.txt",
+          "content": "should be denied\n"
+        }
+      }
+    },
+    {
+      "text": "Finished the approval test."
+    }
+  ],
+  "exec": [
+    {
+      "call": {
+        "name": "run_shell_command",
+        "args": {
+          "command": "mkdir probe-dir",
+          "description": "Make a directory"
+        }
+      }
+    },
+    {
+      "text": "Made it."
+    }
+  ]
+}

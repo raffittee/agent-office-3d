@@ -10,3 +10,4 @@ Thumbs.db
 # spike scratch output (raw hook captures are never committed; only sanitized fixtures are)
 scratch/
 .claude/settings.local.json
+spikes/*/out/

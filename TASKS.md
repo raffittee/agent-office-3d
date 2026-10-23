@@ -89,7 +89,10 @@ The plan, phase by phase. [CLAUDE.md](CLAUDE.md) has the design, contracts and r
     - Codex: a lock file and a rollout slice. *(Moved to P5-01: Codex isn't installed here.)*
   - Write `docs/providers/claude-code.md` and `docs/providers/codex.md`.
   - **Ref:** `server/README.md`, `server/test/fixtures.ts`, `server/test/codex-fixtures.ts`.
-- [ ] **P0-06 Spike: 3D renderer** (M)
+- [x] **P0-06 Spike: 3D renderer** (M) — done: `spikes/renderer/` (page + Playwright harness) measured 17
+  configurations on the Intel UHD iGPU at 1080p; `docs/spikes/renderer.md` (CPU ~1 ms, GPU fill-bound 11–14 ms,
+  MSAA ~5 ms, 10–195 draw calls) and ADR 0003 (orthographic isometric, cutaway `cut`, ≤ 2 draw calls per
+  character, quality tiers).
   - Build a throwaway Three.js page with:
     - 15 rooms of merged or instanced boxes;
     - walls you can cut away;

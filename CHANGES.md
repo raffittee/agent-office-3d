@@ -114,3 +114,22 @@ The protocol didn't need to change. Denials map to `tool.end {ok:false}` + `turn
   of P1-09.
 - Codex: deferred as you decided. `docs/providers/codex.md` says so, and P5-01 now starts with the capture. The
   Phase 0 exit criteria were edited to match.
+
+### P0-06 Spike: 3D renderer — done
+
+- Built a throwaway Three.js office: 15 rooms, 810 wall segments, 90 desks, 30 characters walking with Habblaud's
+  A*, and name labels. A Playwright harness measured 17 configurations on **your Intel UHD Graphics at 1080p**,
+  which is exactly the hardware class in our performance budget.
+- **Result: the budget is achievable.** CPU ~1 ms per frame. The GPU is limited by pixel fill, not draw calls:
+  11–14 ms per frame with antialiasing (MSAA ~5 ms of that) and shadows. So 60 fps holds, but there's **little room
+  for post-effects** (bloom, ambient occlusion) on integrated GPUs. They become an optional "high" quality tier.
+- **Camera:** orthographic isometric by default (as you chose), confirmed by the screenshots: far rooms stay
+  readable. Perspective becomes an optional "follow agent" camera.
+- **Cutaway:** walls facing the camera are **cut down to ~0.4 m** (better than hiding them, which loses room
+  outlines, or fading them, which looks striped). See the screenshots in `docs/spikes/renderer/`.
+- Implications recorded in **ADR 0003**: the default view frames 4–6 rooms (at a full 15-room view characters are
+  ~10 px tall); at most 2 draw calls per character in Phase 3; blob shadows for characters; labels need
+  decluttering (they collide at overview zoom).
+- Note: headless Chrome caps animation at ~55 fps even on an empty page, so budgets are measured as GPU-synced
+  frame cost instead.
+- Added dev dependencies `three` 0.186.1, `@types/three` 0.186.0 and `playwright-core` 1.64.1 (pinned).

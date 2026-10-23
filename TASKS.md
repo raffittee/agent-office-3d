@@ -103,7 +103,11 @@ The plan, phase by phase. [CLAUDE.md](CLAUDE.md) has the design, contracts and r
   - Try three cutaway approaches: hide the walls facing the camera, cut walls to a fixed height, and fade them.
   - **Ref:** `client/src/world/path/*`, `client/src/world/camera.ts`.
   - **Done when:** `docs/spikes/renderer.md` holds the numbers, and an ADR records the camera and cutaway choice.
-- [ ] **P0-07 Spike: assets** (M)
+- [x] **P0-07 Spike: assets** (M) — done: Quaternius Universal Animation Library + Base Characters and the Kenney
+  Furniture Kit (all CC0, licenses verified in the downloads); meshopt via gltf-transform 4.5.1 (character + 45
+  clips 305 KB gzipped, furniture kit 193 KB); 30 animated characters ≈ 13 ms GPU, 60 over budget;
+  `docs/spikes/assets.md`, ADR 0004, `ASSETS.md` started. Missing poses (type, wave, sleep, raise hand) become
+  procedural pose layers. Base Characters need a manual itch.io download.
   - Pick a character source: a rigged glTF with idle, walk, run, sit, type, wave, talk, cheer and sleep, or clips
     that can be retargeted.
   - Pick furniture kits that cover the four themes.
@@ -284,7 +288,9 @@ Gemini sessions appear, and clicking an agent opens its drawer.
   - `scripts/assets/`: `gltf-transform` compression, KTX2 textures, and budget checks (triangles, texture sizes).
   - Check that every file is listed in `ASSETS.md`.
 - [ ] **P3-02 Rigged characters** (L)
-  - One shared rigged glTF, with a map from pose to animation clip.
+  - One shared rigged glTF, with a map from pose to animation clip (Quaternius, ADR 0004).
+  - Procedural pose layers for the poses the free clips lack: type, wave, sleep, raise hand.
+  - Character budget from ADR 0004: one material, no finger bones, a 25% LOD.
   - An `AnimationMixer` manager with crossfades, and sitting offsets for each seat type.
   - **Ref:** the `Pose` list in `client/src/art/api.ts`.
 - [ ] **P3-03 Appearance** (M)

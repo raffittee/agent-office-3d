@@ -133,3 +133,24 @@ The protocol didn't need to change. Denials map to `tool.end {ok:false}` + `turn
 - Note: headless Chrome caps animation at ~55 fps even on an empty page, so budgets are measured as GPU-synced
   frame cost instead.
 - Added dev dependencies `three` 0.186.1, `@types/three` 0.186.0 and `playwright-core` 1.64.1 (pinned).
+
+### P0-07 Spike: assets — done
+
+- **Characters:** Quaternius, as you chose. The free **Universal Animation Library** (45 clips, CC0, confirmed in
+  the bundled license file) covers idle, walk, run, sit and talk. It's **missing typing, waving, sleeping and a
+  raised hand**. Plan: build those four as small procedural bone overrides on top of the sitting and idle clips (no
+  new art needed); author real clips only if they look bad.
+- **Furniture:** the **Kenney Furniture Kit** (CC0, 140 low-poly models). Untextured models with materials named
+  "wood", "metal", "carpet"… are ideal for themes, which can recolor them by name. A few office kinds are missing
+  (water cooler, whiteboard, cubicles, ping-pong); they start as simple procedural shapes.
+- **Compression:** with meshopt, a character plus all 45 animations is **~0.3 MB** over the network, and the whole
+  furniture kit **~0.2 MB**. Loading takes under 0.1 s.
+- **Performance:** 30 animated characters run in ~13 ms per frame on your iGPU, which is within budget. 60 don't
+  fit, because the cost is per character (bones, materials) rather than polygons. ADR 0004 sets a character budget
+  for Phase 3: one material, no finger bones, a low-detail version for zoomed-out views.
+- `ASSETS.md` started. **No asset files are committed yet.**
+- **Needs you (before Phase 3):** download "Universal Base Characters [Standard]" from
+  https://quaternius.itch.io/universal-base-characters (pick $0 or tip). itch.io requires a browser, so I couldn't
+  fetch it.
+- Not tested: KTX2 texture compression (needs KTX-Software's `toktx`, not installed; nothing textured yet). It
+  moves to P3-01.

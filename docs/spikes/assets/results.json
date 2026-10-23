@@ -1,0 +1,107 @@
+[
+ {
+  "name": "raw-30",
+  "char": {
+   "bytes": 6671104,
+   "fetchMs": 63.299999952316284,
+   "parseMs": 78.5,
+   "clips": 45
+  },
+  "furniture": {
+   "fetchMs": 16.100000023841858,
+   "parseMs": 36,
+   "bytes": 1839656,
+   "meshes": 4
+  },
+  "n": 30,
+  "cloneMs": 29.399999976158142,
+  "mixerMsP50": 1.7000000476837158,
+  "mixerMsP95": 3.899999976158142,
+  "cpuFrameMsP50": 4.899999976158142,
+  "burstMsP50": 13.299999952316284,
+  "burstMsP95": 15.100000023841858,
+  "drawCalls": 60,
+  "triangles": 412320
+ },
+ {
+  "name": "meshopt-30",
+  "char": {
+   "bytes": 1782632,
+   "fetchMs": 25.300000071525574,
+   "parseMs": 44.09999990463257,
+   "clips": 45
+  },
+  "furniture": {
+   "fetchMs": 8.5,
+   "parseMs": 20.799999952316284,
+   "bytes": 707368,
+   "meshes": 4
+  },
+  "n": 30,
+  "cloneMs": 25.700000047683716,
+  "mixerMsP50": 1.2000000476837158,
+  "mixerMsP95": 2.899999976158142,
+  "cpuFrameMsP50": 3.899999976158142,
+  "burstMsP50": 12.800000071525574,
+  "burstMsP95": 14.600000023841858,
+  "drawCalls": 60,
+  "triangles": 412320
+ },
+ {
+  "name": "meshopt-60",
+  "char": {
+   "bytes": 1782632,
+   "fetchMs": 29.700000047683716,
+   "parseMs": 33.09999990463257,
+   "clips": 45
+  },
+  "furniture": null,
+  "n": 60,
+  "cloneMs": 39.60000002384186,
+  "mixerMsP50": 2.200000047683716,
+  "mixerMsP95": 4.299999952316284,
+  "cpuFrameMsP50": 7.399999976158142,
+  "burstMsP50": 17.399999976158142,
+  "burstMsP95": 21.100000023841858,
+  "drawCalls": 120,
+  "triangles": 824640
+ },
+ {
+  "name": "lod25-30",
+  "char": {
+   "bytes": 1725160,
+   "fetchMs": 28.5,
+   "parseMs": 54.199999928474426,
+   "clips": 45
+  },
+  "furniture": null,
+  "n": 30,
+  "cloneMs": 29.200000047683716,
+  "mixerMsP50": 1.2000000476837158,
+  "mixerMsP95": 3.600000023841858,
+  "cpuFrameMsP50": 4.600000023841858,
+  "burstMsP50": 10.699999928474426,
+  "burstMsP95": 12.399999976158142,
+  "drawCalls": 60,
+  "triangles": 103050
+ },
+ {
+  "name": "lod25-60",
+  "char": {
+   "bytes": 1725160,
+   "fetchMs": 22.300000071525574,
+   "parseMs": 34.5,
+   "clips": 45
+  },
+  "furniture": null,
+  "n": 60,
+  "cloneMs": 48.199999928474426,
+  "mixerMsP50": 2.399999976158142,
+  "mixerMsP95": 5,
+  "cpuFrameMsP50": 8.100000023841858,
+  "burstMsP50": 16.5,
+  "burstMsP95": 18.200000047683716,
+  "drawCalls": 120,
+  "triangles": 206100
+ }
+]

@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { AgentEvent, AgentStatus } from '../../../shared/protocol';
 import { setQuiet } from '../../log';
 import { NameStore } from '../../model/names';
-import { Office } from '../../model/office';
+import { Office } from '../../../shared/model/office';
 import { tempDir } from '../../test/helpers';
 import { AdapterSet } from '../adapter';
 import { GeminiCliAdapter } from './adapter';

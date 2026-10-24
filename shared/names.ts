@@ -52,3 +52,28 @@ export function pickName(id: string, used: ReadonlySet<string>): PersonName {
     if (!used.has(name)) return { name, look: base.look };
   }
 }
+
+/** Where the office gets character names: a key (provider:session[:agent]) → a name, kept for that key. */
+export interface NameSource {
+  /** Name for `key`: the one it had, unless it collides with `used`; else a new one from the pool. */
+  assign(key: string, used: ReadonlySet<string>): PersonName;
+  /** Links `person` to one more key (the new session after a /clear). */
+  remember(key: string, person: PersonName): void;
+}
+
+/** Names in memory only (the browser's mock mode, tests). The server persists them (server/model/names.ts). */
+export class MemoryNames implements NameSource {
+  private names = new Map<string, PersonName>();
+
+  assign(key: string, used: ReadonlySet<string>): PersonName {
+    const kept = this.names.get(key);
+    if (kept && !used.has(kept.name)) return kept;
+    const person = pickName(key, used);
+    this.names.set(key, person);
+    return person;
+  }
+
+  remember(key: string, person: PersonName): void {
+    this.names.set(key, person);
+  }
+}

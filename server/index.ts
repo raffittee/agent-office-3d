@@ -5,6 +5,7 @@ import http from 'node:http';
 import { join } from 'node:path';
 import { AdapterSet } from './adapters/adapter';
 import { ClaudeCodeAdapter } from './adapters/claude-code/adapter';
+import { DemoAdapter } from './adapters/demo';
 import { GeminiCliAdapter } from './adapters/gemini-cli/adapter';
 import { loadConfig } from './config';
 import { createApiHandler } from './http/app';
@@ -14,7 +15,7 @@ import { createStaticHandler } from './http/static';
 import { createIngestHandler } from './ingest/ingest';
 import { errMsg, log } from './log';
 import { NameStore } from './model/names';
-import { Office } from './model/office';
+import { Office } from '../shared/model/office';
 import { RoomAliases } from './model/room-aliases';
 
 /** How often agents' processes are checked (the Phase 1 exit asks for status changes within 2 s). */
@@ -27,7 +28,10 @@ names.load();
 const aliases = new RoomAliases(join(config.dataDir, 'rooms.json'));
 aliases.load();
 
-const adapters = new AdapterSet([new ClaudeCodeAdapter({ inDocker: config.inDocker }), new GeminiCliAdapter({ home: config.home })]);
+const demo = config.demo ? new DemoAdapter() : undefined;
+const adapters = new AdapterSet([new ClaudeCodeAdapter({ inDocker: config.inDocker }), new GeminiCliAdapter({ home: config.home }), ...(demo ? [demo] : [])]);
+/** Provider badges: the running adapters, plus the ones only the demo simulates (Codex). */
+const providers = () => (demo ? [...adapters.providers(), ...demo.extraProviders(adapters.providers())] : adapters.providers());
 
 const office = new Office({
   names,
@@ -35,7 +39,8 @@ const office = new Office({
   version: config.version,
   startedAt: Date.now(),
   sources: () => adapters.sources(),
-  providers: () => adapters.providers(),
+  providers,
+  demo: config.demo,
 });
 await adapters.start(office);
 const hub = new Hub(office);
@@ -47,7 +52,7 @@ liveness.unref();
 
 const guard = createRequestGuard({ allowedHosts: config.allowedHosts });
 const ingest = createIngestHandler({ apply: (e) => office.apply(e), hooks: (p) => adapters.hooks(p) });
-const api = createApiHandler({ office, hub, version: config.version, sources: () => adapters.sources(), providers: () => adapters.providers(), ingest });
+const api = createApiHandler({ office, hub, version: config.version, sources: () => adapters.sources(), providers, ingest });
 
 type Handler = (req: http.IncomingMessage, res: http.ServerResponse, pathname: string) => void;
 let fallback: Handler = createStaticHandler(join(config.rootDir, 'dist', 'client'));

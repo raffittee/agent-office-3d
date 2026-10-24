@@ -7,7 +7,7 @@ import { createRequestGuard } from '../http/guard';
 import { Hub } from '../http/sse';
 import { setQuiet } from '../log';
 import { NameStore } from '../model/names';
-import { Office } from '../model/office';
+import { Office } from '../../shared/model/office';
 import { RateLimiter, createIngestHandler, isLoopbackAddress, type HookAdapter } from './ingest';
 import { maskDeep, maskEvent } from './mask';
 

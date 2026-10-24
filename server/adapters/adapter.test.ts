@@ -5,7 +5,7 @@ import type { AgentEvent, ProviderId } from '../../shared/protocol';
 import { describeToolFor } from '../../shared/tools';
 import { setQuiet } from '../log';
 import { NameStore } from '../model/names';
-import { Office } from '../model/office';
+import { Office } from '../../shared/model/office';
 import { AdapterSet, HEARTBEAT_TIMEOUT_MS, pidAlive, type ProviderAdapter } from './adapter';
 
 setQuiet(true);

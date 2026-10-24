@@ -17,7 +17,7 @@ import { describeClaudeTool } from '../../../shared/tools/claude-code';
 import { errMsg, log } from '../../log';
 import { discoverClaudeAccounts, type ClaudeAccount } from '../accounts';
 import { pidAlive, type AdapterContext, type ProviderAdapter } from '../adapter';
-import type { LivenessTarget } from '../../model/office';
+import type { LivenessTarget } from '../../../shared/model/office';
 import { FileTail } from '../tail';
 import { compareVersions, ProcStartChecker, registryStatus, RegistryReader, SHELL_STATUS_VERSION, type RegistryEntry, type RegistryStatus } from './registry';
 import { SHELL_FALLBACK_MAX_AGE_MS, ShellTracker } from './shells';

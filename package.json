@@ -10,6 +10,7 @@
   },
   "scripts": {
     "dev": "tsx watch --clear-screen=false --exclude ./client/** server/index.ts --dev",
+    "demo": "tsx watch --clear-screen=false --exclude ./client/** server/index.ts --dev --demo",
     "dev:client": "vite --config vite.config.ts",
     "build": "npm run build:client && npm run build:server",
     "build:client": "vite build --config vite.config.ts",

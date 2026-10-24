@@ -3,7 +3,7 @@
 // /api/hooks/:provider) are plugged in by deps.ingest (P1-06).
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { ProviderMeta, SourceInfo } from '../../shared/protocol';
-import type { Office } from '../model/office';
+import type { Office } from '../../shared/model/office';
 import { isJsonContentType } from './guard';
 import type { Hub } from './sse';
 

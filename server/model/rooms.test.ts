@@ -7,7 +7,7 @@ import { setQuiet } from '../log';
 import { tempDir } from '../test/helpers';
 import { NameStore } from './names';
 import { RoomAliases } from './room-aliases';
-import { SlotAllocator, normalizeCwd, roomDisplayNames } from './rooms';
+import { SlotAllocator, normalizeCwd, roomDisplayNames } from '../../shared/model/rooms';
 
 setQuiet(true);
 

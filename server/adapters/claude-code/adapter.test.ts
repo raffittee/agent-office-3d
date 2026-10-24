@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { AgentEvent } from '../../../shared/protocol';
 import { setQuiet } from '../../log';
 import { NameStore } from '../../model/names';
-import { Office } from '../../model/office';
+import { Office } from '../../../shared/model/office';
 import { appendLines, L, writeLines } from '../../test/claude-lines';
 import { tempDir } from '../../test/helpers';
 import { AdapterSet } from '../adapter';

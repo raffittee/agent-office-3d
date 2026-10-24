@@ -10,7 +10,7 @@ import type { AgentEvent, ProviderCapabilities, ProviderId, ProviderMeta, Source
 import { validateAgentEvent } from '../../shared/validate';
 import { maskEvent } from '../ingest/mask';
 import { errMsg, log } from '../log';
-import type { LivenessTarget, Office } from '../model/office';
+import type { LivenessTarget, Office } from '../../shared/model/office';
 
 export interface AdapterContext {
   /** Validates, masks and applies an event. */

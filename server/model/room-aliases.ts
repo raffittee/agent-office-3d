@@ -4,7 +4,7 @@
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { errMsg, log } from '../log';
-import { normalizeCwd } from './rooms';
+import { normalizeCwd } from '../../shared/model/rooms';
 
 export const ROOM_NAME_MAX = 40;
 

@@ -1,12 +1,13 @@
 // Ported from habblaud server/model/office.ts (MIT, © 2026 Márcio Junior)
 // The office model, rewritten as a reducer over AgentEvent (ADR 0002): one status machine for every provider.
 // Adapters call apply(); the SSE hub calls commit() (throttled) to get the new snapshot, feed and notices; a timer
-// calls tick() to expire grace periods and refresh filler bubbles. Habblaud's rules are kept: grace periods,
+// calls tick() to expire grace periods and refresh filler bubbles. Pure (no Node or DOM APIs): the server runs it, and so
+// does the browser in mock mode (?mock=1) with the demo simulator. Habblaud's rules are kept: grace periods,
 // synthesized "Done"/"Needs you" bubbles, shell-wait bubbles, notice dedupe and quiet boots.
-import { JOB_WAIT_TOOL, SPECIAL, describeJob, describePrompt, maskSecrets, truncate } from '../../shared/activity';
-import { hash32 } from '../../shared/hash';
-import { t } from '../../shared/i18n';
-import { nameKey } from '../../shared/names';
+import { JOB_WAIT_TOOL, SPECIAL, describeJob, describePrompt, maskSecrets, truncate } from '../activity';
+import { hash32 } from '../hash';
+import { t } from '../i18n';
+import { nameKey, type NameSource } from '../names';
 import {
   mainIdOf,
   type AccountInfo,
@@ -25,9 +26,8 @@ import {
   type RoomInfo,
   type ShellJob,
   type SourceInfo,
-} from '../../shared/protocol';
-import { describeToolFor } from '../../shared/tools';
-import type { NameStore } from './names';
+} from '../protocol';
+import { describeToolFor } from '../tools';
 import { SlotAllocator, normalizeCwd, roomDisplayNames } from './rooms';
 
 export const OFFLINE_GRACE_MS = 20_000;
@@ -46,8 +46,9 @@ const PROMPT_MAX = 2_000;
 export const UNKNOWN_ROOM = '(no project)';
 
 export interface OfficeDeps {
-  names: NameStore;
-  /** Name the user chose for a folder's room (room-aliases.ts), if any. */
+  /** Character names (server: persisted in names.json; browser mock mode: in memory). */
+  names: NameSource;
+  /** Name the user chose for a folder's room (server/model/room-aliases.ts), if any. */
   roomAlias?: (path: string) => string | undefined;
   version: string;
   /** Build of the client being served (OfficeSnapshot.meta.build); absent in dev and tests. */
@@ -59,6 +60,8 @@ export interface OfficeDeps {
   providers?: () => ProviderMeta[];
   /** Friendly account name for notices ("Account D"). */
   accountName?: (provider: ProviderId, account: string) => string | undefined;
+  /** Simulated agents are in the office (OfficeSnapshot.meta.demo). */
+  demo?: boolean;
   now?: () => number;
 }
 
@@ -767,7 +770,7 @@ export class Office {
       agents,
       accounts: this.deps.accounts?.(sessions) ?? [],
       meta: {
-        demo: false,
+        demo: !!this.deps.demo,
         sources: this.deps.sources?.() ?? [],
         providers: this.deps.providers?.() ?? [],
         startedAt: this.deps.startedAt,

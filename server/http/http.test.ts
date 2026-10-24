@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { AgentEvent, OfficeSnapshot } from '../../shared/protocol';
 import { setQuiet } from '../log';
 import { NameStore } from '../model/names';
-import { Office } from '../model/office';
+import { Office } from '../../shared/model/office';
 import { tempDir } from '../test/helpers';
 import { createApiHandler } from './app';
 import { createRequestGuard, hostAllowed, hostnameOf, isLoopbackHost, originAllowed, parseAllowedHosts } from './guard';

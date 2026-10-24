@@ -3,7 +3,7 @@
 // protocol JSON from shared/protocol.ts). Snapshots are throttled (~200 ms); feed and notices go right after.
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { OfficeSnapshot } from '../../shared/protocol';
-import type { Office } from '../model/office';
+import type { Office } from '../../shared/model/office';
 
 /** A client too slow to keep up (buffer above this) is dropped; EventSource reconnects. */
 const MAX_BUFFERED = 8 * 1024 * 1024;

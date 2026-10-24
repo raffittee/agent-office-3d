@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { AgentEvent } from '../../shared/protocol';
 import { setQuiet } from '../log';
 import { NameStore } from './names';
-import { DONE_GRACE_MS, OFFLINE_GRACE_MS, Office, SNAPSHOT_RECENT, UNKNOWN_ROOM } from './office';
+import { DONE_GRACE_MS, OFFLINE_GRACE_MS, Office, SNAPSHOT_RECENT, UNKNOWN_ROOM } from '../../shared/model/office';
 
 setQuiet(true);
 

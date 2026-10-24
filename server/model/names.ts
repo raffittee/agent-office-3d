@@ -3,7 +3,7 @@
 // restarts. (Habblaud's per-room character editor is in the backlog.)
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { pickName, type PersonName } from '../../shared/names';
+import { pickName, type NameSource, type PersonName } from '../../shared/names';
 import { errMsg, log } from '../log';
 
 interface StoredName {
@@ -20,7 +20,7 @@ interface NamesFile {
 const MAX_ENTRIES = 4000;
 const MAX_AGE_MS = 60 * 24 * 3_600_000;
 
-export class NameStore {
+export class NameStore implements NameSource {
   private names = new Map<string, StoredName>();
   private timer: ReturnType<typeof setTimeout> | null = null;
   private readonly now: () => number;

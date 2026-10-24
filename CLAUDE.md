@@ -301,8 +301,9 @@ points below summarize it.
   chat file shows its activity.
 - **Output contract:** stdout must contain only JSON, and exit code 2 blocks the action. Our shim always prints
   nothing (or `{}`) and exits 0.
-- **Approvals:** `Notification` is observe-only, so it can't approve from the office. Whether a `BeforeTool`
-  decision could do it safely is a Phase 7 spike, off by default.
+- **Approvals:** not possible from the office (P7-03, [docs/spikes/gemini-approvals.md](docs/spikes/gemini-approvals.md)).
+  A `BeforeTool` hook can deny or force a prompt but can't approve, and it runs before the CLI decides whether to ask.
+  `Notification` is observe-only.
 - **Session files:** `~/.gemini/tmp/<project-slug>/chats/session-<YYYY-MM-DDTHH-MM>-<id8>.jsonl`. The slug comes
   from `~/.gemini/projects.json`, keyed by the lower-cased project path. Subagents are in
   `chats/<parentSessionId>/<subagentSessionId>.jsonl`. The format is append-only JSONL: messages are re-appended

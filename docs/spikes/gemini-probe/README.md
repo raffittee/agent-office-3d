@@ -10,6 +10,7 @@ not part of the build and have no tests.
 | `fake-gemini.mjs` | Stub of the Gemini API on `127.0.0.1`. Replies follow `script.json`: the scenario is picked by `SCENARIO <key>:` in the latest prompt, and each model turn is a function call, parallel calls or text. Logs every request. |
 | `log-hook.mjs` | Hook command: appends the raw stdin payload (plus `ppid`) to `$PROBE_LOG`. Prints nothing, exits 0. Set `PROBE_PARENTS=1` to also record the parent process (Windows). |
 | `tui-driver.mjs` | Drives the interactive TUI through `node-pty` (use the copy Gemini bundles: `node_modules/@lydell/node-pty`). Steps wait for screen text, then send keys. |
+| `decide-hook.mjs` | P7-03: answers `BeforeTool(run_shell_command)` with `{"decision": $DECISION}` and logs to `$PROBE_LOG` (see [../gemini-approvals.md](../gemini-approvals.md)). |
 | `acp-driver.mjs` | Drives `gemini --acp` over JSON-RPC and answers permission requests (`allow` / `deny`). |
 | `script.json`, `tui-steps2.json` | The scenarios used for the committed fixtures. |
 

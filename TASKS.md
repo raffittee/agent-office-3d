@@ -592,7 +592,9 @@ need a look on your machine.
   options and "Other", answered by position and sent back with the original texts.
   - Answer `AskUserQuestion` prompts through the same flow.
   - **Ref:** `shared/answers.ts`.
-- [ ] **P7-03 Spike: Gemini approvals** (M)
+- [x] **P7-03 Spike: Gemini approvals** (M) — done: not safe or possible in 0.65.0: `BeforeTool` can deny or force a
+  prompt but `allow` is ignored, and it runs before the policy check (verified on the real TUI with a stub model).
+  Nothing built; see [docs/spikes/gemini-approvals.md](docs/spikes/gemini-approvals.md).
   - Can a `BeforeTool` decision safely mirror the CLI's own confirmation?
   - Document the answer. Implement it only if it's safe, and only as an opt-in.
 - [ ] **P7-04 Send messages** (M)

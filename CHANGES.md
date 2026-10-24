@@ -718,3 +718,10 @@ Branch `phase-1`. One commit per task, each pushed. At the end of the phase ther
 - With the office closed or the feature off, the hook steps aside at once and Claude Code asks in the terminal as
   before.
 
+### P7-03 Gemini approvals (spike) — done, 2026-10-25 06:57
+
+- **Answer: not possible.** Gemini CLI's hooks can refuse a tool call or force its prompt, but they can't approve
+  one, and they run before Gemini decides whether to ask you. Approving Gemini from the office would have meant
+  pausing every tool call, so it wasn't built. Gemini still asks in its terminal, and the office shows the raised hand
+  as before. Details: [docs/spikes/gemini-approvals.md](docs/spikes/gemini-approvals.md).
+

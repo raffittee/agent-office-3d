@@ -72,3 +72,14 @@ rules, only its email and organization may be read; the spike didn't need it.
 ## Fixtures
 
 See [`test/fixtures/claude-code/README.md`](../../test/fixtures/claude-code/README.md).
+
+## Plan usage (P5-04)
+
+Claude Code passes its statusline command a JSON on stdin that includes `rate_limits`
+(`five_hour` / `seven_day`, each `{used_percentage, resets_at}`, `resets_at` in seconds). **Source: Habblaud (Claude
+Code 2.1.293); not re-captured here**, since a statusline needs an interactive, signed-in session.
+`hooks/statusline-tap.mjs` (installed by `npm run usage:install`) sits in front of the user's statusline, keeps only
+those windows in `~/.agent-office/usage/claude-code-<account>.json`, and runs the original command unchanged. The
+tap accepts `used_percentage`, `utilization` or `used_percent`, so a renamed field doesn't break it.
+
+From `.claude.json`, the server reads only `oauthAccount.emailAddress` and `organizationName` (to name the account).

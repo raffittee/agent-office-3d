@@ -18,6 +18,7 @@ import type { LivenessTarget } from '../../../shared/model/office';
 import type { AgentEvent, AgentEventType, EventTool, ProviderCapabilities, SourceInfo } from '../../../shared/protocol';
 import { codexToolName, describeCodexTool } from '../../../shared/tools/codex';
 import { errMsg, log } from '../../log';
+import { usageFromCodex, type ProviderAccount } from '../../accounts/service';
 import { accountSlug, discoverCodexHomes, samePath, type CodexHome } from '../accounts';
 import type { AdapterContext, ProviderAdapter } from '../adapter';
 import { FileTail } from '../tail';
@@ -139,6 +140,19 @@ export class CodexAdapter implements ProviderAdapter {
   /** The latest plan usage per account (P5-04). */
   accountUsage(): CodexAccountUsage[] {
     return [...this.usage.values()];
+  }
+
+  /** Watched homes, with the plan usage the latest token_count reported. */
+  accounts(): ProviderAccount[] {
+    const list: ProviderAccount[] = this.homes.map((h) => ({ id: h.slug, dir: h.dir }));
+    for (const u of this.usage.values()) if (!list.some((a) => a.id === u.account)) list.push({ id: u.account });
+    for (const a of list) {
+      const u = this.usage.get(a.id);
+      if (!u) continue;
+      a.usage = usageFromCodex(u.limits, u.at);
+      if (u.limits.planType) a.plan = u.limits.planType;
+    }
+    return list;
   }
 
   /** Main agents: alive while their lock exists (when the home has locks). Subagents follow their session. */

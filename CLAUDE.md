@@ -417,6 +417,7 @@ Update this table as commands land. *(planned)* marks the ones that don't exist 
 | `npm run hooks:install -- --provider gemini-cli` · `--provider codex` | Install a provider's hooks (Gemini: `--profile light` or `full`; also `hooks:status`, `hooks:uninstall`) |
 | `npm run assets:fetch` · `npm run assets:build` | Download pinned asset sources into `assets-src/`, then build the committed GLBs and profiles |
 | `npm run shot` | After `npm run build`: screenshot the demo office in Chrome (`--sessions 30`, `--out <dir>`); CI runs it |
+| `npm run usage:install` · `usage:status` · `usage:uninstall` | Put the statusline tap in front of each Claude Code account's statusline (plan usage) |
 | `npm run theme:check` · `npm run theme:new -- <id>` | Validate theme packs (`-- --write-schema` regenerates the schema) and scaffold a new one |
 | `/preview.html?theme=<id>` | Every furniture kind of a theme side by side (hot-reloads under `npm run dev`) |
 | `npm run shot -- --themes` · `-- --thumbs` | Screenshot every theme (CI) · rewrite the theme picker thumbnails |

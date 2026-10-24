@@ -502,7 +502,11 @@ no page errors, 37–52 draw calls) and renders the preview page; `themes/cabin/
   adapter as the worked example.
   - A checklist in `docs/providers/adding-a-provider.md`: fixtures, tool table, liveness, capabilities, shim rules,
     tests.
-- [ ] **P5-04 Accounts & usage** (M)
+- [x] **P5-04 Accounts & usage** (M) — done: `server/accounts/service.ts` fills `snapshot.accounts` (one per watched
+  config folder or with sessions; email/org from `.claude.json` only; usage stale after 30 min); Claude usage from
+  `hooks/statusline-tap.mjs` (`npm run usage:install`, `scripts/usage-install.ts`), Codex usage from
+  `token_count.rate_limits`; Gemini has no source (P0-04). Top-bar chips in `client/src/ui/usage.ts`; demo numbers
+  labelled as such.
   - Detect accounts per provider, and show plan usage where the tool exposes it:
     - Claude: `rate_limits` from the statusline, or the mod;
     - Codex: `token_count.rate_limits`;

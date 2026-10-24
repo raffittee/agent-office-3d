@@ -609,3 +609,16 @@ Branch `phase-1`. One commit per task, each pushed. At the end of the phase ther
 
 - `docs/providers/adding-a-provider.md`: the checklist for teaching the office a new coding CLI, from recording what
   the real tool writes to the tests, with the Codex work as the example. (For your own agent, the SDK is enough.)
+
+### P5-04 Accounts & usage — done, 2026-10-25 07:10
+
+- **Plan usage in the top bar:** each account shows its 5-hour and weekly bars (green, then amber above 70%, red above
+  90%), with the reset times in the tooltip. Codex numbers come from its own files automatically.
+- **For Claude Code, run `npm run usage:install` once.** It puts a small "tap" in front of your statusline that saves
+  only the two usage numbers Claude Code already hands the statusline. Your own statusline keeps working exactly as
+  before (`npm run usage:uninstall` puts it back). No credentials and no network involved.
+- Accounts are named by their email when Claude Code knows it (only the email and organization are read).
+- Gemini CLI doesn't record plan usage anywhere we can read, so its chip shows the account without bars.
+- In the demo, the numbers are made up and the tooltip says so.
+- **Needs your machine:** after `npm run usage:install`, open a Claude Code session and check the bars appear (the
+  statusline format came from Habblaud's notes; I couldn't capture it here without a signed-in session).

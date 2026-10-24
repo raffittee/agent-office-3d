@@ -5,6 +5,7 @@ import type { ConnectionState, OfficeStore } from '../net/store';
 import type { WorldApi } from '../render3d/world';
 import { button, el } from './dom';
 import { ago, countByStatus, STATUS_COLORS, statusLabel } from './model';
+import { createUsage } from './usage';
 
 export function createTopbar(store: OfficeStore, world: WorldApi, actions: { settings(): void; help(): void }): HTMLElement {
   const root = el('header', 'ui-topbar');
@@ -16,6 +17,7 @@ export function createTopbar(store: OfficeStore, world: WorldApi, actions: { set
   root.append(
     brand,
     counters,
+    createUsage(store),
     el('div', 'ui-spacer'),
     conn,
     button('⤢', t('Frame the office (F)'), () => world.overview()),

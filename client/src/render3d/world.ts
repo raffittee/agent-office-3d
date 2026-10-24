@@ -8,16 +8,24 @@ import { BuildingView, type Cutaway } from './building';
 import { attachInput, CameraRig, type ViewInsets } from './camera';
 import { CharacterView } from './characters';
 import { Overlay } from './overlay';
+import { loadRigModel, RigView } from './rig';
 import { createScene, type Quality } from './scene';
+import { ScreenView } from './screens';
 import { mx, mz, tm } from './units';
 
 export type Selection = { type: 'agent'; id: string } | { type: 'room'; id: string } | null;
 
 export interface WorldSettings extends WorldOptions {
   cutaway: Cutaway;
+  /** Rigged models (when loaded) or the simple capsule people. */
+  characters: 'rigged' | 'capsule';
 }
 
-export const DEFAULT_WORLD_SETTINGS: WorldSettings = { ...DEFAULT_WORLD_OPTIONS, cutaway: 'cut' };
+export const DEFAULT_WORLD_SETTINGS: WorldSettings = { ...DEFAULT_WORLD_OPTIONS, cutaway: 'cut', characters: 'rigged' };
+
+/** Where the pipeline's character assets are served from, and the default character. */
+const CHARACTER_BASE = 'assets/characters';
+const CHARACTER_ID = 'robot';
 
 export interface WorldApi {
   select(sel: Selection, opts?: { focus?: boolean }): void;
@@ -36,7 +44,7 @@ export interface WorldApi {
   screenPositionOf(agentId: string): { x: number; y: number } | null;
   setViewInsets(insets: Partial<ViewInsets>): void;
   /** Frame stats for the debug readout and the smoke test. */
-  stats(): { fps: number; calls: number; triangles: number; agents: number; rooms: number };
+  stats(): { fps: number; cpuMs: number; phases: { sim: number; sync: number; render: number; labels: number }; calls: number; triangles: number; agents: number; rooms: number };
   readonly sim: Sim;
   destroy(): void;
 }
@@ -48,24 +56,44 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
   let options: WorldSettings = { ...DEFAULT_WORLD_SETTINGS, ...initial };
   const parts = createScene(canvas, quality);
   const { renderer, scene } = parts;
+  // world matrices are updated once per frame in the loop (before attachments), not again inside render()
+  scene.matrixWorldAutoUpdate = false;
   const sim = new Sim({ options: () => options });
   const building = new BuildingView();
   const chars = new CharacterView();
-  scene.add(building.root, chars.root);
-  const rig = new CameraRig();
+  const screens = new ScreenView();
+  scene.add(building.root, chars.root, screens.mesh);
+  const rig2d = new CameraRig();
   const overlay = new Overlay(overlayParent);
   canvas.tabIndex = 0;
+  // rigged characters replace the capsules once their model has loaded
+  let rig: RigView | null = null;
+  loadRigModel(CHARACTER_BASE, CHARACTER_ID)
+    .then((model) => {
+      rig = new RigView(model);
+      rig.providerColors = chars.providerColors;
+      scene.add(rig.root);
+    })
+    .catch((err: unknown) => console.warn('[world] rigged characters unavailable, using capsules', err));
+  const useRig = () => !!rig && options.characters === 'rigged';
+  const view = () => (useRig() ? rig! : chars);
 
   let selection: Selection = null;
   const selectCbs = new Set<(s: Selection) => void>();
   const hoverCbs = new Set<(h: { id: string; x: number; y: number } | null) => void>();
   let framed = false;
   let fps = 0;
+  /** Smoothed JavaScript time per frame (sim, scene sync, render submission, labels), in ms. */
+  let cpuMs = 0;
+  /** Smoothed time per phase (ms): the sim, scene sync (meshes, rigs, screens), render submission, labels. */
+  const phases = { sim: 0, sync: 0, render: 0, labels: 0 };
+  const ema = (k: keyof typeof phases, v: number) => (phases[k] = phases[k] ? phases[k] * 0.95 + v * 0.05 : v);
 
   // ---- data
   const applyProviders = () => {
     const colors = new Map((store.snapshot?.meta.providers ?? []).map((p) => [p.id, p.color]));
     chars.providerColors = colors;
+    if (rig) rig.providerColors = colors;
     overlay.providerColors = colors;
     chars.repaint();
   };
@@ -89,7 +117,7 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
     const same = JSON.stringify(sel) === JSON.stringify(selection);
     selection = sel;
     if (sel?.type === 'agent' && options.followSelected) followAgent(sel.id);
-    else if (!sel) rig.follow = null;
+    else if (!sel) rig2d.follow = null;
     if (!same) selectCbs.forEach((cb) => cb(sel));
   };
 
@@ -102,9 +130,9 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
       if (c.gone || c.inside || c.alpha < 0.3) continue;
       // test the head and the middle of the body
       for (const h of [1, 0.55]) {
-        chars.headPoint(c, tmpV);
+        view().headPoint(c, tmpV);
         tmpV.y *= h;
-        rig.project(tmpV, pt);
+        rig2d.project(tmpV, pt);
         const d = Math.hypot(pt.x - x, pt.y - y);
         if (d < bestD) {
           bestD = d;
@@ -115,7 +143,7 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
     return best;
   };
   const roomAt = (x: number, y: number): string | null => {
-    const g = rig.groundAt(x, y);
+    const g = rig2d.groundAt(x, y);
     if (!g) return null;
     for (const r of sim.rooms.values()) {
       if (!r.present || r.ghost) continue;
@@ -126,13 +154,13 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
   };
 
   const followAgent = (id: string) => {
-    rig.follow = () => {
+    rig2d.follow = () => {
       const c = sim.chars.get(id);
       return c ? { x: mx(c.x), z: mz(c.y) } : null;
     };
   };
 
-  const offInput = attachInput(canvas, rig, {
+  const offInput = attachInput(canvas, rig2d, {
     click(x, y) {
       const id = pick(x, y);
       if (id) setSelection({ type: 'agent', id });
@@ -160,25 +188,58 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
   const frame = (t: number) => {
     raf = 0;
     if (!running) return;
+    const t0 = performance.now();
     const dt = Math.min(0.1, Math.max(0, (t - last) / 1000));
     last = t;
     if (dt > 0) fps = fps ? fps * 0.95 + (1 / dt) * 0.05 : 1 / dt;
     const now = Date.now();
-    if (parts.resize() || !framed) rig.setViewport(canvas.clientWidth, canvas.clientHeight);
+    if (parts.resize() || !framed) rig2d.setViewport(canvas.clientWidth, canvas.clientHeight);
+    const tSim = performance.now();
     sim.update(dt, now);
+    ema('sim', performance.now() - tSim);
     if (!framed && sim.initialized) {
       framed = true;
       const b = building.bounds(sim);
-      rig.frame(b);
-      rig.zoom = rig.zoomGoal;
-      rig.target.copy(rig.targetGoal);
+      rig2d.frame(b);
+      rig2d.zoom = rig2d.zoomGoal;
+      rig2d.target.copy(rig2d.targetGoal);
     }
-    rig.update(dt);
-    building.sync(sim, rig.yaw, options.cutaway, now);
-    chars.sync(sim.chars.values(), dt);
+    rig2d.update(dt);
+    const tSync = performance.now();
+    const tb = performance.now();
+    building.sync(sim, rig2d.yaw, options.cutaway, now);
+    screens.sync(sim, now);
+    { const P = (globalThis as any).__perf; if (P) P.building += performance.now() - tb; }
+    const onScreen = (c: { x: number; y: number }) => {
+      tmpV.set(mx(c.x), 0.8, mz(c.y));
+      rig2d.project(tmpV, pt);
+      return pt.x > -80 && pt.y > -80 && pt.x < canvas.clientWidth + 80 && pt.y < canvas.clientHeight + 80;
+    };
+    if (useRig()) {
+      rig!.root.visible = true;
+      chars.root.visible = false;
+      rig!.sync(sim.chars.values(), dt, onScreen);
+      // one world-matrix update per frame: the attachments read bone positions from it, and render() skips its own
+      const tm0 = performance.now();
+      scene.updateMatrixWorld();
+      const P = (globalThis as any).__perf; if (P) { P.matrix += performance.now() - tm0; P.n++; }
+      rig!.attach();
+    } else {
+      if (rig) rig.root.visible = false;
+      chars.root.visible = true;
+      chars.sync(sim.chars.values(), dt);
+    }
     sim.effects.length = 0;
-    renderer.render(scene, rig.camera);
-    overlay.update(sim.chars.values(), sim.rooms.values(), chars, rig, options, selection?.type === 'agent' ? selection.id : null, now);
+    if (!useRig()) scene.updateMatrixWorld();
+    const tRender = performance.now();
+    ema('sync', tRender - tSync);
+    renderer.render(scene, rig2d.camera);
+    const tLabels = performance.now();
+    ema('render', tLabels - tRender);
+    overlay.update(sim.chars.values(), sim.rooms.values(), view(), rig2d, options, selection?.type === 'agent' ? selection.id : null, now);
+    ema('labels', performance.now() - tLabels);
+    const spent = performance.now() - t0;
+    cpuMs = cpuMs ? cpuMs * 0.95 + spent * 0.05 : spent;
     raf = requestAnimationFrame(frame);
   };
   const start = () => {
@@ -222,38 +283,38 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
     focusAgent(id, opts) {
       const c = sim.chars.get(id);
       if (!c) return;
-      rig.focus(mx(c.x), mz(c.y), Math.min(rig.zoomGoal, 16));
+      rig2d.focus(mx(c.x), mz(c.y), Math.min(rig2d.zoomGoal, 16));
       if (opts?.follow ?? options.followSelected) followAgent(id);
     },
     focusRoom(id) {
       const r = sim.rooms.get(id);
       if (!r) return;
       const rect = r.layout.rect;
-      rig.frame({ x0: tm(rect.x), z0: tm(rect.y), x1: tm(rect.x + rect.w), z1: tm(rect.y + rect.h) });
+      rig2d.frame({ x0: tm(rect.x), z0: tm(rect.y), x1: tm(rect.x + rect.w), z1: tm(rect.y + rect.h) });
     },
     overview() {
-      rig.frame(building.bounds(sim));
+      rig2d.frame(building.bounds(sim));
     },
-    zoomBy: (f) => rig.zoomBy(f),
-    rotate: (s) => rig.rotate(s),
+    zoomBy: (f) => rig2d.zoomBy(f),
+    rotate: (s) => rig2d.rotate(s),
     getOptions: () => ({ ...options }),
     setOptions(o) {
       options = { ...options, ...o };
-      if (o.followSelected === false) rig.follow = null;
+      if (o.followSelected === false) rig2d.follow = null;
       if (o.followSelected && selection?.type === 'agent') followAgent(selection.id);
     },
     screenPositionOf(agentId) {
       const c = sim.chars.get(agentId);
       if (!c || c.inside || c.gone) return null;
-      rig.project(chars.headPoint(c, tmpV), pt);
+      rig2d.project(view().headPoint(c, tmpV), pt);
       const r = canvas.getBoundingClientRect();
       if (pt.x < 0 || pt.y < 0 || pt.x > r.width || pt.y > r.height) return null;
       return { x: pt.x + r.left, y: pt.y + r.top };
     },
     setViewInsets(insets) {
-      rig.insets = { ...rig.insets, ...insets };
+      rig2d.insets = { ...rig2d.insets, ...insets };
     },
-    stats: () => ({ fps: Math.round(fps), calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, agents: sim.chars.size, rooms: [...sim.rooms.values()].filter((r) => !r.ghost).length }),
+    stats: () => ({ fps: Math.round(fps), cpuMs: +cpuMs.toFixed(2), phases: { sim: +phases.sim.toFixed(2), sync: +phases.sync.toFixed(2), render: +phases.render.toFixed(2), labels: +phases.labels.toFixed(2) }, calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, agents: sim.chars.size, rooms: [...sim.rooms.values()].filter((r) => !r.ghost).length }),
     destroy() {
       stop();
       offSnap();
@@ -261,6 +322,7 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
       document.removeEventListener('visibilitychange', onVisibility);
       overlay.dispose();
       building.dispose();
+      screens.dispose();
       chars.dispose();
       parts.dispose();
     },

@@ -9,3 +9,4 @@ never renumber. Supersede an ADR with a new one instead of rewriting it.
 | [0002](0002-event-protocol.md) | Provider-neutral event protocol | accepted |
 | [0003](0003-renderer-and-camera.md) | Renderer, camera and cutaway | accepted |
 | [0004](0004-assets.md) | Asset sources and pipeline | accepted |
+| [0005](0005-interim-character.md) | Interim character model and a model-agnostic rig | accepted |

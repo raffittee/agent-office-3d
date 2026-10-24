@@ -12,3 +12,4 @@ scratch/
 .claude/settings.local.json
 spikes/*/out/
 artifacts/
+assets-src/

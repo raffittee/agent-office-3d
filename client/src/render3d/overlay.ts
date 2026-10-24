@@ -5,7 +5,10 @@ import type { Character } from '../core/sim/character';
 import type { RoomState } from '../core/sim/room-state';
 import type { WorldOptions } from '../core/options';
 import type { CameraRig } from './camera';
-import type { CharacterView } from './characters';
+/** Anything that can say where a character's head is (capsules or rigged models). */
+export interface HeadSource {
+  headPoint(c: Character, out: THREE.Vector3): THREE.Vector3;
+}
 import { declutter, labelFor, type LabelView } from './labels';
 import { tm, WALL_H } from './units';
 
@@ -82,7 +85,7 @@ export class Overlay {
     return e;
   }
 
-  update(chars: Iterable<Character>, rooms: Iterable<RoomState>, view: CharacterView, rig: CameraRig, opts: WorldOptions, selected: string | null, now: number): void {
+  update(chars: Iterable<Character>, rooms: Iterable<RoomState>, view: HeadSource, rig: CameraRig, opts: WorldOptions, selected: string | null, now: number): void {
     const zoomPx = rig.pxPerMetre;
     const seen = new Set<string>();
     const byId = new Map<string, Character>();

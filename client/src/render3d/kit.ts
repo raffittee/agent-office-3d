@@ -24,7 +24,6 @@ const FOLIAGE: Record<string, string> = { fern: '#4f8f45', succulent: '#6aa36d',
 const METAL = '#9aa3ad';
 const DARK = '#3a3d42';
 const POT = '#c9845c';
-const SCREEN = '#5fa8ff';
 const GLASS = '#bfe3f2';
 
 /** Box helper in metres. */
@@ -75,15 +74,14 @@ export function furnitureParts(kind: FurnitureKind, variant?: string): Part[] {
     case 'desk':
     case 'desk_back': {
       const top = WOOD[variant ?? 'wood'] ?? WOOD.wood!;
-      // desk: the monitor sits at the back (north), facing south; desk_back: the other way round
+      // desk: the monitor sits at the back (north), facing south; desk_back: the other way round. Its live screen
+      // is drawn by screens.ts (deskScreen in screens-model.ts).
       const mz0 = kind === 'desk' ? 0.06 : d - 0.12;
-      const sz0 = kind === 'desk' ? mz0 + 0.04 : mz0 - 0.01;
       return [
         b(0.03, 0.03, w - 0.03, d - 0.03, 0.71, 0.75, top),
         b(0.05, 0.05, 0.1, d - 0.05, 0, 0.71, DARK),
         b(w - 0.1, 0.05, w - 0.05, d - 0.05, 0, 0.71, DARK),
         b(w / 2 - 0.3, mz0, w / 2 + 0.3, mz0 + 0.06, 0.8, 1.15, DARK),
-        b(w / 2 - 0.27, sz0, w / 2 + 0.27, sz0 + 0.02, 0.83, 1.12, SCREEN, 'glow'),
         b(w / 2 - 0.04, mz0, w / 2 + 0.04, mz0 + 0.06, 0.75, 0.8, DARK),
       ];
     }

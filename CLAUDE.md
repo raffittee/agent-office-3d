@@ -1,6 +1,6 @@
 # Agent Office — guide for AI agents
 
-> **Status: Phases 0–2 done (pending on the user's machine: a live Gemini CLI check and the 50 fps check); Phase 3 next.** The phased plan lives in [TASKS.md](TASKS.md).
+> **Status: Phases 0–3 done (pending on the user's machine: a live Gemini CLI check and the frame-rate checks); Phase 4 next.** The phased plan lives in [TASKS.md](TASKS.md).
 > Provider facts: [docs/providers/](docs/providers/). Decisions: [docs/adr/](docs/adr/). Spike results:
 > [docs/spikes/](docs/spikes/).
 
@@ -401,6 +401,7 @@ Update this table as commands land. *(planned)* marks the ones that don't exist 
 | `node spikes/renderer/measure.mjs` · `node spikes/assets/measure.mjs <dir>` | Re-run the Phase 0 measurements |
 | `npm run demo` | Dev mode with simulated agents from several providers (`AGENT_OFFICE_DEMO=1` or `--demo` on any run) |
 | `npm run hooks:install -- --provider gemini-cli` | Install a provider's hooks (`--profile light` or `full`; also `hooks:status`, `hooks:uninstall`) |
+| `npm run assets:fetch` · `npm run assets:build` | Download pinned asset sources into `assets-src/`, then build the committed GLBs and profiles |
 | `npm run shot` | After `npm run build`: screenshot the demo office in Chrome (`--sessions 30`, `--out <dir>`); CI runs it |
 | `npm run theme:check` · `npm run theme:new -- <id>` *(planned)* | Validate theme packs and scaffold a new one |
 
@@ -444,5 +445,10 @@ Update this table as commands land. *(planned)* marks the ones that don't exist 
   account ids. See [ADR 0002](docs/adr/0002-event-protocol.md) (accepted in P1-01).
 - **D14:** Gemini CLI ≥ 0.65.0 is supported, with `light` (default on Windows) and `full` hook profiles. Tailing the
   chat file is mandatory. See [docs/providers/gemini-cli.md](docs/providers/gemini-cli.md).
+
+**Settled in Phase 3 (2026-10-25):**
+
+- **D15:** Until the ADR 0004 human pack can be built, the default character is Quaternius's RobotExpressive (CC0),
+  driven by a model-agnostic rig profile. See [ADR 0005](docs/adr/0005-interim-character.md).
 
 ADRs are listed in [docs/adr/README.md](docs/adr/README.md).

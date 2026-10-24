@@ -119,10 +119,34 @@ describe('the placeholder kit', () => {
     }
   });
 
-  it('desk monitors face the person: desk to the south, desk_back to the north', () => {
-    const glow = (k: 'desk' | 'desk_back') => furnitureParts(k).find((p) => p.mat === 'glow')!;
-    expect(glow('desk').z0).toBeLessThan(0.25);
-    expect(glow('desk_back').z0).toBeGreaterThan(0.25);
+  it('desk screens sit on the monitor and face the person: desk to the south, desk_back to the north', async () => {
+    const { deskScreen } = await import('./screens-model');
+    for (const k of ['desk', 'desk_back'] as const) {
+      const sc = deskScreen(k)!;
+      const monitor = furnitureParts(k).find((p) => p.y1 > 1.1 && p.x1 - p.x0 > 0.5)!;
+      // on the monitor's face that looks at the sitter
+      expect(Math.abs(sc.z - (sc.facing === 1 ? monitor.z1 : monitor.z0))).toBeLessThan(0.01);
+      expect(sc.y - sc.h / 2).toBeGreaterThanOrEqual(monitor.y0);
+      expect(sc.y + sc.h / 2).toBeLessThanOrEqual(monitor.y1);
+    }
+    expect(deskScreen('desk')!.facing).toBe(1);
+    expect(deskScreen('desk_back')!.facing).toBe(-1);
+    expect(deskScreen('stool')).toBeNull();
+  });
+
+  it('a desk screen follows its occupant and the room light', async () => {
+    const { deskScreenMode } = await import('./screens-model');
+    const c = new Character(agent({ activity: { id: 'x', kind: 'test', icon: '🧪', text: 'Running tests', at: T0 } }));
+    c.mode = 'work';
+    expect(deskScreenMode(c, 1)).toBe('terminal');
+    c.mode = 'wait';
+    expect(deskScreenMode(c, 1)).toBe('alert');
+    c.mode = 'shell';
+    expect(deskScreenMode(c, 1)).toBe('progress');
+    c.mode = 'idle';
+    expect(deskScreenMode(c, 1)).toBe('idle');
+    expect(deskScreenMode(null, 1)).toBe('standby');
+    expect(deskScreenMode(c, 0)).toBe('off');
   });
 });
 
@@ -198,5 +222,46 @@ describe('labels', () => {
       { id: 'apart', rect: { x: 200, y: 0, w: 50, h: 20 }, priority: 0 },
     ]);
     expect([...kept].sort()).toEqual(['apart', 'high']);
+  });
+});
+
+describe('rigged characters', () => {
+  const all = () => true;
+  const none = () => false;
+
+  it('picks a base clip per pose: seated poses sit, walking walks, the clip covers what it can', async () => {
+    const { baseClipFor } = await import('./rig');
+    expect(baseClipFor('type', true, all)).toBe('sit');
+    expect(baseClipFor('sleep', true, all)).toBe('sit');
+    expect(baseClipFor('wait', true, all)).toBe('sit');
+    expect(baseClipFor('raise_hand', true, all)).toBe('sit');
+    expect(baseClipFor('raise_hand', false, all)).toBe('wave');
+    expect(baseClipFor('raise_hand', false, none)).toBe('idle');
+    expect(baseClipFor('walk', false, all)).toBe('walk');
+    expect(baseClipFor('run', false, none)).toBe('walk');
+    expect(baseClipFor('cheer', false, all)).toBe('dance');
+    expect(baseClipFor('talk', false, all)).toBe('yes');
+    expect(baseClipFor('sulk', false, all)).toBe('no');
+    expect(baseClipFor('drink', false, all)).toBe('idle');
+  });
+
+  it('layers procedural poses only where the clip does not already do the motion', async () => {
+    const { layersFor } = await import('./rig');
+    expect(layersFor('walk', 'walk')).toEqual({ arms: false, head: false, lean: false });
+    expect(layersFor('raise_hand', 'wave')).toEqual({ arms: false, head: false, lean: false });
+    expect(layersFor('type', 'sit')).toEqual({ arms: true, head: true, lean: true });
+    expect(layersFor('sit', 'sit').arms).toBe(false);
+    expect(layersFor('raise_hand', 'sit').arms).toBe(true);
+  });
+
+  it('at least 10 distinct poses are animated (exit criterion): base clip or a procedural layer', async () => {
+    const { baseClipFor, layersFor } = await import('./rig');
+    const poses = ['stand', 'walk', 'run', 'sit', 'type', 'sleep', 'drink', 'use', 'raise_hand', 'talk', 'stretch', 'read', 'wait', 'cheer', 'sulk'] as const;
+    const animated = poses.filter((p) => {
+      const base = baseClipFor(p, false, all);
+      const l = layersFor(p, base);
+      return base !== 'idle' || l.arms || l.head || l.lean;
+    });
+    expect(animated.length).toBeGreaterThanOrEqual(10);
   });
 });

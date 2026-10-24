@@ -68,6 +68,10 @@ export function openSettings(root: HTMLElement, world: WorldApi): () => void {
         ['lively', t('Often')],
       ], (v) => set({ liveliness: v })),
       toggle(t('Camera follows the selected agent'), o.followSelected, (v) => set({ followSelected: v })),
+      select(t('Characters'), o.characters, [
+        ['rigged', t('Robots')],
+        ['capsule', t('Simple shapes')],
+      ], (v) => set({ characters: v })),
       select(t('Walls in front'), o.cutaway, [
         ['cut', t('Cut down')],
         ['hide', t('Hidden')],

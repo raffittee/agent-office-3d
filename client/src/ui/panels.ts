@@ -61,7 +61,7 @@ export function createTopbar(store: OfficeStore, world: WorldApi, actions: { set
     conn.after(perf);
     setInterval(() => {
       const st = world.stats();
-      perf.textContent = t('{0} fps · {1} draw calls · {2} agents', [st.fps, st.calls, st.agents]);
+      perf.textContent = t('{0} fps · {1} ms CPU · {2} draw calls · {3} agents', [st.fps, st.cpuMs, st.calls, st.agents]);
     }, 1000);
   }
   return root;

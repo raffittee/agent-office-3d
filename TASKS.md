@@ -364,31 +364,52 @@ Gemini sessions appear, and clicking an agent opens its drawer.
 
 ## Phase 3: Characters & art pipeline
 
-- [ ] **P3-01 Asset pipeline** (M)
+- [x] **P3-01 Asset pipeline** (M) — done: `scripts/assets/` (`assets:fetch` with pinned SHA-256 into git-ignored
+  `assets-src/`; `assets:build`: strip unlit, drop morphs, trim finger joints, bake material slots into vertex colors
+  + a `_TINT` mask, convert rigid parts to skinned, merge to one mesh, meshopt; budget checks), `test/assets.test.ts`
+  (transforms on synthetic models; every committed asset listed in `ASSETS.md`; character budgets). KTX2 isn't wired:
+  no textures yet and `toktx` isn't installable from npm (Phase 4, when themes bring textures).
   - `scripts/assets/`: `gltf-transform` compression, KTX2 textures, and budget checks (triangles, texture sizes).
   - Check that every file is listed in `ASSETS.md`.
-- [ ] **P3-02 Rigged characters** (L)
+- [x] **P3-02 Rigged characters** (L) — done: `render3d/rig.ts` (one skinned mesh per agent from
+  `client/public/assets/characters/robot.glb`, 1 draw call, 23 joints; mixer with crossfades; pose → base clip map;
+  procedural layers in character space for type, raised hand when seated, sleep, popcorn…; seat offset from the
+  profile; capsules as fallback and as a setting). The model is RobotExpressive per ADR 0005 (the ADR 0004 human
+  pack needs a download this environment can't make); at 3.2k triangles a 25% LOD isn't needed.
   - One shared rigged glTF, with a map from pose to animation clip (Quaternius, ADR 0004).
   - Procedural pose layers for the poses the free clips lack: type, wave, sleep, raise hand.
   - Character budget from ADR 0004: one material, no finger bones, a 25% LOD.
   - An `AnimationMixer` manager with crossfades, and sitting offsets for each seat type.
   - **Ref:** the `Pose` list in `client/src/art/api.ts`.
-- [ ] **P3-03 Appearance** (M)
+- [x] **P3-03 Appearance** (M) — done for the robot: the seed recolors its main slot through the baked `_TINT` mask
+  (one material per character), subagents are smaller and wear a lanyard, and the provider badge is instanced on the
+  chest in the provider's color. Hair and accessory meshes wait for the human pack (ADR 0005).
   - Seed → skin, hair, outfit and accessories, using material slots and swappable meshes.
   - Subagents wear a lanyard; the provider badge color matches the provider.
   - **Ref:** `shared/appearance.ts`, `client/src/art/character/appearance.ts`.
-- [ ] **P3-04 Held items** (S)
+- [x] **P3-04 Held items** (S) — done: coffee, water, laptop, papers, book, box, phone, controller, paddle and popcorn
+  follow the right hand bone, drawn as one instanced mesh for everyone.
   - Attach items to bone sockets: coffee, laptop, papers, phone, controller, paddle, popcorn.
-- [ ] **P3-05 Live monitors** (M)
+- [x] **P3-05 Live monitors** (M) — done: `render3d/screens.ts` (all desk screens as one instanced mesh textured from
+  a shared 512×512 canvas atlas; code, terminal, browser, search, docs, chat, tasks, alert, progress, idle, standby,
+  off; animated tiles redrawn every 250 ms; dimmed with the room) and `render3d/screens-model.ts` (pure: mode from the
+  seated occupant via `screenModeFor`, screen placement on the monitor; tested).
   - Desk screens show a screen mode (code, terminal, browser, docs, chat, alert) from small shared canvas
     textures, and go dark with the room.
   - **Ref:** `screenModeFor` in `client/src/world/sim/behavior.ts`, `client/src/art/dynamic.ts`.
-- [ ] **P3-06 Performance pass** (M)
+- [x] **P3-06 Performance pass** (M) — done: off-screen robots not drawn and animated at ¼ rate, one world-matrix
+  update per frame, pose layers without world-matrix queries, allocation-free hot paths, per-phase timings in
+  `world.stats()` and `?stats=1`; results and method in `docs/perf.md` (38 agents, 6 rooms: 72 draw calls). Frame
+  rate needs a real GPU (the cloud renders in software).
   - Instancing, static geometry merging, frustum culling, a texture atlas.
   - Skip animation updates for characters that are off-screen.
   - Record the results against the budget in `docs/perf.md`.
 
 **Exit:** rigged characters with at least 10 poses, and the performance budget in `CLAUDE.md` is met.
+
+> **Exit status (2026-10-25):** rigged characters animate 15 poses (a test checks ≥ 10); draw calls are within budget
+> (72 for 38 agents and 6 rooms, about 160 projected for 15 rooms). The 60 fps check needs the user's integrated GPU:
+> `/?mock=1&sessions=30&stats=1` (see `docs/perf.md`). The characters are the interim robot (ADR 0005).
 
 ---
 

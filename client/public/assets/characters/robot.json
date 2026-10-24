@@ -1,0 +1,45 @@
+{
+  "file": "robot.glb",
+  "asset": "robot-expressive",
+  "height": 4.461,
+  "scale": 0.269,
+  "seat": {
+    "back": 0,
+    "up": 0.3
+  },
+  "clips": {
+    "idle": "Idle",
+    "walk": "Walking",
+    "run": "Running",
+    "sit": "Sitting",
+    "wave": "Wave",
+    "yes": "Yes",
+    "no": "No",
+    "thumbsUp": "ThumbsUp",
+    "dance": "Dance",
+    "jump": "Jump"
+  },
+  "holdClips": [
+    "sit"
+  ],
+  "bones": {
+    "hips": "Hips",
+    "spine": "Abdomen",
+    "chest": "Torso",
+    "neck": "Neck",
+    "head": "Head",
+    "upperArmL": "UpperArm.L",
+    "lowerArmL": "LowerArm.L",
+    "handL": "Palm2.L",
+    "upperArmR": "UpperArm.R",
+    "lowerArmR": "LowerArm.R",
+    "handR": "Palm2.R",
+    "upperLegL": "UpperLeg.L",
+    "lowerLegL": "LowerLeg.L",
+    "upperLegR": "UpperLeg.R",
+    "lowerLegR": "LowerLeg.R"
+  },
+  "tintSlots": [
+    "Main"
+  ]
+}

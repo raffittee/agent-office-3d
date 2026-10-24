@@ -1,5 +1,5 @@
 // Ported from habblaud server/sources/registry.test.ts (MIT, © 2026 Márcio Junior)
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { tempDir } from '../../test/helpers';
@@ -82,6 +82,18 @@ describe('session registry', () => {
     expect(reader.poll().entries[0]!.status).toBe('idle');
     rmSync(file);
     expect(reader.poll().entries).toEqual([]);
+  });
+
+  it('sees a same-size rewrite in the same mtime tick (busy → idle)', () => {
+    const file = join(sessions, '21.json');
+    const tick = new Date('2026-10-24T18:00:00Z');
+    writeFileSync(file, entry(21, { status: 'busy' }));
+    utimesSync(file, tick, tick);
+    const reader = new RegistryReader(tmp.dir, { checkPid: false });
+    expect(reader.poll().entries[0]!.status).toBe('busy');
+    writeFileSync(file, entry(21, { status: 'idle' }));
+    utimesSync(file, tick, tick);
+    expect(reader.poll().entries[0]!.status).toBe('idle');
   });
 
   it('a missing sessions/ folder is reported as a source with a problem', () => {

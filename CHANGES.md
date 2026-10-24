@@ -1,7 +1,8 @@
-# Changes log (overnight Phase 0 run)
+# Changes log
 
-A running log of what was done while you were away, what was decided on your behalf, and what needs your eyes.
-Newest task at the bottom. Branch: `phase-0` (pushed to `origin`; `main` is untouched).
+A running log of what was done, what was decided on your behalf, and what needs your eyes. Newest entry at the
+bottom. Timestamps are your local time (UTC+08:00). Each phase has its own branch (`phase-N`), merged into `main`
+through a pull request when the phase ends.
 
 ## Start here
 
@@ -350,3 +351,45 @@ Branch `phase-1`. One commit per task, each pushed. At the end of the phase ther
   3. `npm run hooks:install -- --provider gemini-cli`.
   4. Start `npm run dev` and use Gemini in any folder.
   I didn't touch your `~/.gemini` settings.
+
+### Phase 1 partial commit (yours) — 2026-10-25 03:57
+
+- `09e9cf7` "Partial completion of phase 1": the demo simulator (`shared/demo/simulator.ts`, its tests,
+  `shared/demo/mock.ts`, `server/adapters/demo.ts`, `npm run demo`). The reducer and rooms moved from `server/model/`
+  to `shared/model/` so the browser can run them too.
+
+### Fix: Gemini replay tests on Linux — 2026-10-25 04:04
+
+- The 5 Gemini replay tests failed on Linux (and in CI's Ubuntu job since P1-10). The test helper used the Linux
+  `basename()` on the Windows paths stored in the recorded samples. It now uses `win32.basename`, which handles both.
+  The adapter itself was fine.
+
+### P1-11 Demo simulator — done, 2026-10-25 04:05
+
+- Reviewed your partial commit: it already met the task. The same seed always gives the same office; four providers
+  are mixed (Claude Code, Gemini CLI, Codex, Demo); `AGENT_OFFICE_DEMO=1`, `--demo` and `npm run demo` start it.
+- Checked live: the built server in demo mode showed 5 agents in 3 rooms with all four badges.
+
+### P1-12 Debug page — done, 2026-10-25 04:07
+
+- `client/src/debug/`: rooms, then their agents (subagents indented under their parent), each with a provider badge,
+  status, job count and current activity. Live over `/api/stream`; `?mock=1` runs the demo office inside the
+  browser with no server data.
+- Checked in Chromium: demo agents and this cloud session's own Claude Code session showed up side by side. Status
+  changes sent to `/api/events` reached the page in about 200 ms (the target is 2 s).
+
+### Fix: Claude Code status missed on Windows — 2026-10-25 04:20
+
+- CI's Windows job caught a real bug: the reader of `sessions/<pid>.json` skipped files whose modification time and
+  size hadn't changed. `"busy"` and `"idle"` are the same length, and on Windows two quick writes can share a
+  timestamp, so an agent could stay "working" after it went idle. The files are tiny, so they're now re-read every
+  poll and compared by content. A new test reproduces the old failure.
+
+### Phase 1 closed — 2026-10-25 04:25
+
+- All 12 tasks are ticked. Pull request `phase-1` → `main`.
+- **Exit check, one item left for you:** a real Gemini CLI session on your machine (needs Gemini ≥ 0.65 and a
+  sign-in; see P1-10 above). Real Claude Code sessions, the demo, the 2 s latency and all tests are verified.
+- **Decision I made:** start Phase 2 anyway. Phase 2 is the browser side and runs on the demo data, so nothing in it
+  depends on the Gemini check. If your Gemini test shows a problem, the fix goes into the Gemini adapter alone.
+

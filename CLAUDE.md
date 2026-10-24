@@ -1,6 +1,6 @@
 # Agent Office — guide for AI agents
 
-> **Status: Phase 0 (foundation and spikes) done; Phase 1 next.** The phased plan lives in [TASKS.md](TASKS.md).
+> **Status: Phases 0–1 done (a live Gemini CLI check is pending on the user's machine); Phase 2 next.** The phased plan lives in [TASKS.md](TASKS.md).
 > Provider facts: [docs/providers/](docs/providers/). Decisions: [docs/adr/](docs/adr/). Spike results:
 > [docs/spikes/](docs/spikes/).
 

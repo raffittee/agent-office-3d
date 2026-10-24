@@ -5,7 +5,7 @@
 //
 // Only `*.json` is opened: the same folder holds `<pid>.<hash>.key` files, which are never read.
 import { execFile } from 'node:child_process';
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { WaitingReason } from '../../../shared/protocol';
 import { describeClaudeWaitingFor } from '../../../shared/tools/claude-code';
@@ -164,8 +164,9 @@ export interface RegistryPoll {
 }
 
 interface Cached {
-  mtimeMs: number;
-  size: number;
+  /** The text last parsed. mtime + size can't tell a rewrite apart: "busy" and "idle" are the same length, and two
+   * writes can share an mtime tick (coarse on Windows). The files are tiny, so each poll reads them again. */
+  text: string;
   entry: RegistryEntry | undefined;
 }
 
@@ -198,23 +199,23 @@ export class RegistryReader {
       if (!/^\d+\.json$/.test(name)) continue;
       const file = join(this.sessionsDir, name);
       seen.add(file);
-      let st;
+      let text: string;
       try {
-        st = statSync(file);
+        text = readFileSync(file, 'utf8');
       } catch {
         continue;
       }
       let cached = this.cache.get(file);
-      if (!cached || cached.mtimeMs !== st.mtimeMs || cached.size !== st.size) {
+      if (!cached || cached.text !== text) {
         let entry: RegistryEntry | undefined;
         try {
-          entry = parseRegistryEntry(readFileSync(file, 'utf8'));
+          entry = parseRegistryEntry(text);
         } catch {
           entry = undefined;
         }
-        if (entry) cached = { mtimeMs: st.mtimeMs, size: st.size, entry };
+        if (entry) cached = { text, entry };
         // Invalid JSON (the file is being written): keep the last good version and try again next round.
-        else cached = cached ? { ...cached } : { mtimeMs: 0, size: -1, entry: undefined };
+        else cached = cached ?? { text: '', entry: undefined };
         this.cache.set(file, cached);
       }
       const e = cached.entry;

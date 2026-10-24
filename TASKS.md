@@ -262,6 +262,9 @@ The plan, phase by phase. [CLAUDE.md](CLAUDE.md) has the design, contracts and r
 **Exit:** a real Claude Code session and a real Gemini CLI session on this machine both show up in the debug page;
 their status changes (working, waiting, idle, offline) appear within 2 s; the demo runs; all tests pass.
 
+> **Exit status (2026-10-25):** met except the live Gemini CLI session, which needs Gemini ≥ 0.65 and a sign-in on
+> the user's machine. Phase 2 starts anyway: it runs on demo data and doesn't depend on that check.
+
 ---
 
 ## Phase 2: 3D world MVP (placeholder art)

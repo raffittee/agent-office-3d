@@ -161,7 +161,8 @@ describe('Codex adapter', () => {
     }
   };
   const hook = (p: Record<string, unknown>) => {
-    const body = shim.buildBody(JSON.parse(JSON.stringify(p).replaceAll('/home/dev/.codex', home)), () => 777, {});
+    // the home as a JSON string's inside (Windows paths have backslashes)
+    const body = shim.buildBody(JSON.parse(JSON.stringify(p).replaceAll('/home/dev/.codex', JSON.stringify(home).slice(1, -1))), () => 777, {});
     for (const e of adapter.onHook(body)) {
       emitted.push(e);
       office.apply(e);

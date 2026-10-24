@@ -23,10 +23,12 @@ import {
   type OfficeSnapshot,
   type ProviderId,
   type ProviderMeta,
+  type RoomEffect,
   type RoomInfo,
   type ShellJob,
   type SourceInfo,
 } from '../protocol';
+import { ALARM_MS, PARTY_MS, roomSignalCandidate, settleSignal, signalText, type RoomSignalCandidate } from '../room-effects';
 import { describeToolFor } from '../tools';
 import { SlotAllocator, normalizeCwd, roomDisplayNames } from './rooms';
 
@@ -99,9 +101,11 @@ interface AgentRecord {
   shellWait?: { id: string; prev?: Activity };
   /** Open tool calls (id or name → start time), for durations. */
   openTools: Map<string, number>;
+  /** Open tool calls that may become a room effect (id or name → candidate), settled at tool.end. */
+  roomFx?: Map<string, RoomSignalCandidate>;
 }
 
-type NoticeKind = 'arrive' | 'room' | 'wait' | 'deliver' | 'done' | 'leave' | 'shell' | 'jobDone';
+type NoticeKind = 'arrive' | 'room' | 'wait' | 'deliver' | 'done' | 'leave' | 'shell' | 'jobDone' | 'effect';
 
 function zeroStats(): AgentStats {
   return { toolCalls: 0, tokensIn: 0, tokensOut: 0, subagents: 0 };
@@ -145,7 +149,7 @@ export class Office {
   private agents = new Map<string, AgentRecord>();
   /** Main-agent id of a session that continues another (`/clear`) → the id of the agent it continues. */
   private aliases = new Map<string, string>();
-  private rooms = new Map<string, { path: string; createdAt: number }>();
+  private rooms = new Map<string, { path: string; createdAt: number; effect?: RoomEffect }>();
   private slots = new SlotAllocator(SLOT_COOLDOWN_MS);
   private roomNames = new Map<string, string>();
   private feed: FeedItem[] = [];
@@ -300,6 +304,7 @@ export class Office {
         break;
       case 'turn.end':
         rec.openTools.clear();
+        rec.roomFx?.clear();
         this.setStatus(rec, rec.info.jobs?.some((j) => j.background) ? 'shell' : 'idle');
         break;
       case 'tool.start':
@@ -417,6 +422,7 @@ export class Office {
     delete info.jobs;
     delete rec.shellWait;
     rec.openTools.clear();
+    delete rec.roomFx;
     rec.removeAt = now + OFFLINE_GRACE_MS;
     for (const sub of this.descendants(info.id)) {
       delete sub.info.jobs;
@@ -499,6 +505,8 @@ export class Office {
     const desc = describeToolFor(rec.info.provider, tool.name, tool.input);
     const key = tool.id ?? `${tool.name}#${++this.seq}`;
     rec.openTools.set(tool.id ?? tool.name, e.at);
+    const fx = roomSignalCandidate(tool.name, tool.input);
+    if (fx) (rec.roomFx ??= new Map()).set(tool.id ?? tool.name, fx);
     const act: Activity = { id: `${rec.info.id}#tool:${key}`, at: e.at, tool: tool.name, ...desc };
     rec.info.stats.toolCalls++;
     this.addActivity(rec, act);
@@ -509,6 +517,11 @@ export class Office {
     const tool = e.tool!;
     const started = rec.openTools.get(tool.id ?? tool.name);
     rec.openTools.delete(tool.id ?? tool.name);
+    const fx = rec.roomFx?.get(tool.id ?? tool.name);
+    if (fx) {
+      rec.roomFx!.delete(tool.id ?? tool.name);
+      this.roomSignal(rec, settleSignal(fx, tool.ok), e.at);
+    }
     if (tool.ok === false) {
       const err = tool.error ?? '';
       const desc = err === 'denied' ? SPECIAL.rejected(tool.name) : err === 'cancelled' ? SPECIAL.cancelled() : SPECIAL.error(tool.name, err || undefined);
@@ -520,6 +533,25 @@ export class Office {
     // A finished tool ends a wait (the permission was answered); a denial or cancel usually ends the turn too,
     // and the adapter follows with turn.end.
     if (rec.info.status === 'waiting') this.setStatus(rec, 'working');
+  }
+
+  /**
+   * A party or an alarm in the agent's room (P6-04). A green CI ends the room's alarm (with a short party); a
+   * plain green CI with no alarm is routine and shows nothing. Old events (a boot replaying transcripts) don't fire.
+   */
+  private roomSignal(rec: AgentRecord, sig: ReturnType<typeof settleSignal>, at: number): void {
+    if (!sig) return;
+    const room = this.rooms.get(rec.info.roomId);
+    if (!room) return;
+    const now = this.now();
+    const alarm = sig.kind === 'ci_failed';
+    if (sig.kind === 'ci_passed' && room.effect?.kind !== 'alarm') return;
+    const until = Math.min(at, now) + (alarm ? ALARM_MS : PARTY_MS);
+    if (this.booting || until <= now) return;
+    const text = signalText(sig);
+    room.effect = { kind: alarm ? 'alarm' : 'party', text, at: now, until, agentId: rec.info.id };
+    this.dirty = true;
+    this.notice('effect', rec.info.id, alarm ? 'alert' : 'success', `${rec.info.name}: ${text}`, rec.info.roomId, { dedupeKey: `${rec.info.roomId}|fx|${text}` });
   }
 
   private jobStart(rec: AgentRecord, e: AgentEvent): void {
@@ -715,6 +747,12 @@ export class Office {
   tick(): void {
     const now = this.now();
     let removed = false;
+    for (const room of this.rooms.values()) {
+      if (room.effect && now >= room.effect.until) {
+        delete room.effect;
+        this.dirty = true;
+      }
+    }
     for (const [id, rec] of this.agents) {
       if (rec.removeAt !== undefined && now >= rec.removeAt) {
         this.agents.delete(id);
@@ -755,7 +793,11 @@ export class Office {
     const now = this.now();
     this.slots.sync(this.rooms.keys(), now);
     const rooms: RoomInfo[] = [...this.rooms]
-      .map(([id, r]) => ({ id, name: this.roomName(id), path: r.path, slot: this.slots.slotOf(id) ?? 0, seed: hash32(id), createdAt: r.createdAt }))
+      .map(([id, r]) => {
+        const room: RoomInfo = { id, name: this.roomName(id), path: r.path, slot: this.slots.slotOf(id) ?? 0, seed: hash32(id), createdAt: r.createdAt };
+        if (r.effect && now < r.effect.until) room.effect = { ...r.effect };
+        return room;
+      })
       .sort((a, b) => a.slot - b.slot);
     const agents = [...this.agents.values()].map((r) => {
       const a = cloneAgent(r.info);

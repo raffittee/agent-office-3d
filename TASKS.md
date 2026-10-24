@@ -549,7 +549,9 @@ Python and both examples) in the office alongside the built-in providers.
   - Hourglass, popcorn, crossed arms, cobwebs, dozing off. Celebrate when the command succeeds; a rain cloud when
     it fails.
   - **Ref:** `client/src/world/sim/shell.ts`.
-- [ ] **P6-04 Room effects** (M)
+- [x] **P6-04 Room effects** (M) — done: `shared/room-effects.ts` turns `gh` commands and GitHub MCP tools into party
+  or alarm signals; the reducer sets `RoomInfo.effect` (party 12 s, alarm until green CI or 10 min) and notices;
+  `render3d/effects.ts` rains confetti and spins red beacons, `overlay.ts` adds the banner; the demo shows it.
   - GitHub party and alarm events (PR merged, CI red), generalized into a provider-neutral `RoomEffect`.
   - **Ref:** `server/sources/github.ts`, `shared/github.ts`, `client/src/world/render/github-fx.ts`.
 - [ ] **P6-05 Sounds** (M)

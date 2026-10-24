@@ -128,12 +128,13 @@ export class Sim {
       listed.add(r.id);
       const rs = this.rooms.get(r.id);
       if (!rs) {
-        this.createRoom(r, first, now);
+        this.createRoom(r, first, now).syncEffect(snap.serverTime, now);
         layoutDirty = true;
         continue;
       }
       if (rs.info.name !== r.name || rs.info.seed !== r.seed) rs.version++;
       rs.info = r;
+      rs.syncEffect(snap.serverTime, now);
       if (!rs.listed) {
         rs.listed = true;
         rs.readyToDismantleAt = 0;

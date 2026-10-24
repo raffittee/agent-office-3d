@@ -1,24 +1,32 @@
 // Shell-wait gags in 3D (P6-03): a confetti burst when a job succeeds, a little rain cloud with falling drops when it
 // fails, and a cobweb that grows on a long wait (sim/shell.ts decides when). Three instanced meshes for everyone, so
-// the cost doesn't grow with the number of agents. Reads the sim; never writes it.
+// the cost doesn't grow with the number of agents. Room effects (P6-04): confetti raining over a room in party, and
+// in alarm two red beacons in the back corners sweeping their beams over a pulsing red floor. With
+// prefers-reduced-motion nothing spins, pulses or rains. Reads the sim; never writes it.
 import * as THREE from 'three';
 import type { Character } from '../core/sim/character';
 import type { Sim } from '../core/sim/sim';
+import { fxFade } from '../core/sim/room-state';
 import { SHELL_COBWEB_BIG_MS } from '../core/sim/shell';
-import { mx, mz } from './units';
+import { WALL_H, mx, mz, tm } from './units';
 
 /** Anything that knows where a character's head is (the rig or the capsules). */
 export interface HeadSource {
   headPoint(c: Character, out: THREE.Vector3): THREE.Vector3;
 }
 
-const CONFETTI_MAX = 600;
+const CONFETTI_MAX = 900;
 const CONFETTI_PER_BURST = 48;
 const CONFETTI_LIFE = 1.8;
 const GRAVITY = -3.2;
 const CLOUD_MAX = 32;
 const DROPS_PER_CLOUD = 6;
 const WEB_MAX = 64;
+const ALARM_MAX = 16;
+/** Confetti per second over a room in party. */
+const PARTY_RATE = 42;
+/** One turn of a beacon, in seconds. */
+const SPIN_S = 0.9;
 const COLORS = ['#ff5d5d', '#ffcc33', '#4ecb71', '#4aa3ff', '#c77dff', '#ff8fc7'].map((c) => new THREE.Color(c));
 
 interface Particle {
@@ -40,6 +48,20 @@ const tmpP = new THREE.Vector3();
 const tmpS = new THREE.Vector3();
 const head = new THREE.Vector3();
 const HIDE = new THREE.Matrix4().makeScale(0, 0, 0);
+const RED = new THREE.Color('#ff2a2a');
+const tmpC = new THREE.Color();
+
+let reducedMq: MediaQueryList | null | undefined;
+/** prefers-reduced-motion (the query follows changes by itself). */
+export function reducedMotion(): boolean {
+  if (reducedMq === undefined) reducedMq = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null;
+  return !!reducedMq?.matches;
+}
+
+/** The alarm's floor pulse (0..1) at time t (seconds); steady with reduced motion. */
+export function alarmPulse(t: number, reduced: boolean): number {
+  return reduced ? 0.6 : 0.55 + 0.45 * Math.sin(t * Math.PI * 2 * 0.8);
+}
 
 /** A flat cobweb: radial threads and three rings, as line segments in the XY plane (radius 1). */
 export function cobwebSegments(spokes = 8, rings = 3): Float32Array {
@@ -70,6 +92,10 @@ export class EffectsView {
   private drops: THREE.InstancedMesh;
   private webs: THREE.LineSegments;
   private webGeo: THREE.BufferGeometry;
+  private domes: THREE.InstancedMesh;
+  private beams: THREE.InstancedMesh;
+  private tints: THREE.InstancedMesh;
+  private partyCarry = new Map<string, number>();
   private particles: Particle[] = [];
   private seen = new Set<string>();
   private t = 0;
@@ -93,7 +119,21 @@ export class EffectsView {
     this.webGeo.setDrawRange(0, 0);
     this.webs = new THREE.LineSegments(this.webGeo, new THREE.LineBasicMaterial({ color: '#e8e8ec', transparent: true, opacity: 0.75 }));
     this.webs.frustumCulled = false;
-    this.root.add(this.confetti, this.clouds, this.drops, this.webs);
+    // alarm: beacon domes, their beams (a flat cone along +x, additive) and a floor tint per room
+    this.domes = new THREE.InstancedMesh(new THREE.SphereGeometry(0.11, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshBasicMaterial(), ALARM_MAX * 2);
+    const beam = new THREE.ConeGeometry(0.38, 1.9, 16, 1, true);
+    beam.rotateZ(Math.PI / 2);
+    beam.translate(0.95, 0, 0);
+    const additive = { transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide } as const;
+    this.beams = new THREE.InstancedMesh(beam, new THREE.MeshBasicMaterial({ ...additive, opacity: 0.28 }), ALARM_MAX * 4);
+    const floor = new THREE.PlaneGeometry(1, 1);
+    floor.rotateX(-Math.PI / 2);
+    this.tints = new THREE.InstancedMesh(floor, new THREE.MeshBasicMaterial({ ...additive, opacity: 0.3 }), ALARM_MAX);
+    for (const m of [this.domes, this.beams, this.tints]) {
+      m.count = 0;
+      m.frustumCulled = false;
+    }
+    this.root.add(this.confetti, this.clouds, this.drops, this.webs, this.domes, this.beams, this.tints);
   }
 
   /** Bursts of confetti for new effects; clouds and cobwebs from the characters' state. */
@@ -107,9 +147,68 @@ export class EffectsView {
       if (c && c.visible && !c.inside) this.burst(heads.headPoint(c, head));
     }
     if (this.seen.size > 200) this.seen.clear();
+    this.syncRooms(sim, now, dt);
     this.stepConfetti(dt);
     this.syncClouds(sim, heads, now);
     this.syncWebs(sim, now);
+  }
+
+  /** Party rain and alarm beacons for the rooms with an effect (almost always none). */
+  private syncRooms(sim: Sim, now: number, dt: number): void {
+    const reduced = reducedMotion();
+    let alarms = 0;
+    for (const r of sim.rooms.values()) {
+      const fx = r.fx;
+      if (!fx || !r.present || r.ghost || now >= fx.end) {
+        this.partyCarry.delete(r.id);
+        continue;
+      }
+      const fade = fxFade(fx, now);
+      const rect = r.layout.rect;
+      if (fx.kind === 'party') {
+        if (reduced) continue;
+        let carry = (this.partyCarry.get(r.id) ?? 0) + PARTY_RATE * dt * fade;
+        for (; carry >= 1 && this.particles.length < CONFETTI_MAX; carry--) {
+          const x = tm(rect.x + 1 + Math.random() * (rect.w - 2));
+          const z = tm(rect.y + 1.5 + Math.random() * (rect.h - 2.5));
+          this.particles.push({ x, y: WALL_H * 0.85, z, vx: (Math.random() - 0.5) * 0.4, vy: -0.3 - Math.random() * 0.4, vz: (Math.random() - 0.5) * 0.4, spin: Math.random() * 10, age: -1.6, color: COLORS[Math.floor(Math.random() * COLORS.length)]! });
+        }
+        this.partyCarry.set(r.id, Math.min(carry, 4));
+        continue;
+      }
+      if (alarms >= ALARM_MAX) continue;
+      const pulse = alarmPulse(this.t, reduced) * fade;
+      const cx = tm(rect.x + rect.w / 2);
+      const cz = tm(rect.y + rect.h / 2);
+      tmpM.compose(tmpP.set(cx, 0.02, cz), tmpQ.identity(), tmpS.set(tm(rect.w - 1), 1, tm(rect.h - 1)));
+      this.tints.setMatrixAt(alarms, tmpM);
+      this.tints.setColorAt(alarms, tmpC.copy(RED).multiplyScalar(pulse));
+      // the back corners, on the wall, under the ceiling
+      const y = WALL_H * 0.82;
+      const spin = reduced ? 0.6 : (this.t / SPIN_S) * Math.PI * 2;
+      const corners = [tm(rect.x + 1.2), tm(rect.x + rect.w - 1.2)];
+      corners.forEach((x, k) => {
+        const i = alarms * 2 + k;
+        tmpM.compose(tmpP.set(x, y, tm(rect.y + 0.9)), tmpQ.identity(), tmpS.setScalar(fade));
+        this.domes.setMatrixAt(i, tmpM);
+        this.domes.setColorAt(i, tmpC.copy(RED).multiplyScalar(0.6 + 0.4 * pulse));
+        for (let b = 0; b < 2; b++) {
+          // two opposite beams, sweeping around the vertical axis, tilted down a little
+          tmpQ.setFromEuler(tmpE.set(0, spin + (k ? Math.PI / 2 : 0) + b * Math.PI, -0.35));
+          tmpM.compose(tmpP.set(x, y + 0.05, tm(rect.y + 0.9)), tmpQ, tmpS.setScalar(fade));
+          this.beams.setMatrixAt(i * 2 + b, tmpM);
+          this.beams.setColorAt(i * 2 + b, tmpC.copy(RED).multiplyScalar(0.5 + 0.5 * pulse));
+        }
+      });
+      alarms++;
+    }
+    this.tints.count = alarms;
+    this.domes.count = alarms * 2;
+    this.beams.count = alarms * 4;
+    for (const m of [this.tints, this.domes, this.beams]) {
+      m.instanceMatrix.needsUpdate = true;
+      if (m.instanceColor) m.instanceColor.needsUpdate = true;
+    }
   }
 
   private burst(at: THREE.Vector3): void {
@@ -207,7 +306,7 @@ export class EffectsView {
   }
 
   dispose(): void {
-    for (const m of [this.confetti, this.clouds, this.drops]) {
+    for (const m of [this.confetti, this.clouds, this.drops, this.domes, this.beams, this.tints]) {
       m.geometry.dispose();
       (m.material as THREE.Material).dispose();
     }

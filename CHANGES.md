@@ -675,3 +675,14 @@ Branch `phase-1`. One commit per task, each pushed. At the end of the phase ther
   network access is needed.
 - With "reduce motion" turned on in your system, nothing spins, pulses or rains. `npm run demo` shows it now and then.
 - Fix: the Phase 4–6 timestamps above were ahead of the clock; they now match the commits.
+
+### P6-05 Sounds and P6-06 Notifications — done, 2026-10-25 06:40
+
+- **Sounds (off by default):** turn them on in Settings → "Sounds and notifications". You hear soft keystrokes from
+  agents typing on screen, a "ding" when the elevator opens, ping-pong and arcade games, a bell when an agent needs
+  you and a click when something finishes. The master volume and each kind (alerts, typing, elevator, games) can be set
+  separately. Everything is synthesized in the browser, with no audio files. While the tab is hidden, only the bell
+  plays.
+- **Notifications (off by default):** a browser notification when an agent needs you while the tab is in the
+  background (the browser asks for permission once; clicking it brings you to the agent). The tab title shows how many
+  agents are waiting for you, e.g. "(2) Agent Office". Toasts for every notice were already there.

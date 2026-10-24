@@ -2,6 +2,7 @@
 import { t } from '../../../shared/i18n';
 import type { WorldApi, WorldSettings } from '../render3d/world';
 import { themes, type ThemeEntry } from '../themes/registry';
+import { notificationState, type Alerts } from './alerts';
 import { button, el, prefs } from './dom';
 
 export const SETTINGS_KEY = 'world';
@@ -97,7 +98,66 @@ function themePicker(world: WorldApi, set: (patch: Partial<WorldSettings>) => vo
   return wrap;
 }
 
-export function openSettings(root: HTMLElement, world: WorldApi): () => void {
+function slider(label: string, value: number, onChange: (v: number) => void): HTMLElement {
+  const row = el('label', 'ui-field');
+  const r = el('input');
+  r.type = 'range';
+  r.min = '0';
+  r.max = '100';
+  r.step = '5';
+  r.value = String(Math.round(value * 100));
+  r.addEventListener('change', () => onChange(Number(r.value) / 100));
+  row.append(label, r);
+  return row;
+}
+
+/** Sounds (P6-05) and notifications (P6-06): all off by default. */
+function alertSettings(alerts: Alerts): HTMLElement[] {
+  const a = alerts.get();
+  const sounds = el('div', 'ui-subfields');
+  const setSounds = (patch: Partial<typeof a.sounds>, sample = true) => {
+    alerts.set({ sounds: { ...alerts.get().sounds, ...patch } });
+    if (sample) alerts.preview('pop');
+  };
+  sounds.append(
+    slider(t('Volume'), a.sounds.volume, (v) => setSounds({ volume: v })),
+    toggle(t('Alerts (someone needs you, something finished)'), a.sounds.alerts, (v) => {
+      setSounds({ alerts: v }, false);
+      if (v) alerts.preview('chime');
+    }),
+    toggle(t('Typing'), a.sounds.keys, (v) => setSounds({ keys: v }, false)),
+    toggle(t('Elevator'), a.sounds.elevator, (v) => {
+      setSounds({ elevator: v }, false);
+      if (v) alerts.preview('elevator');
+    }),
+    toggle(t('Games (ping-pong, arcade)'), a.sounds.social, (v) => setSounds({ social: v }, false)),
+  );
+  sounds.hidden = !a.sound;
+  const note = el('p', 'ui-empty');
+  const showState = () => {
+    const st = notificationState();
+    note.textContent =
+      st === 'denied' ? t('The browser blocks notifications for this page; allow them in the site settings.') : st === 'unsupported' ? t('This browser has no notifications.') : '';
+    note.hidden = !note.textContent;
+  };
+  showState();
+  return [
+    toggle(t('Sounds'), a.sound, (v) => {
+      alerts.set({ sound: v });
+      sounds.hidden = !v;
+      if (v) alerts.preview('pop');
+    }),
+    sounds,
+    toggle(t('Browser notification when an agent needs you (tab in the background)'), a.browserNotifications, (v) => {
+      alerts.set({ browserNotifications: v });
+      if (v) void alerts.enableBrowserNotifications().then(showState);
+      else showState();
+    }),
+    note,
+  ];
+}
+
+export function openSettings(root: HTMLElement, world: WorldApi, alerts?: Alerts): () => void {
   const o = world.getOptions();
   const set = (patch: Partial<WorldSettings>) => {
     world.setOptions(patch);
@@ -135,7 +195,7 @@ export function openSettings(root: HTMLElement, world: WorldApi): () => void {
         ['cut', t('Cut down')],
         ['hide', t('Hidden')],
       ], (v) => set({ cutaway: v })),
-      el('p', 'ui-empty', t('More settings (sounds, notifications) arrive in later phases.')),
+      ...(alerts ? [el('h3', 'ui-section', t('Sounds and notifications')), ...alertSettings(alerts)] : []),
     ],
     close,
   );

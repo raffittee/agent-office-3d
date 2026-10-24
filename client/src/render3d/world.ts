@@ -9,6 +9,8 @@ import { attachInput, CameraRig, type ViewInsets } from './camera';
 import { CharacterView } from './characters';
 import { Overlay } from './overlay';
 import { onThemesChanged, themeById, type ThemeEntry } from '../themes/registry';
+import type { SoundCue } from '../audio/scheduler';
+import { SoundCues, type SoundView } from '../core/sound-cues';
 import { EffectsView } from './effects';
 import { ModelView } from './models';
 import { loadRigModel, RigView } from './rig';
@@ -55,6 +57,8 @@ export interface WorldApi {
   theme(): ThemeEntry;
   /** Frame stats for the debug readout and the smoke test. */
   stats(): { fps: number; cpuMs: number; phases: { sim: number; sync: number; render: number; labels: number }; calls: number; triangles: number; agents: number; rooms: number };
+  /** Ambient sound cues (P6-05): keys, elevator dings, games. The UI decides whether they play. */
+  onSound(cb: (cue: SoundCue) => void): () => void;
   readonly sim: Sim;
   destroy(): void;
 }
@@ -74,6 +78,23 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
   const building = new BuildingView(theme.look);
   const models = new ModelView((ready) => building.setLook(theme.look, ready));
   const chars = new CharacterView();
+  const cues = new SoundCues(sim);
+  const soundCbs = new Set<(c: SoundCue) => void>();
+  const soundPt = { x: 0, y: 0 };
+  const soundV = new THREE.Vector3();
+  const soundView: SoundView = {
+    visible(x, y) {
+      rig2d.project(soundV.set(mx(x), 0.8, mz(y)), soundPt);
+      return soundPt.x > -40 && soundPt.y > -40 && soundPt.x < canvas.clientWidth + 40 && soundPt.y < canvas.clientHeight + 40;
+    },
+    pan(x, y) {
+      rig2d.project(soundV.set(mx(x), 0.8, mz(y)), soundPt);
+      const half = Math.max(1, canvas.clientWidth / 2);
+      return Math.max(-0.7, Math.min(0.7, ((soundPt.x - half) / half) * 0.7));
+    },
+    // closer zoom, louder: ~40 px per metre is the overview, ~160 a close-up
+    near: () => Math.max(0.45, Math.min(1, 0.3 + rig2d.pxPerMetre / 230)),
+  };
   const screens = new ScreenView();
   const effects = new EffectsView();
   scene.add(building.root, models.root, chars.root, screens.mesh, effects.root);
@@ -273,6 +294,7 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
     }
     effects.sync(sim, view(), now, dt);
     sim.effects.length = 0;
+    if (soundCbs.size && sim.initialized) cues.update(now, soundView, (c) => soundCbs.forEach((cb) => cb(c)));
     if (!useRig()) scene.updateMatrixWorld();
     const tRender = performance.now();
     ema('sync', tRender - tSync);
@@ -363,6 +385,10 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
       rig2d.insets = { ...rig2d.insets, ...insets };
     },
     theme: () => theme,
+    onSound(cb) {
+      soundCbs.add(cb);
+      return () => soundCbs.delete(cb);
+    },
     stats: () => ({ fps: Math.round(fps), cpuMs: +cpuMs.toFixed(2), phases: { sim: +phases.sim.toFixed(2), sync: +phases.sync.toFixed(2), render: +phases.render.toFixed(2), labels: +phases.labels.toFixed(2) }, calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, agents: sim.chars.size, rooms: [...sim.rooms.values()].filter((r) => !r.ghost).length }),
     destroy() {
       stop();

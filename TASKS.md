@@ -554,11 +554,13 @@ Python and both examples) in the office alongside the built-in providers.
   `render3d/effects.ts` rains confetti and spins red beacons, `overlay.ts` adds the banner; the demo shows it.
   - GitHub party and alarm events (PR merged, CI red), generalized into a provider-neutral `RoomEffect`.
   - **Ref:** `server/sources/github.ts`, `shared/github.ts`, `client/src/world/render/github-fx.ts`.
-- [ ] **P6-05 Sounds** (M)
+- [x] **P6-05 Sounds** (M) — done: `client/src/audio/` (scheduler, synth, board; ported with tests),
+  `core/sound-cues.ts` (keys, elevator, games, pure), `WorldApi.onSound`, settings section; off by default.
   - Synthesized WebAudio cues: keys, the elevator ding, a bell when someone needs you, a click for a finished task.
   - Per-category volumes; off by default.
   - **Ref:** `client/src/audio/*`, `client/src/ui/sound.ts`.
-- [ ] **P6-06 Notifications** (S)
+- [x] **P6-06 Notifications** (S) — done: `client/src/ui/alerts.ts`: browser notification on `alert` notices with
+  the tab hidden (opt-in, asks permission), bell/click sounds per notice, "(n) Agent Office" tab title; toasts existed.
   - A browser notification and a toast when an agent needs you.
   - **Ref:** `client/src/ui/notify.ts`.
 - [ ] **P6-07 Seasonal overlays** (S)

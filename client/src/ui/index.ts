@@ -2,6 +2,7 @@
 // help and keyboard shortcuts. Keeps the camera's free area in line with what the panels cover.
 import type { OfficeStore } from '../net/store';
 import type { WorldApi, WorldSettings } from '../render3d/world';
+import { Alerts } from './alerts';
 import { openHelp, openSettings, SETTINGS_KEY } from './dialogs';
 import { prefs } from './dom';
 import { createDrawer } from './drawer';
@@ -15,6 +16,7 @@ export function savedSettings(defaults: WorldSettings): WorldSettings {
 }
 
 export function createUI(root: HTMLElement, store: OfficeStore, world: WorldApi): void {
+  const alerts = new Alerts(store, world);
   let closeDialog: (() => void) | null = null;
   const dialog = (open: () => () => void) => {
     closeDialog?.();
@@ -25,7 +27,7 @@ export function createUI(root: HTMLElement, store: OfficeStore, world: WorldApi)
     };
   };
   const topbar = createTopbar(store, world, {
-    settings: () => dialog(() => openSettings(root, world)),
+    settings: () => dialog(() => openSettings(root, world, alerts)),
     help: () => dialog(() => openHelp(root)),
   });
   const sidebar = createSidebar(store, world);
@@ -59,7 +61,7 @@ export function createUI(root: HTMLElement, store: OfficeStore, world: WorldApi)
         dialog(() => openHelp(root));
         break;
       case ',':
-        dialog(() => openSettings(root, world));
+        dialog(() => openSettings(root, world, alerts));
         break;
       case 'n':
         world.setOptions({ showNames: !world.getOptions().showNames });

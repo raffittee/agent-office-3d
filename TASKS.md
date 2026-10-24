@@ -364,20 +364,31 @@ Gemini sessions appear, and clicking an agent opens its drawer.
 
 ## Phase 3: Characters & art pipeline
 
-- [ ] **P3-01 Asset pipeline** (M)
+- [x] **P3-01 Asset pipeline** (M) — done: `scripts/assets/` (`assets:fetch` with pinned SHA-256 into git-ignored
+  `assets-src/`; `assets:build`: strip unlit, drop morphs, trim finger joints, bake material slots into vertex colors
+  + a `_TINT` mask, convert rigid parts to skinned, merge to one mesh, meshopt; budget checks), `test/assets.test.ts`
+  (transforms on synthetic models; every committed asset listed in `ASSETS.md`; character budgets). KTX2 isn't wired:
+  no textures yet and `toktx` isn't installable from npm (Phase 4, when themes bring textures).
   - `scripts/assets/`: `gltf-transform` compression, KTX2 textures, and budget checks (triangles, texture sizes).
   - Check that every file is listed in `ASSETS.md`.
-- [ ] **P3-02 Rigged characters** (L)
+- [x] **P3-02 Rigged characters** (L) — done: `render3d/rig.ts` (one skinned mesh per agent from
+  `client/public/assets/characters/robot.glb`, 1 draw call, 23 joints; mixer with crossfades; pose → base clip map;
+  procedural layers in character space for type, raised hand when seated, sleep, popcorn…; seat offset from the
+  profile; capsules as fallback and as a setting). The model is RobotExpressive per ADR 0005 (the ADR 0004 human
+  pack needs a download this environment can't make); at 3.2k triangles a 25% LOD isn't needed.
   - One shared rigged glTF, with a map from pose to animation clip (Quaternius, ADR 0004).
   - Procedural pose layers for the poses the free clips lack: type, wave, sleep, raise hand.
   - Character budget from ADR 0004: one material, no finger bones, a 25% LOD.
   - An `AnimationMixer` manager with crossfades, and sitting offsets for each seat type.
   - **Ref:** the `Pose` list in `client/src/art/api.ts`.
-- [ ] **P3-03 Appearance** (M)
+- [x] **P3-03 Appearance** (M) — done for the robot: the seed recolors its main slot through the baked `_TINT` mask
+  (one material per character), subagents are smaller and wear a lanyard, and the provider badge is instanced on the
+  chest in the provider's color. Hair and accessory meshes wait for the human pack (ADR 0005).
   - Seed → skin, hair, outfit and accessories, using material slots and swappable meshes.
   - Subagents wear a lanyard; the provider badge color matches the provider.
   - **Ref:** `shared/appearance.ts`, `client/src/art/character/appearance.ts`.
-- [ ] **P3-04 Held items** (S)
+- [x] **P3-04 Held items** (S) — done: coffee, water, laptop, papers, book, box, phone, controller, paddle and popcorn
+  follow the right hand bone, drawn as one instanced mesh for everyone.
   - Attach items to bone sockets: coffee, laptop, papers, phone, controller, paddle, popcorn.
 - [ ] **P3-05 Live monitors** (M)
   - Desk screens show a screen mode (code, terminal, browser, docs, chat, alert) from small shared canvas

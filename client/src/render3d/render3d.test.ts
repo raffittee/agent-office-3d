@@ -200,3 +200,44 @@ describe('labels', () => {
     expect([...kept].sort()).toEqual(['apart', 'high']);
   });
 });
+
+describe('rigged characters', () => {
+  const all = () => true;
+  const none = () => false;
+
+  it('picks a base clip per pose: seated poses sit, walking walks, the clip covers what it can', async () => {
+    const { baseClipFor } = await import('./rig');
+    expect(baseClipFor('type', true, all)).toBe('sit');
+    expect(baseClipFor('sleep', true, all)).toBe('sit');
+    expect(baseClipFor('wait', true, all)).toBe('sit');
+    expect(baseClipFor('raise_hand', true, all)).toBe('sit');
+    expect(baseClipFor('raise_hand', false, all)).toBe('wave');
+    expect(baseClipFor('raise_hand', false, none)).toBe('idle');
+    expect(baseClipFor('walk', false, all)).toBe('walk');
+    expect(baseClipFor('run', false, none)).toBe('walk');
+    expect(baseClipFor('cheer', false, all)).toBe('dance');
+    expect(baseClipFor('talk', false, all)).toBe('yes');
+    expect(baseClipFor('sulk', false, all)).toBe('no');
+    expect(baseClipFor('drink', false, all)).toBe('idle');
+  });
+
+  it('layers procedural poses only where the clip does not already do the motion', async () => {
+    const { layersFor } = await import('./rig');
+    expect(layersFor('walk', 'walk')).toEqual({ arms: false, head: false, lean: false });
+    expect(layersFor('raise_hand', 'wave')).toEqual({ arms: false, head: false, lean: false });
+    expect(layersFor('type', 'sit')).toEqual({ arms: true, head: true, lean: true });
+    expect(layersFor('sit', 'sit').arms).toBe(false);
+    expect(layersFor('raise_hand', 'sit').arms).toBe(true);
+  });
+
+  it('at least 10 distinct poses are animated (exit criterion): base clip or a procedural layer', async () => {
+    const { baseClipFor, layersFor } = await import('./rig');
+    const poses = ['stand', 'walk', 'run', 'sit', 'type', 'sleep', 'drink', 'use', 'raise_hand', 'talk', 'stretch', 'read', 'wait', 'cheer', 'sulk'] as const;
+    const animated = poses.filter((p) => {
+      const base = baseClipFor(p, false, all);
+      const l = layersFor(p, base);
+      return base !== 'idle' || l.arms || l.head || l.lean;
+    });
+    expect(animated.length).toBeGreaterThanOrEqual(10);
+  });
+});

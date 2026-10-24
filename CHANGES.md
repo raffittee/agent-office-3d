@@ -490,3 +490,24 @@ Branch `phase-1`. One commit per task, each pushed. At the end of the phase ther
   its details; screenshots look right; all tests pass.
 - Added `?stats=1` (frame rate, draw calls, agents in the top bar) for that check.
 
+## Phase 3: Characters & art pipeline (branch `phase-3`)
+
+### P3-01 to P3-04: animated characters — done, 2026-10-25 05:10
+
+- **Agents are now animated robots** instead of capsules: they walk, sit down at their desks, type, raise a hand
+  (seated) or wave (standing) when they need you, nod while talking, sleep at the desk, dance when cheering.
+  Each robot is recolored from its agent's seed, carries a badge in its provider's color, subagents are smaller and
+  wear a lanyard, and held items (coffee, laptop, papers, phone, popcorn…) follow its hand.
+- **Why a robot and not the people from Phase 0's plan (decision I made, ADR 0005):** the human character pack needs a
+  download from itch.io, and this cloud environment can only reach GitHub and npm. RobotExpressive is by the same
+  artist (Quaternius), CC0, on GitHub. The animation code doesn't depend on the model: switching to the human pack
+  later is a new entry in `scripts/assets/sources.ts`, built on a machine that can download it.
+  - Prefer the simple shapes? Settings → Characters → "Simple shapes".
+- **Asset pipeline:** `npm run assets:fetch` downloads sources (checked against a pinned fingerprint) into
+  `assets-src/` (not committed); `npm run assets:build` turns them into the small files the page loads. The robot
+  went from 14 pieces and 3 materials to 1 piece and 1 material (one draw call per agent), 23 bones, 159 KB.
+- A check in the tests makes sure every asset file in the repo is listed in `ASSETS.md` with its license.
+- Fixed while testing: the sidebar rebuilt every row several times a second, which broke hovering and clicking in a
+  busy office. Rows are now reused and only their text changes.
+- 30 robots in 6 rooms: 67 draw calls (budget 300).
+

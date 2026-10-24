@@ -1,5 +1,5 @@
-// Client entry point. Until Phase 2 brings the SSE store, the 3D scene and the panels, it shows the debug page.
-import { startDebugPage } from './debug/page';
+// Client entry point. v1 ships English only (D10), so there's no dictionary to load before the app.
+import './styles.css';
+import { start } from './app';
 
-const app = document.querySelector<HTMLDivElement>('#app');
-if (app) startDebugPage(app);
+start();

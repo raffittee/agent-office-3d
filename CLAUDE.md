@@ -1,6 +1,6 @@
 # Agent Office — guide for AI agents
 
-> **Status: Phases 0–1 done (a live Gemini CLI check is pending on the user's machine); Phase 2 next.** The phased plan lives in [TASKS.md](TASKS.md).
+> **Status: Phases 0–2 done (pending on the user's machine: a live Gemini CLI check and the 50 fps check); Phase 3 next.** The phased plan lives in [TASKS.md](TASKS.md).
 > Provider facts: [docs/providers/](docs/providers/). Decisions: [docs/adr/](docs/adr/). Spike results:
 > [docs/spikes/](docs/spikes/).
 
@@ -401,6 +401,7 @@ Update this table as commands land. *(planned)* marks the ones that don't exist 
 | `node spikes/renderer/measure.mjs` · `node spikes/assets/measure.mjs <dir>` | Re-run the Phase 0 measurements |
 | `npm run demo` | Dev mode with simulated agents from several providers (`AGENT_OFFICE_DEMO=1` or `--demo` on any run) |
 | `npm run hooks:install -- --provider gemini-cli` | Install a provider's hooks (`--profile light` or `full`; also `hooks:status`, `hooks:uninstall`) |
+| `npm run shot` | After `npm run build`: screenshot the demo office in Chrome (`--sessions 30`, `--out <dir>`); CI runs it |
 | `npm run theme:check` · `npm run theme:new -- <id>` *(planned)* | Validate theme packs and scaffold a new one |
 
 ## How to work in this repo

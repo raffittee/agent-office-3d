@@ -269,21 +269,29 @@ their status changes (working, waiting, idle, offline) appear within 2 s; the de
 
 ## Phase 2: 3D world MVP (placeholder art)
 
-- [ ] **P2-01 Client shell & store** (M)
+- [x] **P2-01 Client shell & store** (M) — done: `client/src/net/store.ts` (ported: SSE, reconnect with backoff,
+  `online` retry, stale-build notice, feed dedupe; `?mock=1` runs `shared/demo/mock.ts` in the page), `app.ts`/`main.ts`
+  (full-window `#world` canvas under a `#ui` layer, `styles.css` tokens with dark mode); the debug list reads the store.
   - Port the SSE store: reconnect with backoff, plus a mock mode backed by the demo simulator.
   - Lay out the app: canvas plus panels.
   - **Ref:** `client/src/net/store.ts`, `client/src/app.ts`, `client/src/main.ts`.
-- [ ] **P2-02 Layout core** (L)
+- [x] **P2-02 Layout core** (L) — done: `client/src/core/layout/` (ported: reception with elevators, restrooms,
+  kitchen, lounge, corridor, seeded project rooms; floors, rugs, walls with doorways, wall items and furniture by
+  semantic kind, spots), `core/vocab.ts` (the furniture/pose/spot vocabulary from Habblaud's art API, no sprites),
+  `core/room-theme.ts`, `core/constants.ts`. Habblaud's 2D exterior (garden, street) isn't ported. 15 tests.
   - `client/src/core/layout/`: a building with core areas (entrance/reception, kitchen, lounge, restrooms) plus one
     project room per slot.
   - Output: areas, walls with doorways, furniture placements by semantic kind, and spots (desk, stool, nook,
     coffee, water, sofa, toilet, …).
   - Pure code, with tests.
   - **Ref:** `client/src/world/layout/*`, `client/src/world/constants.ts`.
-- [ ] **P2-03 Navigation** (S)
+- [x] **P2-03 Navigation** (S) — done: `client/src/core/nav/{grid,astar}.ts` and their 7 tests, ported as is.
   - Port the grid and A*, with their tests.
   - **Ref:** `client/src/world/path/*`.
-- [ ] **P2-04 Simulation core** (L)
+- [x] **P2-04 Simulation core** (L) — done: `client/src/core/sim/` (ported: sim, behavior, character, spots, steps,
+  elevator, room-state, shell gag) + `core/options.ts`. Characters expose neutral data only; `jobs` replaces `shells`;
+  the job-done celebration keys on `JOB_DONE_TOOL`. Left out: social gatherings and personas (P6-01), GitHub room
+  effects (backlog), the World visitor (never), the 2D art module (P3-03). 57 ported tests, no `three` import.
   - Port the sim, behavior, character, spots, steps and elevator modules.
   - Reconcile incoming snapshots with the characters on screen.
   - Modes: work, wait, idle, shell, deliver, leave. Idle activities are picked by weight.
@@ -291,41 +299,66 @@ their status changes (working, waiting, idle, offline) appear within 2 s; the de
   - Characters expose only neutral data (position, direction, pose, held item) instead of calling an art module.
   - **Ref:** `client/src/world/sim/*` and its tests.
   - **Done when:** the ported sim tests pass with no `three` import.
-- [ ] **P2-05 Scene & camera** (M)
+- [x] **P2-05 Scene & camera** (M) — done: `render3d/scene.ts` (WebGL2 renderer, sRGB output, lights, DPR capped by
+  quality), `render3d/camera.ts` (ortho iso rig per ADR 0003: 90° animated turns, zoom to cursor, pan, pinch, frame
+  office/room inside the panels' free area, follow; mouse, wheel, touch and keys Q/E, WASD/arrows, +/-, F, Esc),
+  `render3d/world.ts` (rAF loop paused while hidden, `sim.fastForward` on return).
   - `render3d/scene.ts`: the renderer, color management, resizing, and a capped device pixel ratio.
   - A camera rig as decided in the ADR: follow an agent, frame the whole office, rotate, zoom, pan.
   - Input: drag, mouse wheel, keyboard.
   - Suspend rendering while the tab is hidden.
   - **Ref:** `client/src/world/camera.ts`, `client/src/world/input.ts`.
-- [ ] **P2-06 Building meshes** (L)
+- [x] **P2-06 Building meshes** (L) — done: `render3d/building.ts` (floors, rugs, walls with doorways, cutaway: only
+  the far outer walls stay full height, the rest cut to 0.4 m or hidden; wall items; elevator doors; one merged
+  solid/glass/glow mesh per area, ~25 draw calls for a 3-room office; per-room build/dismantle scale and light
+  dimming) and `render3d/kit.ts` (procedural boxes for every furniture kind, tested against footprints).
   - Floors, walls with doorways, cutaway mode, doors.
   - Procedural placeholder furniture (beveled boxes) for each semantic kind, merged or instanced per room.
   - Room build and dismantle animations; lights on and off per room.
-- [ ] **P2-07 Placeholder characters** (M)
+- [x] **P2-07 Placeholder characters** (M) — done: `render3d/characters.ts` (capsule people from 8 InstancedMeshes:
+  legs, torso, head, hair, arms, provider badge, held item, blob shadow; colors from the seed; subagents smaller;
+  shrink in/out of the elevator) and `render3d/pose.ts` (pure rig per pose: walk bob, sit, typing arms, raised hand,
+  drink, popcorn, sleep…; shortest-way turning).
   - Procedural "capsule people": body and head colored by the agent's seed, plus a provider badge.
   - Procedural animation for each pose (walk bob, sit, typing arms, raised hand).
   - Smooth path following and turning.
-- [ ] **P2-08 Labels & bubbles** (M)
+- [x] **P2-08 Labels & bubbles** (M) — done: `render3d/labels.ts` (pure: name, bubble kind and priority from sim
+  state, options and zoom; greedy declutter) and `render3d/overlay.ts` (DOM labels with a provider dot, activity,
+  "needs you" alert, job timer, delivery and icons; room name tags). The options are in `WorldOptions`; their
+  toggles land in the settings panel (P2-10).
   - A DOM overlay with names, activity bubbles (icon and text), the "needs you" alert, and a shell timer.
   - Occlusion, culling and level of detail.
   - Options: names on or off; bubbles all, important only, or none.
   - **Ref:** `client/src/world/render/overlay.ts`, `client/src/world/api.ts` (`WorldOptions`).
-- [ ] **P2-09 Selection & details drawer** (M)
+- [x] **P2-09 Selection & details drawer** (M) — done: screen-space picking of characters (head and body) and rooms
+  (ground ray) in `render3d/world.ts`, a hover tooltip, and `ui/drawer.ts` (status, provider, model, branch, room,
+  current activity or what it waits for, jobs, tasks, parent/subagents, stats, a timeline from `/api/agents/:id`).
   - Raycast picking and a hover tooltip.
   - A details drawer with the current activity, tasks, subagents, timeline, stats, model and provider.
   - **Ref:** `client/src/ui/drawer.ts`, `client/src/ui/hovertip.ts`.
-- [ ] **P2-10 Panels** (M)
+- [x] **P2-10 Panels** (M) — done: `client/src/ui/` (sidebar with search and provider chips, top bar counters and
+  connection state, activity feed, toasts for notices and new builds, settings skeleton saved in localStorage,
+  help, shortcuts `/ ? , N B Esc` plus the camera keys; panels set the camera's free area; narrow-screen layout).
+  The P1-12 debug page is deleted. `ui/model.ts` holds the tested logic.
   - Sidebar: rooms → agents, search, provider filter.
   - Top bar counters, activity feed, toasts, a settings skeleton, keyboard shortcuts, help.
   - Delete the P1-12 debug page.
   - **Ref:** `client/src/ui/{sidebar,topbar,feed,toasts,settings,help}.ts`.
-- [ ] **P2-11 Screenshot smoke test** (S)
+- [x] **P2-11 Screenshot smoke test** (S) — done: `scripts/shot.mjs` (`npm run shot`: built server + `?mock=1` in Chrome
+  with software WebGL; fails on page errors, an empty scene, >300 draw calls or a drawer that won't open) and a CI
+  step that uploads `artifacts/` (office and selected-agent screenshots + stats). 30 demo agents: 38 draw calls.
   - A Playwright script that captures the demo scene and uploads it as a CI artifact.
   - **Ref:** `scripts/shot.mjs`.
 
 **Exit:** demo mode plays the whole lifecycle in 3D at ≥ 50 fps with 30 agents: arrive, work, wait with a raised
 hand, wander when idle, deliver as a subagent, leave, turn out the lights, dismantle the room. Real Claude and
 Gemini sessions appear, and clicking an agent opens its drawer.
+
+> **Exit status (2026-10-25):** met in the cloud environment, except the frame rate, which needs a real GPU. The demo
+> plays the whole lifecycle (covered by the ported sim tests and seen in screenshots); 30 agents in 6 rooms cost 38
+> draw calls; a real Claude Code session appears live and its drawer opens. To check on your machine: `npm run
+> build && npm start`, open `http://127.0.0.1:4848/?mock=1&sessions=30&stats=1` and read the fps in the top bar. The
+> live Gemini check carries over from Phase 1.
 
 ---
 

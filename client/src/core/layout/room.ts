@@ -1,0 +1,269 @@
+// Ported from habblaud client/src/world/layout/room.ts (MIT, © 2026 Márcio Junior)
+// A project room's layout (16x12 tiles with its own walls).
+//
+//   rows 0–1   north wall face (south rooms: with the doorway)
+//   rows 2–10  floor (14x9 inside: columns 1–14)
+//   row 11     south wall (north rooms: with the door to the corridor)
+//
+// A 6-seat island of facing desks (3 `desk` to the south, backs to the camera; 3 `desk_back` to the north, facing
+// it), a kanban board, the name sign and decoration. So that rooms aren't identical, the room's seed picks the
+// island's side (a mirrored layout), the meeting corner (a table, round tables or armchairs), the lower corners
+// (rest, printing, green, standing desk) and the support column by the wall.
+import { mulberry32 } from '../../../../shared/hash';
+import { DOOR_W, DOOR_X, TILE } from '../constants';
+import { FURNITURE, type Dir, type FurnitureKind, type RoomTheme, type WallStyle } from '../vocab';
+import { AreaBuilder, type SpotOpts } from './builder';
+import { slotRect, slotSide } from './geometry';
+import type { AreaLayout, SpotDef, SpotKind } from './types';
+
+export interface RoomInput {
+  id: string;
+  slot: number;
+  seed: number;
+}
+
+const PLANTS_TALL = ['palm', 'ficus', 'monstera', 'bonsai'] as const;
+const PLANTS_SMALL = ['fern', 'succulent', 'flower'] as const;
+const POSTERS = ['code', 'coffee', 'rocket', 'cat', 'bug', 'ship_it'] as const;
+const BEANBAGS = ['red', 'blue', 'yellow', 'green'] as const;
+
+/** The meeting corner (extra seats for subagents). */
+export type MeetingStyle = 'table' | 'round' | 'lounge';
+/** A lower corner of the room (rows 9–10). */
+export type CornerStyle = 'rest' | 'print' | 'green' | 'standdesk' | 'stands';
+
+/** Variations drawn from the seed (exported for tests). */
+export interface RoomVariant {
+  mirror: boolean;
+  meeting: MeetingStyle;
+  left: CornerStyle;
+  right: CornerStyle;
+}
+
+/** Lightens (amount > 0) or darkens a hex color; used for rugs and details. */
+function shade(hex: string, amount: number): string {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return hex;
+  const n = parseInt(m[1]!, 16);
+  const ch = (v: number) => Math.max(0, Math.min(255, Math.round(v + (amount > 0 ? (255 - v) * amount : v * amount))));
+  const r = ch((n >> 16) & 255);
+  const g = ch((n >> 8) & 255);
+  const b = ch(n & 255);
+  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
+}
+
+/** The room's variations (deterministic from the seed). */
+export function roomVariant(seed: number): RoomVariant {
+  const rng = mulberry32((seed ^ 0x7a11) >>> 0);
+  const mirror = rng() < 0.5;
+  const m = rng();
+  const meeting: MeetingStyle = m < 0.45 ? 'table' : m < 0.78 ? 'round' : 'lounge';
+  const lefts: CornerStyle[] = ['rest', 'print', 'green'];
+  const rights: CornerStyle[] = ['standdesk', 'stands', 'green'];
+  const left = lefts[Math.floor(rng() * lefts.length) % lefts.length]!;
+  let right = rights[Math.floor(rng() * rights.length) % rights.length]!;
+  if (right === left) right = 'stands';
+  return { mirror, meeting, left, right };
+}
+
+export function layoutProjectRoom(room: RoomInput, theme: RoomTheme): AreaLayout {
+  const rect = slotRect(room.slot);
+  const side = slotSide(room.slot);
+  const rng = mulberry32(room.seed ^ 0x5eed);
+  const pick = <T,>(arr: readonly T[]): T => arr[Math.floor(rng() * arr.length) % arr.length]!;
+  const v = roomVariant(room.seed);
+  const b = new AreaBuilder(room.id, 'room', rect);
+  const area = b.area;
+  area.side = side;
+  const wall: WallStyle = theme.wall;
+  const north = side === 'north';
+  const door = { lx: DOOR_X, w: DOOR_W };
+
+  // ---- mirroring (local coordinates are written with the island on the left)
+  const mir = v.mirror;
+  const fx = (lx: number, w = 1) => (mir ? 16 - lx - w : lx);
+  const fdir = (d: Dir): Dir => (mir && (d === 'left' || d === 'right') ? (d === 'left' ? 'right' : 'left') : d);
+  const fdx = (dx: number | undefined) => (dx === undefined ? undefined : mir ? -dx : dx);
+  const furn = (kind: FurnitureKind, lx: number, ly: number, variant?: string, o: { dx?: number; dy?: number; order?: number; seat?: string } = {}) =>
+    b.furn(kind, fx(lx, FURNITURE[kind].footprint.w), ly, variant, { ...o, dx: fdx(o.dx) });
+  const spot = (kind: SpotKind, lx: number, ly: number, dir: Dir, o: SpotOpts = {}): SpotDef => b.spot(kind, fx(lx), ly, fdir(dir), { ...o, dx: fdx(o.dx) });
+  /** A seat; `dirVariant` = the furniture's variant is the direction itself (armchair, cafe chair). */
+  const seat = (kind: SpotKind, fk: FurnitureKind, lx: number, ly: number, dir: Dir, variant?: string, o: SpotOpts & { order?: number } = {}, dirVariant = false): SpotDef =>
+    b.seat(kind, fk, fx(lx), ly, fdir(dir), dirVariant ? fdir(dir) : variant, { ...o, dx: fdx(o.dx) });
+  const wallItem = (kind: FurnitureKind, cx: number, variant?: string, o: { ly?: number; on?: 'face' | 'south'; order?: number } = {}) => b.wall(kind, mir ? 16 - cx : cx, variant, o);
+  const rug = (lx: number, ly: number, w: number, h: number, color: string, seed: number) => b.rug(fx(lx, w), ly, w, h, color, seed);
+
+  // ---- floor: light porcelain (tiles are for the restroom); a light tint from the palette gives identity
+  b.floor('marble', 0, 0, 16, 12, room.seed);
+  area.floorTint = theme.carpet;
+  // a rug in the room's color under the island
+  rug(1.5, 3.25, 7, 5.5, theme.carpet, room.seed);
+  // a doormat
+  rug(DOOR_X - 0.25, north ? 9.5 : 2, DOOR_W + 0.5, 1.25, shade(theme.carpet2, -0.1), room.seed + 1);
+
+  // ---- walls
+  if (north) {
+    b.face(0.5, 15, wall);
+    b.south(0.5, 15, 11, wall, [door]);
+  } else {
+    b.face(0.5, 15, wall, [door]);
+    b.south(0.5, 15, 11, { ...wall, exterior: true });
+    // a frame over the doorway (the north face shows the opening)
+    b.wall('door_frame', DOOR_X + DOOR_W / 2, undefined, { order: 0.05 });
+  }
+  b.cap(0, 0, 0.5, 12, wall);
+  b.cap(15.5, 0, 0.5, 12, wall);
+
+  // ---- walkability
+  b.walk(1, 2, 14, 9);
+  area.door = north ? { x: rect.x + DOOR_X, y: rect.y + 11, w: DOOR_W, h: 1 } : { x: rect.x + DOOR_X, y: rect.y, w: DOOR_W, h: 2 };
+  b.walk(area.door.x - rect.x, area.door.y - rect.y, area.door.w, area.door.h);
+
+  // ---- wall items
+  const signCx = north ? 8 : 10.5;
+  area.signId = wallItem('sign', signCx, undefined, { order: 0.95 });
+  if (north) {
+    wallItem('whiteboard', 4.5, undefined, { order: 0.6 });
+    wallItem('clock', 10, undefined, { order: 0.7 });
+    wallItem('poster', 11.1, pick(POSTERS), { order: 0.5 });
+    wallItem('window', 12.75, undefined, { order: 0.4 });
+    // light switch next to the door, on the low wall (inside)
+    wallItem('light_switch', DOOR_X - 0.5, 'on', { ly: 12, on: 'south', order: 0.8 });
+    spot('switch', DOOR_X - 1, 10, 'down', { dy: -1 });
+  } else {
+    wallItem('whiteboard', 2.5, undefined, { order: 0.6 });
+    wallItem('light_switch', DOOR_X - 0.5, 'on', { order: 0.8 });
+    wallItem('clock', 12.3, undefined, { order: 0.7 });
+    wallItem('poster', 13.35, pick(POSTERS), { order: 0.5 });
+    spot('switch', DOOR_X - 1, 2, 'up', { dy: -3 });
+  }
+  spot('whiteboard', north ? 4 : 2, 2, 'up', { dx: 8, dy: 2 });
+
+  // ---- the 3x2 island of facing desks (columns 2–7, rows 4–7)
+  const deskV = theme.deskVariant;
+  const chairV = theme.chairVariant;
+  const ranks = [2, 0, 4];
+  for (let i = 0; i < 3; i++) {
+    const lx = 2 + i * 2;
+    const back = furn('desk_back', lx, 5, deskV, { order: 0.35 + i * 0.05, seat: `N${i}` });
+    const front = furn('desk', lx, 6, deskV, { order: 0.4 + i * 0.05, seat: `S${i}` });
+    seat('desk', 'office_chair_front', lx, 4, 'down', chairV, { dx: TILE / 2, deskId: back, rank: ranks[i]! + 1, side: 'N', order: 0.55 + i * 0.03 });
+    seat('desk', 'office_chair', lx, 7, 'up', chairV, { dx: TILE / 2, deskId: front, rank: ranks[i]!, side: 'S', order: 0.6 + i * 0.03 });
+  }
+  furn('trash_bin', 9, 6, undefined, { order: 0.7 });
+
+  // ---- meeting corner (extra seats for subagents: stools or armchairs)
+  if (v.meeting === 'table') {
+    furn('meeting_table', 10, 5, undefined, { order: 0.45 });
+    seat('stool', 'stool', 10, 4, 'down', undefined, { order: 0.65 });
+    seat('stool', 'stool', 12, 4, 'down', undefined, { order: 0.66 });
+    seat('stool', 'stool', 10, 7, 'up', undefined, { order: 0.67 });
+    seat('stool', 'stool', 12, 7, 'up', undefined, { order: 0.68 });
+  } else if (v.meeting === 'round') {
+    // two round tables with two stools each (offset, so people can walk between them)
+    furn('cafe_table', 11, 4, undefined, { order: 0.45 });
+    seat('stool', 'stool', 10, 4, 'right', undefined, { order: 0.65 });
+    seat('stool', 'stool', 12, 4, 'left', undefined, { order: 0.66 });
+    furn('cafe_table', 11, 7, undefined, { order: 0.46 });
+    seat('stool', 'stool', 10, 7, 'right', undefined, { order: 0.67 });
+    seat('stool', 'stool', 12, 7, 'left', undefined, { order: 0.68 });
+    furn('plant_small', 12, 5, pick(PLANTS_SMALL), { order: 0.47 });
+  } else {
+    // a nook with armchairs and beanbags around a coffee table (no meeting table)
+    rug(9.6, 3.7, 4.8, 4.6, shade(theme.carpet2, 0.25), room.seed + 2);
+    furn('coffee_table', 10, 5, undefined, { order: 0.45 });
+    seat('nook', 'armchair', 9, 5, 'right', undefined, { order: 0.65 }, true);
+    seat('nook', 'armchair', 12, 5, 'left', undefined, { order: 0.66 }, true);
+    seat('nook', 'beanbag', 10, 7, 'up', pick(BEANBAGS), { order: 0.67 });
+    seat('nook', 'beanbag', 11, 7, 'up', pick(BEANBAGS), { order: 0.68 });
+    seat('nook', 'beanbag', 11, 3, 'down', pick(BEANBAGS), { order: 0.69 });
+  }
+
+  // ---- support: a bookshelf on the north wall (not covering the board, sign or window) and a column by the wall
+  const tall = pick(PLANTS_TALL);
+  const shelfX = north ? 1 : 4;
+  furn('bookshelf', shelfX, 2, undefined, { order: 0.25 });
+  spot('shelf', shelfX, 3, 'up', { dx: 8, dy: -2 });
+  furn('plant_tall', 14, 2, tall, { order: 0.2 });
+  if (north) spot('window', 12, 2, 'up', { dx: 12, dy: 1 });
+  else furn('plant_small', 1, 2, pick(PLANTS_SMALL), { order: 0.22 });
+  const column = Math.floor(rng() * 3);
+  if (column === 0) {
+    furn('binder_shelf', 14, 4, undefined, { order: 0.3 });
+    furn('printer', 14, 6, undefined, { order: 0.32 });
+    furn('floor_lamp', 14, 8, undefined, { order: 0.34 });
+  } else if (column === 1) {
+    furn('binder_shelf', 14, 4, undefined, { order: 0.3 });
+    furn('binder_shelf', 14, 5, undefined, { order: 0.31 });
+    furn('floor_lamp', 14, 8, undefined, { order: 0.34 });
+  } else {
+    furn('floor_lamp', 14, 4, undefined, { order: 0.3 });
+    furn('filing_cabinet', 14, 6, undefined, { order: 0.32 });
+    furn('plant_tall', 14, 8, pick(PLANTS_TALL), { order: 0.34 });
+  }
+
+  // ---- lower corners (rows 9–10; the way to the door, columns 6–9, stays clear)
+  corner(v.left, 'left');
+  corner(v.right, 'right');
+
+  function corner(style: CornerStyle, where: 'left' | 'right'): void {
+    // the left zone takes columns 1–5; the right one 10–14
+    const x0 = where === 'left' ? 1 : 10;
+    const o = 0.2 + (where === 'left' ? 0 : 0.05);
+    switch (style) {
+      case 'rest': {
+        // rest corner: a rug, two beanbags (extra places too) and plants
+        rug(x0 + 0.5, 8.85, 4, 2, shade(theme.carpet, 0.35), room.seed + 3);
+        seat('nook', 'beanbag', x0 + 1, 10, 'up', pick(BEANBAGS), { order: o + 0.4 });
+        seat('nook', 'beanbag', x0 + 3, 10, 'up', pick(BEANBAGS), { order: o + 0.41 });
+        furn('plant_small', x0 + 2, 10, pick(PLANTS_SMALL), { order: o });
+        furn('plant_tall', where === 'left' ? x0 : x0 + 4, 10, pick(PLANTS_TALL), { order: o + 0.01 });
+        return;
+      }
+      case 'print': {
+        // printing station with binder shelves and a filing cabinet
+        furn('printer', x0, 10, undefined, { order: o });
+        furn('binder_shelf', x0 + 1, 10, undefined, { order: o + 0.01 });
+        furn('binder_shelf', x0 + 2, 10, undefined, { order: o + 0.02 });
+        furn('filing_cabinet', x0 + 3, 10, undefined, { order: o + 0.03 });
+        furn('trash_bin', x0 + 4, 10, undefined, { order: o + 0.04 });
+        return;
+      }
+      case 'green': {
+        // a green corner with a lamp and a reading armchair
+        furn('plant_tall', x0, 10, pick(PLANTS_TALL), { order: o });
+        furn('floor_lamp', x0 + 1, 10, undefined, { order: o + 0.01 });
+        seat('nook', 'armchair', x0 + 2, 10, 'up', undefined, { order: o + 0.4 }, true);
+        furn('plant_small', x0 + 3, 10, pick(PLANTS_SMALL), { order: o + 0.02 });
+        furn('plant_tall', x0 + 4, 10, pick(PLANTS_TALL), { order: o + 0.03 });
+        return;
+      }
+      case 'standdesk': {
+        // a standing desk with a laptop (standing workplace, facing the camera)
+        furn('cafe_table', x0 + 2, 10, undefined, { order: o });
+        spot('stand', x0 + 2, 9, 'down', { dy: -1 });
+        furn('plant_small', x0 + 4, 10, pick(PLANTS_SMALL), { order: o + 0.01 });
+        furn('trash_bin', x0, 10, undefined, { order: o + 0.02 });
+        return;
+      }
+      case 'stands': {
+        // standing places by a low cabinet
+        furn('filing_cabinet', x0 + 4, 10, undefined, { order: o });
+        furn('plant_small', x0, 10, pick(PLANTS_SMALL), { order: o + 0.01 });
+        spot('stand', x0 + 1, 9, 'up', { dy: -2 });
+        spot('stand', x0 + 2, 9, 'up', { dy: -2 });
+        return;
+      }
+    }
+  }
+
+  // standing places (subagents without a seat work here; also used for chats)
+  spot('stand', 9, 3, 'left');
+  spot('stand', 1, 7, 'right');
+  spot('stand', 13, 9, 'up', { dy: -2 });
+
+  // ---- the darkened area with the lights off (north rooms: the low south wall stays lit)
+  const p = { x: rect.x * TILE, y: rect.y * TILE, w: rect.w * TILE, h: rect.h * TILE };
+  area.shade = north ? { x: p.x, y: p.y, w: p.w, h: p.h - TILE } : { x: p.x, y: p.y, w: p.w, h: p.h };
+  return b.build();
+}

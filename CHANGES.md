@@ -399,3 +399,94 @@ Branch `phase-1`. One commit per task, each pushed. At the end of the phase ther
 - **Decision I made:** start Phase 2 anyway. Phase 2 is the browser side and runs on the demo data, so nothing in it
   depends on the Gemini check. If your Gemini test shows a problem, the fix goes into the Gemini adapter alone.
 
+## Phase 2: 3D world MVP (branch `phase-2`)
+
+### P2-01 Client shell & store — done, 2026-10-25 04:20
+
+- `client/src/net/store.ts` keeps the browser's copy of the office. It's ported from Habblaud's, without the parts
+  for later phases (permissions, messages, character editor, timelapse):
+  - it reconnects by itself when the server restarts, waiting 2 s, 4 s, 8 s and so on up to 30 s, and at once when
+    the network comes back;
+  - `?mock=1` runs the demo office inside the page (also `&seed=`, `&speed=`, `&sessions=`);
+  - it notices when the server starts serving a newer build of the page.
+- The page is now a full-window canvas (for the 3D office) with a panel layer on top, with light and dark colors.
+  Until the real panels arrive (P2-10), the debug list sits on the right.
+- 16 store tests (ported and translated, plus mock mode).
+
+### P2-02 Layout core — done, 2026-10-25 04:25
+
+- `client/src/core/layout/` lays out the building as plain data, ported from Habblaud: a reception with two
+  elevators, restrooms, a kitchen, a lounge, the corridor, and one project room per slot (rooms vary by seed:
+  mirrored, three kinds of meeting corner, different corners). It lists floors, rugs, walls with doorways, wall items,
+  furniture by kind, and "spots" (desk, stool, coffee machine, sofa, toilet…).
+- `client/src/core/vocab.ts` is the shared vocabulary (furniture kinds and sizes, poses, held items, spot kinds).
+  This is the contract themes will use: a theme decides how a `desk` looks, never where it goes.
+- Positions use Habblaud's units (16 per tile) so the ported numbers don't change; the 3D view converts to metres.
+- Not ported: Habblaud's 2D garden and street around the building.
+- 15 tests, including 90 room seeds checked for overlaps, reachability and hidden wall items.
+
+### P2-03 Navigation — done, 2026-10-25 04:25
+
+- The walk grid and A* path finder, ported as they are, with their 7 tests.
+
+### P2-04 Simulation core — done, 2026-10-25 04:33
+
+- `client/src/core/sim/` is Habblaud's office simulation, ported. It turns each snapshot into people who:
+  arrive by elevator, switch on a dark room's light, sit and type, raise a hand when waiting for you, wander when
+  idle (coffee, water cooler, restroom, lounge, window, bookshelf, arcade, snacks, phone, stretching), eat popcorn
+  while a background job runs (then fidget, gather cobwebs and nap as it drags on), cheer when it finishes, carry a
+  result to their parent as a subagent, and on leaving switch off the light and take the elevator. Rooms are built,
+  dismantled, and moved so no gaps are left between them.
+- It only produces plain data (position, direction, pose, held item, icons, bubbles); the 3D view will read it.
+- Left out for now: social life (group games, chats, personalities: Phase 6) and GitHub celebrations (backlog).
+  Habblaud's World visitor is never ported.
+- 57 tests ported from Habblaud (2 about the 2D appearance were dropped until Phase 3 brings characters).
+
+### P2-05 to P2-08: the office in 3D — done, 2026-10-25 04:43
+
+- **The page now shows the office in 3D.** An isometric diorama of the building: reception with two elevators,
+  restrooms, kitchen, lounge, the corridor and one room per project. Walls between the camera and the rooms are
+  cut down to knee height, so you can see inside; the back outer walls stay full height.
+- **Camera:** drag to pan, wheel or pinch to zoom (towards the cursor), right-drag or Q/E to turn by 90°, arrows or
+  WASD to move, F to frame the whole office, Esc to clear the selection.
+- **People:** simple "capsule people" for now (Phase 3 brings real characters). Each has its own colors from its
+  seed, a badge in its provider's color, and poses: walking, sitting and typing, raising a hand when it needs you,
+  drinking coffee, eating popcorn while a job runs, sleeping. Subagents are a bit smaller.
+- **Labels:** names, activity bubbles, an orange "needs you" bubble, a job timer and room names. Zoomed far out,
+  only what needs you stays.
+- Rooms grow when they open and shrink away when they close; dark rooms dim.
+- Rendering stops while the tab is hidden; on return everyone jumps to where they were going.
+- Cost: about 25 draw calls for a 3-room office (the budget is 300).
+- 16 new tests for the parts that don't need a GPU (camera framing, cutaway, furniture kit, poses, labels).
+
+### P2-09 to P2-11: panels, details and the screenshot test — done, 2026-10-25 04:51
+
+- **Panels around the office:**
+  - a top bar with counters (an orange "N need you" chip appears when someone waits for you) and the connection
+    state, with "Retry now" when disconnected;
+  - a sidebar listing rooms and their agents, with search (`/`) and a filter per provider;
+  - an activity feed;
+  - pop-up notices (click one to jump to the agent);
+  - a tooltip when hovering an agent.
+- **Click an agent** (in the office or the list) to open its details: what it's doing or waiting for, background
+  jobs, tasks, subagents or parent, stats, model, branch and a timeline. Click a room to see who's in it.
+- **Settings** (`,`): names, bubbles, how often idle agents wander, camera follow, and walls cut down or hidden.
+  They're remembered in this browser. **Help** (`?`) lists the shortcuts.
+- The temporary debug page from Phase 1 is gone.
+- **`npm run shot`** takes screenshots of the demo office in Chrome. CI now runs it and keeps the pictures (GitHub →
+  Actions → a run → "office-screenshots"). It fails if the page errors, the scene is empty, the draw calls pass
+  300, or the details panel won't open.
+- With 30 demo agents in 6 rooms: 38 draw calls.
+
+### Phase 2 closed — 2026-10-25 04:52
+
+- All 11 tasks are ticked. Pull request `phase-2` → `main`.
+- **Two checks need your machine:**
+  1. **Frame rate.** Run `npm run build && npm start`, open
+     http://127.0.0.1:4848/?mock=1&sessions=30&stats=1 and read the fps in the top bar. The target is 50 or more.
+     The cloud has no GPU, so I could only count draw calls: 38 for 30 agents, against a budget of 300.
+  2. **A live Gemini session** (carried over from Phase 1).
+- Verified here: the demo plays the whole lifecycle; a real Claude Code session (this one) appears in 3D and opens
+  its details; screenshots look right; all tests pass.
+- Added `?stats=1` (frame rate, draw calls, agents in the top bar) for that check.
+

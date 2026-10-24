@@ -1,9 +1,19 @@
-// The procedural placeholder kit: each furniture kind as a few boxes (P2-06). Pure data, no three: building.ts turns
-// the boxes into merged geometry. Theme packs (Phase 4) replace these with models; a missing kind falls back here.
+// The procedural kit: each furniture kind as a few boxes (P2-06). Pure data, no three: building.ts turns the boxes
+// into merged geometry. Theme packs (P4-02) recolor parts by role, pick a procedural alternative look, or replace a
+// kind with a model (render3d/models.ts); a kind the pack leaves out falls back to the defaults here.
+import type { KitRole, Procedural } from '../../../shared/theme';
 import { FURNITURE, type FurnitureKind } from '../core/vocab';
 import { TILE_M } from './units';
 
 export type PartMaterial = 'solid' | 'glass' | 'glow';
+
+/** How a theme restyles the kit (themes/look.ts builds one from a pack). */
+export interface KitStyle {
+  /** A theme color for a part role of a kind, or undefined to keep the kit's own. */
+  color(kind: FurnitureKind, role: KitRole): string | undefined;
+  /** A procedural alternative look for a kind. */
+  procedural(kind: FurnitureKind): Procedural | undefined;
+}
 
 /** A box in metres: x/z relative to the footprint's top-left corner (+z = south), y up from the floor. */
 export interface Part {
@@ -15,6 +25,10 @@ export interface Part {
   y1: number;
   color: string;
   mat?: PartMaterial;
+  /** What the part is, so a theme can recolor it. */
+  role?: KitRole;
+  /** The color came from the room (a hex variant): themes don't override it. */
+  fixed?: boolean;
 }
 
 const WOOD: Record<string, string> = { wood: '#b98a5e', white: '#e9e6e0', dark: '#4d4844' };
@@ -26,9 +40,26 @@ const DARK = '#3a3d42';
 const POT = '#c9845c';
 const GLASS = '#bfe3f2';
 
-/** Box helper in metres. */
-function b(x0: number, z0: number, x1: number, z1: number, y0: number, y1: number, color: string, mat?: PartMaterial): Part {
-  return mat ? { x0, x1, z0, z1, y0, y1, color, mat } : { x0, x1, z0, z1, y0, y1, color };
+/** Box helper in metres. The role defaults from the color: dark and metal parts are the frame, the rest the body. */
+function b(x0: number, z0: number, x1: number, z1: number, y0: number, y1: number, color: string, mat?: PartMaterial, role?: KitRole): Part {
+  const r: KitRole = role ?? (mat === 'glow' ? 'accent' : color === DARK || color === METAL ? 'frame' : 'body');
+  return mat ? { x0, x1, z0, z1, y0, y1, color, mat, role: r } : { x0, x1, z0, z1, y0, y1, color, role: r };
+}
+
+/** Sets a role on parts (and marks them fixed when the color is the room's own). */
+function as(role: KitRole, parts: Part[], fixed = false): Part[] {
+  for (const p of parts) {
+    if (p.role === 'frame' && role !== 'frame') continue;
+    p.role = role;
+    if (fixed) p.fixed = true;
+  }
+  return parts;
+}
+
+/** A variant that names a color directly (a theme's room variant: '#rrggbb'), or a named entry of a table. */
+function variantColor(table: Record<string, string>, variant: string | undefined, fallback: string): { color: string; fixed: boolean } {
+  if (variant && /^#[0-9a-f]{6}$/i.test(variant)) return { color: variant, fixed: true };
+  return { color: table[variant ?? ''] ?? fallback, fixed: false };
 }
 
 /** A seat facing `dir`, with its backrest on the opposite side, inside a w x d footprint. */
@@ -41,12 +72,15 @@ function seat(w: number, d: number, dir: string, color: string, seatY: number, b
     left: b(w - inset - t, inset, w - inset, d - inset, seatY, backY, color),
     right: b(inset, inset, inset + t, d - inset, seatY, backY, color),
   };
-  return [b(w / 2 - 0.04, d / 2 - 0.04, w / 2 + 0.04, d / 2 + 0.04, 0, 0.18, DARK), s, back[dir] ?? back.down!];
+  s.role = 'seat';
+  const bk = back[dir] ?? back.down!;
+  bk.role = 'seat';
+  return [b(w / 2 - 0.04, d / 2 - 0.04, w / 2 + 0.04, d / 2 + 0.04, 0, 0.18, DARK), s, bk];
 }
 
 /** A table top on a central post. */
 function table(w: number, d: number, h: number, color: string, inset = 0.04): Part[] {
-  return [b(inset, inset, w - inset, d - inset, h - 0.05, h, color), b(w / 2 - 0.05, d / 2 - 0.05, w / 2 + 0.05, d / 2 + 0.05, 0, h - 0.05, DARK)];
+  return [b(inset, inset, w - inset, d - inset, h - 0.05, h, color, undefined, 'top'), b(w / 2 - 0.05, d / 2 - 0.05, w / 2 + 0.05, d / 2 + 0.05, 0, h - 0.05, DARK)];
 }
 
 /** A plant: pot plus foliage. */
@@ -56,39 +90,137 @@ function plant(w: number, d: number, tall: boolean, variant: string | undefined)
   const r = tall ? 0.16 : 0.11;
   const cx = w / 2;
   const cz = d / 2;
-  const parts = [b(cx - r, cz - r, cx + r, cz + r, 0, potH, POT)];
-  if (tall) parts.push(b(cx - 0.2, cz - 0.2, cx + 0.2, cz + 0.2, potH, 1.25, leaf), b(cx - 0.13, cz - 0.13, cx + 0.13, cz + 0.13, 1.25, 1.65, leaf));
-  else parts.push(b(cx - 0.15, cz - 0.15, cx + 0.15, cz + 0.15, potH, 0.48, leaf));
+  const parts = [b(cx - r, cz - r, cx + r, cz + r, 0, potH, POT, undefined, 'pot')];
+  if (tall) parts.push(b(cx - 0.2, cz - 0.2, cx + 0.2, cz + 0.2, potH, 1.25, leaf, undefined, 'foliage'), b(cx - 0.13, cz - 0.13, cx + 0.13, cz + 0.13, 1.25, 1.65, leaf, undefined, 'foliage'));
+  else parts.push(b(cx - 0.15, cz - 0.15, cx + 0.15, cz + 0.15, potH, 0.48, leaf, undefined, 'foliage'));
   return parts;
 }
 
+/** The monitor on a desk (its live screen is drawn by screens.ts, see deskScreen in screens-model.ts). */
+function monitor(kind: FurnitureKind, w: number, d: number): Part[] {
+  // desk: the monitor sits at the back (north), facing south; desk_back: the other way round
+  const mz0 = kind === 'desk' ? 0.06 : d - 0.12;
+  return as('screen', [b(w / 2 - 0.3, mz0, w / 2 + 0.3, mz0 + 0.06, 0.8, 1.15, DARK, undefined, 'screen'), b(w / 2 - 0.04, mz0, w / 2 + 0.04, mz0 + 0.06, 0.75, 0.8, DARK)]);
+}
+
+/** Procedural alternatives (FurnitureSpec.procedural). Returns null when the look doesn't apply to the kind. */
+function alternative(look: Procedural, kind: FurnitureKind, variant: string | undefined, w: number, d: number): Part[] | null {
+  const desk = kind === 'desk' || kind === 'desk_back';
+  const top = variantColor(WOOD, variant, WOOD.wood!);
+  switch (look) {
+    case 'stool':
+      // a backless stool for any seat that faces one way (office chairs, cafe chairs, armchairs)
+      if (!FURNITURE[kind].seat || kind === 'sofa' || kind === 'bench') return null;
+      return [
+        ...as('seat', [b(0.12, 0.12, w - 0.12, d - 0.12, 0.6, 0.66, variantColor(CHAIR, variant, '#3d4248').color)], variantColor(CHAIR, variant, '').fixed),
+        b(w / 2 - 0.03, d / 2 - 0.03, w / 2 + 0.03, d / 2 + 0.03, 0, 0.6, METAL),
+        b(0.16, 0.16, w - 0.16, d - 0.16, 0.25, 0.28, METAL),
+      ];
+    case 'trestle': {
+      // a wooden top on steel A-frame legs (desks and tables)
+      if (!desk && !['meeting_table', 'cafe_table', 'coffee_table', 'reception_desk'].includes(kind)) return null;
+      const h = kind === 'coffee_table' ? 0.4 : kind === 'reception_desk' ? 1.05 : 0.75;
+      const parts = [
+        ...as('top', [b(0.02, 0.02, w - 0.02, d - 0.02, h - 0.05, h, top.color)], top.fixed),
+        b(0.08, 0.06, 0.12, d - 0.06, 0, h - 0.05, METAL),
+        b(w - 0.12, 0.06, w - 0.08, d - 0.06, 0, h - 0.05, METAL),
+        b(0.08, d / 2 - 0.02, w - 0.08, d / 2 + 0.02, 0.12, 0.16, METAL),
+      ];
+      return desk ? [...parts, ...monitor(kind, w, d)] : parts;
+    }
+    case 'cubicle': {
+      // a desk inside low partition panels (back and sides, within the desk's own footprint)
+      if (!desk) return null;
+      const panel = '#8f98a3';
+      const back = kind === 'desk' ? b(0, 0, w, 0.05, 0, 1.3, panel, undefined, 'body') : b(0, d - 0.05, w, d, 0, 1.3, panel, undefined, 'body');
+      return [
+        ...as('top', [b(0.05, 0.05, w - 0.05, d - 0.05, 0.71, 0.75, top.color)], top.fixed),
+        back,
+        b(0, 0, 0.05, d, 0, 1.15, panel, undefined, 'body'),
+        b(w - 0.05, 0, w, d, 0, 1.15, panel, undefined, 'body'),
+        b(0.1, 0.1, 0.45, d - 0.1, 0, 0.68, '#7d858e', undefined, 'frame'),
+        ...monitor(kind, w, d),
+      ];
+    }
+    case 'pallet': {
+      // stacked shipping pallets (tables): slats on blocks
+      if (!['meeting_table', 'cafe_table', 'coffee_table'].includes(kind) && !desk) return null;
+      const h = kind === 'coffee_table' ? 0.4 : 0.75;
+      const wood = top.fixed ? top.color : '#b8915e';
+      const parts: Part[] = [];
+      const layers = Math.max(2, Math.round(h / 0.14));
+      for (let i = 0; i < layers; i++) {
+        const y = (i * h) / layers;
+        parts.push(b(0.04, 0.04, w - 0.04, d - 0.04, y + 0.07, y + h / layers - 0.005, wood, undefined, i === layers - 1 ? 'top' : 'body'));
+        for (const fx of [0.06, w / 2 - 0.05, w - 0.16]) parts.push(b(fx, 0.06, fx + 0.1, d - 0.06, y, y + 0.07, '#9c7a4c', undefined, 'body'));
+      }
+      return desk ? [...parts, ...monitor(kind, w, d)] : parts;
+    }
+    case 'pipe-shelf': {
+      // black pipe uprights and wooden boards (shelves)
+      if (!['bookshelf', 'binder_shelf'].includes(kind)) return null;
+      const h = kind === 'bookshelf' ? 1.8 : 1.6;
+      const parts: Part[] = [];
+      for (const x of [0.04, w - 0.08]) for (const z of [0.04, d - 0.2]) parts.push(b(x, z, x + 0.04, z + 0.04, 0, h, '#2b2d30', undefined, 'frame'));
+      for (let i = 0; i < 4; i++) {
+        const y = 0.25 + i * ((h - 0.3) / 3);
+        parts.push(b(0.02, 0.02, w - 0.02, d - 0.15, y, y + 0.04, '#a77b4f', undefined, 'top'));
+        if (i < 3) parts.push(b(0.1, 0.06, w * (0.4 + 0.15 * i), d - 0.2, y + 0.04, y + 0.3, ['#c95f4a', '#4a78b5', '#e0a458'][i]!, undefined, 'accent'));
+      }
+      return parts;
+    }
+    case 'tufted': {
+      // a deep buttoned sofa or armchair with rolled arms (traditional)
+      if (kind !== 'sofa' && kind !== 'armchair') return null;
+      const dir = kind === 'sofa' ? (variant === 'up' ? 'up' : 'down') : (variant ?? 'down');
+      const leather = '#6b3a2a';
+      const parts = seat(w, d, dir, leather, 0.44, 0.9, 0.02);
+      const vertical = dir === 'up' || dir === 'down';
+      if (vertical) parts.push(b(0, 0.02, 0.14, d - 0.02, 0.18, 0.66, leather, undefined, 'seat'), b(w - 0.14, 0.02, w, d - 0.02, 0.18, 0.66, leather, undefined, 'seat'));
+      else parts.push(b(0.02, 0, w - 0.02, 0.14, 0.18, 0.66, leather, undefined, 'seat'), b(0.02, d - 0.14, w - 0.02, d, 0.18, 0.66, leather, undefined, 'seat'));
+      return parts;
+    }
+    case 'default':
+      return null;
+  }
+}
+
 /**
- * The boxes of a furniture kind. Footprint-relative metres; `variant` picks colors or the facing. Unknown kinds get a
- * plain crate so nothing is ever invisible.
+ * The boxes of a furniture kind. Footprint-relative metres; `variant` picks colors (a name, or '#rrggbb' from a theme's
+ * room variant) or the facing; `style` is the theme. Unknown kinds get a plain crate so nothing is ever invisible.
  */
-export function furnitureParts(kind: FurnitureKind, variant?: string): Part[] {
+export function furnitureParts(kind: FurnitureKind, variant?: string, style?: KitStyle): Part[] {
   const fp = FURNITURE[kind].footprint;
   const w = fp.w * TILE_M;
   const d = Math.max(1, fp.h) * TILE_M;
+  const look = style?.procedural(kind);
+  const parts = (look && alternative(look, kind, variant, w, d)) || defaultParts(kind, variant, w, d);
+  if (style)
+    for (const p of parts) {
+      if (p.fixed || !p.role) continue;
+      const c = style.color(kind, p.role);
+      if (c) p.color = c;
+    }
+  return parts;
+}
+
+function defaultParts(kind: FurnitureKind, variant: string | undefined, w: number, d: number): Part[] {
   switch (kind) {
     case 'desk':
     case 'desk_back': {
-      const top = WOOD[variant ?? 'wood'] ?? WOOD.wood!;
-      // desk: the monitor sits at the back (north), facing south; desk_back: the other way round. Its live screen
-      // is drawn by screens.ts (deskScreen in screens-model.ts).
-      const mz0 = kind === 'desk' ? 0.06 : d - 0.12;
+      const top = variantColor(WOOD, variant, WOOD.wood!);
       return [
-        b(0.03, 0.03, w - 0.03, d - 0.03, 0.71, 0.75, top),
+        ...as('top', [b(0.03, 0.03, w - 0.03, d - 0.03, 0.71, 0.75, top.color)], top.fixed),
         b(0.05, 0.05, 0.1, d - 0.05, 0, 0.71, DARK),
         b(w - 0.1, 0.05, w - 0.05, d - 0.05, 0, 0.71, DARK),
-        b(w / 2 - 0.3, mz0, w / 2 + 0.3, mz0 + 0.06, 0.8, 1.15, DARK),
-        b(w / 2 - 0.04, mz0, w / 2 + 0.04, mz0 + 0.06, 0.75, 0.8, DARK),
+        ...monitor(kind, w, d),
       ];
     }
     case 'office_chair':
-      return seat(w, d, 'up', CHAIR[variant ?? 'black'] ?? CHAIR.black!, 0.46, 0.95);
-    case 'office_chair_front':
-      return seat(w, d, 'down', CHAIR[variant ?? 'black'] ?? CHAIR.black!, 0.46, 0.95);
+    case 'office_chair_front': {
+      const c = variantColor(CHAIR, variant, CHAIR.black!);
+      return as('seat', seat(w, d, kind === 'office_chair' ? 'up' : 'down', c.color, 0.46, 0.95), c.fixed);
+    }
     case 'cafe_chair':
       return seat(w, d, variant ?? 'down', '#a8784f', 0.45, 0.85);
     case 'armchair':
@@ -100,9 +232,9 @@ export function furnitureParts(kind: FurnitureKind, variant?: string): Part[] {
     case 'stool':
       return [b(0.1, 0.1, w - 0.1, d - 0.1, 0.58, 0.64, '#3d4248'), b(w / 2 - 0.03, d / 2 - 0.03, w / 2 + 0.03, d / 2 + 0.03, 0, 0.58, METAL)];
     case 'beanbag':
-      return [b(0.04, 0.04, w - 0.04, d - 0.04, 0, 0.3, BEANBAG[variant ?? 'red'] ?? BEANBAG.red!), b(0.1, 0.1, w - 0.1, d - 0.1, 0.3, 0.42, BEANBAG[variant ?? 'red'] ?? BEANBAG.red!)];
+      return as('seat', [b(0.04, 0.04, w - 0.04, d - 0.04, 0, 0.3, BEANBAG[variant ?? 'red'] ?? BEANBAG.red!), b(0.1, 0.1, w - 0.1, d - 0.1, 0.3, 0.42, BEANBAG[variant ?? 'red'] ?? BEANBAG.red!)]);
     case 'bookshelf':
-      return [b(0.02, 0.02, w - 0.02, d - 0.15, 0, 1.8, '#8a6a4f'), b(0.08, d - 0.17, w - 0.08, d - 0.15, 0.2, 1.7, '#c95f4a'), b(0.08, d - 0.17, w / 2, d - 0.15, 0.95, 1.3, '#4a78b5')];
+      return [b(0.02, 0.02, w - 0.02, d - 0.15, 0, 1.8, '#8a6a4f'), b(0.08, d - 0.17, w - 0.08, d - 0.15, 0.2, 1.7, '#c95f4a', undefined, 'accent'), b(0.08, d - 0.17, w / 2, d - 0.15, 0.95, 1.3, '#4a78b5', undefined, 'accent')];
     case 'binder_shelf':
       return [b(0.04, 0.04, w - 0.04, d - 0.1, 0, 1.6, '#d9d6cf'), b(0.08, d - 0.12, w - 0.08, d - 0.1, 0.3, 1.5, '#e08a3c')];
     case 'filing_cabinet':
@@ -122,7 +254,7 @@ export function furnitureParts(kind: FurnitureKind, variant?: string): Part[] {
       return glass ? [base, glass] : [base];
     }
     case 'meeting_table':
-      return [b(0.08, 0.08, w - 0.08, d - 0.08, 0.71, 0.75, '#e9e6e0'), b(0.3, d / 2 - 0.1, w - 0.3, d / 2 + 0.1, 0, 0.71, DARK)];
+      return [b(0.08, 0.08, w - 0.08, d - 0.08, 0.71, 0.75, '#e9e6e0', undefined, 'top'), b(0.3, d / 2 - 0.1, w - 0.3, d / 2 + 0.1, 0, 0.71, DARK)];
     case 'cafe_table':
       return table(w, d, 0.75, '#e9e6e0', 0.08);
     case 'coffee_table':
@@ -157,7 +289,7 @@ export function furnitureParts(kind: FurnitureKind, variant?: string): Part[] {
         b(w / 2 - 0.2, 0.1, w / 2 + 0.2, 0.55, 0, 0.42, '#f4f6f7'),
       ];
     case 'reception_desk':
-      return [b(0, 0.05, w, d - 0.05, 0, 1.05, '#8a6a4f'), b(0, 0, w, d, 1.05, 1.1, '#e9e6e0')];
+      return [b(0, 0.05, w, d - 0.05, 0, 1.05, '#8a6a4f'), b(0, 0, w, d, 1.05, 1.1, '#e9e6e0', undefined, 'top')];
     default:
       return [b(0.1, 0.1, w - 0.1, d - 0.1, 0, 0.5, '#b0a99f')];
   }

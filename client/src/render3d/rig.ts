@@ -284,14 +284,9 @@ export class RigView {
       r.pending += dt;
       if (onScreen || this.frame % 4 === 0) {
         for (const [bone, q] of r.rest) bone.quaternion.copy(q);
-        const P = ((globalThis as any).__perf ??= { mixer: 0, layer: 0, matrix: 0, building: 0, n: 0 });
-        let t = performance.now();
         r.mixer.update(r.pending);
-        P.mixer += performance.now() - t;
         r.pending = 0;
-        t = performance.now();
         if (onScreen) this.layer(r, c, base);
-        P.layer += performance.now() - t;
       }
       const prof = this.model.profile;
       const s = prof.scale * (r.sub ? 0.86 : 1) * Math.min(1, 0.4 + c.alpha * 0.6);

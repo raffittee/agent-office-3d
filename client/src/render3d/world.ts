@@ -8,8 +8,10 @@ import { BuildingView, type Cutaway } from './building';
 import { attachInput, CameraRig, type ViewInsets } from './camera';
 import { CharacterView } from './characters';
 import { Overlay } from './overlay';
+import { onThemesChanged, themeById, type ThemeEntry } from '../themes/registry';
+import { ModelView } from './models';
 import { loadRigModel, RigView } from './rig';
-import { createScene, type Quality } from './scene';
+import { applyLighting, createScene, type Quality } from './scene';
 import { ScreenView } from './screens';
 import { mx, mz, tm } from './units';
 
@@ -19,9 +21,11 @@ export interface WorldSettings extends WorldOptions {
   cutaway: Cutaway;
   /** Rigged models (when loaded) or the simple capsule people. */
   characters: 'rigged' | 'capsule';
+  /** The theme pack id (P4-09); '' = the server's default. */
+  theme: string;
 }
 
-export const DEFAULT_WORLD_SETTINGS: WorldSettings = { ...DEFAULT_WORLD_OPTIONS, cutaway: 'cut', characters: 'rigged' };
+export const DEFAULT_WORLD_SETTINGS: WorldSettings = { ...DEFAULT_WORLD_OPTIONS, cutaway: 'cut', characters: 'rigged', theme: '' };
 
 /** Where the pipeline's character assets are served from, and the default character. */
 const CHARACTER_BASE = 'assets/characters';
@@ -43,6 +47,8 @@ export interface WorldApi {
   /** Viewport position just above an agent's head, or null when it isn't on screen. */
   screenPositionOf(agentId: string): { x: number; y: number } | null;
   setViewInsets(insets: Partial<ViewInsets>): void;
+  /** The theme in use. */
+  theme(): ThemeEntry;
   /** Frame stats for the debug readout and the smoke test. */
   stats(): { fps: number; cpuMs: number; phases: { sim: number; sync: number; render: number; labels: number }; calls: number; triangles: number; agents: number; rooms: number };
   readonly sim: Sim;
@@ -58,11 +64,25 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
   const { renderer, scene } = parts;
   // world matrices are updated once per frame in the loop (before attachments), not again inside render()
   scene.matrixWorldAutoUpdate = false;
-  const sim = new Sim({ options: () => options });
-  const building = new BuildingView();
+  // ---- theme: the pack picked in settings, else the server's default (AGENT_OFFICE_THEME), else the built-in default
+  let theme = themeById(options.theme || store.snapshot?.meta.theme);
+  const sim = new Sim({ options: () => options, roomTheme: (seed) => theme.look.roomTheme(seed), template: theme.look.template });
+  const building = new BuildingView(theme.look);
+  const models = new ModelView((ready) => building.setLook(theme.look, ready));
   const chars = new CharacterView();
   const screens = new ScreenView();
-  scene.add(building.root, chars.root, screens.mesh);
+  scene.add(building.root, models.root, chars.root, screens.mesh);
+  const applyTheme = (next: ThemeEntry) => {
+    theme = next;
+    applyLighting(parts, next.look);
+    models.setTheme(next);
+    building.setLook(next.look, models.ready);
+    // the sim keeps everyone where they are: rooms only get new palettes and walls
+    sim.restyle(next.look.template);
+  };
+  applyLighting(parts, theme.look);
+  models.setTheme(theme);
+  const offThemes = onThemesChanged(() => applyTheme(themeById(theme.look.id)));
   const rig2d = new CameraRig();
   const overlay = new Overlay(overlayParent);
   canvas.tabIndex = 0;
@@ -101,6 +121,11 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
   const onSnapshot = () => {
     const snap = store.snapshot;
     if (!snap) return;
+    // no theme picked here: follow the server's default
+    if (!options.theme && snap.meta.theme && snap.meta.theme !== theme.look.id) {
+      const next = themeById(snap.meta.theme);
+      if (next.look.id !== theme.look.id) applyTheme(next);
+    }
     sim.applySnapshot(snap, Date.now());
     const key = snap.meta.providers.map((p) => `${p.id}:${p.color}`).join();
     if (key !== providersKey) {
@@ -206,10 +231,9 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
     }
     rig2d.update(dt);
     const tSync = performance.now();
-    const tb = performance.now();
     building.sync(sim, rig2d.yaw, options.cutaway, now);
+    models.sync(sim, now);
     screens.sync(sim, now);
-    { const P = (globalThis as any).__perf; if (P) P.building += performance.now() - tb; }
     const onScreen = (c: { x: number; y: number }) => {
       tmpV.set(mx(c.x), 0.8, mz(c.y));
       rig2d.project(tmpV, pt);
@@ -220,9 +244,7 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
       chars.root.visible = false;
       rig!.sync(sim.chars.values(), dt, onScreen);
       // one world-matrix update per frame: the attachments read bone positions from it, and render() skips its own
-      const tm0 = performance.now();
       scene.updateMatrixWorld();
-      const P = (globalThis as any).__perf; if (P) { P.matrix += performance.now() - tm0; P.n++; }
       rig!.attach();
     } else {
       if (rig) rig.root.visible = false;
@@ -299,7 +321,12 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
     rotate: (s) => rig2d.rotate(s),
     getOptions: () => ({ ...options }),
     setOptions(o) {
+      const themeChanged = o.theme !== undefined && o.theme !== options.theme;
       options = { ...options, ...o };
+      if (themeChanged) {
+        const next = themeById(options.theme || store.snapshot?.meta.theme);
+        if (next.look.id !== theme.look.id) applyTheme(next);
+      }
       if (o.followSelected === false) rig2d.follow = null;
       if (o.followSelected && selection?.type === 'agent') followAgent(selection.id);
     },
@@ -314,14 +341,17 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
     setViewInsets(insets) {
       rig2d.insets = { ...rig2d.insets, ...insets };
     },
+    theme: () => theme,
     stats: () => ({ fps: Math.round(fps), cpuMs: +cpuMs.toFixed(2), phases: { sim: +phases.sim.toFixed(2), sync: +phases.sync.toFixed(2), render: +phases.render.toFixed(2), labels: +phases.labels.toFixed(2) }, calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, agents: sim.chars.size, rooms: [...sim.rooms.values()].filter((r) => !r.ghost).length }),
     destroy() {
       stop();
       offSnap();
+      offThemes();
       offInput();
       document.removeEventListener('visibilitychange', onVisibility);
       overlay.dispose();
       building.dispose();
+      models.dispose();
       screens.dispose();
       chars.dispose();
       parts.dispose();

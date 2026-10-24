@@ -415,35 +415,54 @@ Gemini sessions appear, and clicking an agent opens its drawer.
 
 ## Phase 4: Theme system
 
-- [ ] **P4-01 ThemePack schema** (M)
+- [x] **P4-01 ThemePack schema** (M) — done: `shared/theme.ts` (types, `REQUIRED_KINDS`, part roles, procedural
+  looks, decor kinds, a dependency-free `validateTheme`, and `themeJsonSchema()` that generates
+  `themes/theme.schema.json`); `npm run theme:check` (`scripts/themes/check.ts`: schema, id = folder, files inside the
+  pack, 15 MB budget) runs in CI and in `test/themes.test.ts`. Procedural defaults: `render3d/kit.ts` (every kind).
   - TypeScript types, `themes/theme.schema.json`, a validator, and `npm run theme:check` (also run in CI).
   - Define the list of required semantic kinds and their procedural defaults.
-- [ ] **P4-02 Theme runtime** (L)
+- [x] **P4-02 Theme runtime** (L) — done: `client/src/themes/{registry,look}.ts` (packs bundled with
+  `import.meta.glob`, resolved to colors, surface patterns, room palettes, kit styles, lighting, decor; dev hot reload),
+  `render3d/models.ts` (glTF cache, one InstancedMesh per model mesh), `render3d/decor.ts`, `scene.applyLighting`,
+  `Sim.restyle()` (live switch keeps every agent's desk and errand; tested). Post-fx are accepted but not drawn in
+  v1 (performance budget; noted in `docs/themes.md`).
   - The loader: a glTF cache, material presets, and procedural kinds.
   - The lighting rig and post-processing come from the theme.
   - Switching themes live keeps the simulation state. `theme.json` hot-reloads in dev.
-- [ ] **P4-03 Layout templates** (L)
+- [x] **P4-03 Layout templates** (L) — done: `layoutProjectRoom`/`assembleBuilding`/`layoutCorridor` take the
+  template; open-plan and loft open the rooms' side walls and use glass or low partitions, with `layoutEdge` closing
+  the east wall; `core/layout/templates.test.ts` checks same spots, all reachable, 1–20 rooms.
   - `corridor`: rooms along a corridor, like Habblaud.
   - `open-plan`: zones marked by rugs and partitions.
   - `loft`: one tall hall with zones.
   - **Done when:** a test shows that every template produces all required spot kinds for 1 to 20 rooms.
-- [ ] **P4-04 Theme: Modern (default)** (M)
+- [x] **P4-04 Theme: Modern (default)** (M) — done: `themes/modern/` (the Phase 2–3 look, as data).
   - A bright, clean office, the closest to Habblaud's look.
-- [ ] **P4-05 Theme: Industrial loft** (M)
+- [x] **P4-05 Theme: Industrial loft** (M) — done: `themes/industrial/` (loft template, 3.6 m brick walls, concrete,
+  pipes, beams, factory windows, Edison bulbs, trestle desks, pallet tables, pipe shelves).
   - Exposed brick, concrete floor, steel beams, ducts, Edison bulbs, factory windows, metal-and-wood furniture,
     pallet tables.
-- [ ] **P4-06 Theme: Traditional office** (M)
+- [x] **P4-06 Theme: Traditional office** (M) — done: `themes/traditional/` (carpet tiles, cubicle desks, fluorescent
+  strips, wainscot, certificates, tufted leather sofas). The drop ceiling is shown as hanging strips: a ceiling would
+  hide the office from the isometric camera.
   - Carpet tiles, cubicles, a drop ceiling with fluorescent panels, wooden desks, filing cabinets, a water cooler,
     framed certificates.
-- [ ] **P4-07 Theme: Startup** (M)
+- [x] **P4-07 Theme: Startup** (M) — done: `themes/startup/` (open plan with glass partitions, wood floors, neon,
+  plant walls, string lights, bright room colors). Bean bags, ping-pong and the snack bar come from the layout.
+  Standing desks would change seats (behavior), so they stay out of the theme.
   - Open plan, standing desks, bean bags, ping-pong, neon signs, plant walls, whiteboard walls, a snack bar.
-- [ ] **P4-08 Per-room variation** (S)
+- [x] **P4-08 Per-room variation** (S) — done: `Look.roomTheme(seed)` picks from `roomVariants` (neighbouring seeds
+  differ; hex desk and chair colors flow into the kit as fixed colors); tested in `themes/themes.test.ts`.
   - Pick room variants by seed from `roomVariants`, so neighboring rooms differ.
   - **Ref:** `client/src/art/theme.ts`.
-- [ ] **P4-09 Theme picker** (S)
+- [x] **P4-09 Theme picker** (S) — done: Settings → Theme (cards with thumbnails, or swatches), saved in
+  `localStorage`; `?theme=<id>` in the URL; `AGENT_OFFICE_THEME` → `meta.theme` (additive protocol field).
   - In settings: thumbnails of each theme. The choice is saved in `localStorage`; `AGENT_OFFICE_THEME` sets the
     server default.
-- [ ] **P4-10 Authoring kit** (M)
+- [x] **P4-10 Authoring kit** (M) — done: `npm run theme:new -- <id> [--from <theme>]` (`scripts/themes/new.ts`),
+  `docs/themes.md`, the example pack `themes/cabin/` with two own-work models (`scripts/themes/example-models.ts`), and
+  `/preview.html` (`client/src/preview.ts`, `themes/preview-layout.ts`: every kind side by side, models marked).
+  `npm run shot -- --thumbs` renders the picker thumbnails; `--themes` (in CI) screenshots every theme and the preview.
   - `npm run theme:new -- <id>` scaffolds a pack.
   - `docs/themes.md`: a step-by-step guide.
   - An example custom theme, and a preview page that shows every kind side by side.
@@ -451,6 +470,10 @@ Gemini sessions appear, and clicking an agent opens its drawer.
 
 **Exit:** the four built-in themes switch live, and a fifth theme can be built by following `docs/themes.md`
 without touching code.
+
+**Exit status (2026-10-25):** met. CI's `npm run shot -- --themes` switches live through all five packs (state kept,
+no page errors, 37–52 draw calls) and renders the preview page; `themes/cabin/` is the fifth theme, built from
+`docs/themes.md` with data and models only. `theme.json` hot reload was checked under `npm run dev`.
 
 ---
 

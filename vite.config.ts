@@ -14,7 +14,7 @@ export default defineConfig({
     // Hashed bundles go to /bundle/ (served immutable); /assets/ is reserved for fixed-name public files.
     assetsDir: 'bundle',
     assetsInlineLimit: 0,
-    rollupOptions: { input: { main: r('./client/index.html') } },
+    rollupOptions: { input: { main: r('./client/index.html'), preview: r('./client/preview.html') } },
   },
   server: {
     host: '127.0.0.1',

@@ -16,6 +16,7 @@ import { PathFinder } from '../nav/astar';
 import { BLOCKED, FREE, SEAT } from '../nav/grid';
 import { DEFAULT_WORLD_OPTIONS, type WorldOptions } from '../options';
 import { roomTheme as defaultRoomTheme } from '../room-theme';
+import type { LayoutTemplate } from '../../../../shared/theme';
 import type { Dir, RoomTheme } from '../vocab';
 import { canDismantle, chooseSeat, idleSitMs, isLastInRoom, isLongIdle, modeFor, pickIdleActivity, shouldRun, type IdleActivity, type Mode } from './behavior';
 import { Character, dirOf, facing } from './character';
@@ -33,8 +34,10 @@ export { SHELL_DONE_TOOL } from './shell';
 export interface SimDeps {
   /** World options (liveliness…); read on every decision. */
   options?: () => WorldOptions;
-  /** A room's palette from its seed (theme packs plug in here in Phase 4). */
+  /** A room's palette from its seed (the active theme's room variants, P4-08); read again by restyle(). */
   roomTheme?: (seed: number) => RoomTheme;
+  /** The theme's layout template (P4-03); change it later with setTemplate. */
+  template?: LayoutTemplate;
 }
 
 /** Cheer (job finished) and sulk (failed or killed). */
@@ -94,11 +97,13 @@ export class Sim {
   private nextHousekeeping = 0;
   private readonly options: () => WorldOptions;
   private readonly roomTheme: (seed: number) => RoomTheme;
+  private template: LayoutTemplate;
 
   constructor(deps: SimDeps = {}) {
     this.options = deps.options ?? (() => DEFAULT_WORLD_OPTIONS);
     this.roomTheme = deps.roomTheme ?? defaultRoomTheme;
-    this.building = assembleBuilding(columnsFor([]), [], 0);
+    this.template = deps.template ?? 'corridor';
+    this.building = assembleBuilding(columnsFor([]), [], 0, this.template);
     this.finder = new PathFinder(this.building.grid);
     this.spots.setSpots(this.building.spots);
     for (const s of this.spots.ofKind('elevator')) this.elevators.push(new Elevator(this.elevators.length, s.id));
@@ -184,7 +189,7 @@ export class Sim {
     }
     // the building's first free slot (the server's slot only gives the arrival order)
     const slot = this.freeSlot();
-    const layout = layoutProjectRoom({ id: r.id, slot, seed: r.seed }, theme);
+    const layout = layoutProjectRoom({ id: r.id, slot, seed: r.seed }, theme, this.template);
     const rs = new RoomState(r, theme, layout, first ? 'ready' : 'building', now, first, slot);
     this.rooms.set(r.id, rs);
     return rs;
@@ -410,6 +415,29 @@ export class Sim {
 
   // =================================================================== layout
 
+  get layoutTemplate(): LayoutTemplate {
+    return this.template;
+  }
+
+  /**
+   * Restyles the office live (a theme change, P4-02/P4-03): every room gets its palette again from `roomTheme` and is
+   * laid out again in place with the template. Spot ids and positions depend on neither, so everyone keeps their desk,
+   * seat and errand.
+   */
+  restyle(template: LayoutTemplate = this.template): void {
+    this.template = template;
+    for (const room of this.rooms.values()) {
+      try {
+        room.theme = this.roomTheme(room.seed) ?? room.theme;
+      } catch {
+        // keep the palette it had
+      }
+      room.layout = layoutProjectRoom({ id: room.id, slot: room.slot, seed: room.seed }, room.theme, template);
+      room.version++;
+    }
+    this.relayout();
+  }
+
   /** Recomputes the building (width, grid, spots) from the rooms present. */
   relayout(force = false): void {
     const present = [...this.rooms.values()].filter((r) => r.present);
@@ -427,6 +455,7 @@ export class Sim {
       cols,
       present.map((r) => r.layout),
       this.layoutVersion + 1,
+      this.template,
     );
     this.building = building;
     this.layoutVersion++;
@@ -561,7 +590,7 @@ export class Sim {
   moveRoom(room: RoomState, slot: number, now: number): void {
     const before = room.layout;
     const ghostId = `${room.id}#moving${++this.moveSeq}`;
-    const ghostLayout = layoutProjectRoom({ id: ghostId, slot: room.slot, seed: room.seed }, room.theme);
+    const ghostLayout = layoutProjectRoom({ id: ghostId, slot: room.slot, seed: room.seed }, room.theme, this.template);
     const ghost = new RoomState({ ...room.info, id: ghostId, seed: room.seed }, room.theme, ghostLayout, 'ready', now, false, room.slot);
     ghost.ghost = true;
     ghost.listed = false;
@@ -577,7 +606,7 @@ export class Sim {
     });
 
     room.slot = slot;
-    room.layout = layoutProjectRoom({ id: room.id, slot, seed: room.seed }, room.theme);
+    room.layout = layoutProjectRoom({ id: room.id, slot, seed: room.seed }, room.theme, this.template);
     room.setPhase('building', now);
     room.lightOn = false;
     room.lightAt = -1e9;

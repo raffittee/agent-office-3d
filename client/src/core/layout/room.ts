@@ -11,6 +11,7 @@
 // (rest, printing, green, standing desk) and the support column by the wall.
 import { mulberry32 } from '../../../../shared/hash';
 import { DOOR_W, DOOR_X, TILE } from '../constants';
+import type { LayoutTemplate } from '../../../../shared/theme';
 import { FURNITURE, type Dir, type FurnitureKind, type RoomTheme, type WallStyle } from '../vocab';
 import { AreaBuilder, type SpotOpts } from './builder';
 import { slotRect, slotSide } from './geometry';
@@ -66,7 +67,10 @@ export function roomVariant(seed: number): RoomVariant {
   return { mirror, meeting, left, right };
 }
 
-export function layoutProjectRoom(room: RoomInput, theme: RoomTheme): AreaLayout {
+/** Open templates: the rows (local) of the opening in each side wall, so neighbouring rooms connect. */
+export const SIDE_OPENING = { ly: 4, h: 5 } as const;
+
+export function layoutProjectRoom(room: RoomInput, theme: RoomTheme, template: LayoutTemplate = 'corridor'): AreaLayout {
   const rect = slotRect(room.slot);
   const side = slotSide(room.slot);
   const rng = mulberry32(room.seed ^ 0x5eed);
@@ -95,27 +99,42 @@ export function layoutProjectRoom(room: RoomInput, theme: RoomTheme): AreaLayout
 
   // ---- floor: light porcelain (tiles are for the restroom); a light tint from the palette gives identity
   b.floor('marble', 0, 0, 16, 12, room.seed);
-  area.floorTint = theme.carpet;
+  // (open templates share one floor across rooms; the rug marks the zone)
+  if (template === 'corridor') area.floorTint = theme.carpet;
   // a rug in the room's color under the island
   rug(1.5, 3.25, 7, 5.5, theme.carpet, room.seed);
   // a doormat
   rug(DOOR_X - 0.25, north ? 9.5 : 2, DOOR_W + 0.5, 1.25, shade(theme.carpet2, -0.1), room.seed + 1);
 
-  // ---- walls
+  // ---- walls (open templates: partitions towards the corridor and the neighbours, with openings at the sides)
+  const open = template !== 'corridor';
+  const inner: WallStyle = open ? { ...wall, partition: template === 'loft' ? 'low' : 'glass' } : wall;
   if (north) {
     b.face(0.5, 15, wall);
-    b.south(0.5, 15, 11, wall, [door]);
+    b.south(0.5, 15, 11, inner, [door]);
   } else {
-    b.face(0.5, 15, wall, [door]);
+    b.face(0.5, 15, inner, [door]);
     b.south(0.5, 15, 11, { ...wall, exterior: true });
     // a frame over the doorway (the north face shows the opening)
     b.wall('door_frame', DOOR_X + DOOR_W / 2, undefined, { order: 0.05 });
   }
-  b.cap(0, 0, 0.5, 12, wall);
-  b.cap(15.5, 0, 0.5, 12, wall);
+  if (open) {
+    const { ly, h } = SIDE_OPENING;
+    for (const x of [0, 15.5]) {
+      b.cap(x, 0, 0.5, ly, inner);
+      b.cap(x, ly + h, 0.5, 12 - ly - h, inner);
+    }
+  } else {
+    b.cap(0, 0, 0.5, 12, wall);
+    b.cap(15.5, 0, 0.5, 12, wall);
+  }
 
   // ---- walkability
   b.walk(1, 2, 14, 9);
+  if (open) {
+    b.walk(0, SIDE_OPENING.ly, 1, SIDE_OPENING.h);
+    b.walk(15, SIDE_OPENING.ly, 1, SIDE_OPENING.h);
+  }
   area.door = north ? { x: rect.x + DOOR_X, y: rect.y + 11, w: DOOR_W, h: 1 } : { x: rect.x + DOOR_X, y: rect.y, w: DOOR_W, h: 2 };
   b.walk(area.door.x - rect.x, area.door.y - rect.y, area.door.w, area.door.h);
 

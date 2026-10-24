@@ -207,6 +207,8 @@ export interface WallStyle {
   pattern?: WallPattern;
   /** An outer wall of the building. */
   exterior?: boolean;
+  /** Open layout templates (P4-03): a glass partition or a low divider instead of a wall. */
+  partition?: 'glass' | 'low';
 }
 
 /** What a monitor or TV shows. */

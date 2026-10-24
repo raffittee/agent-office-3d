@@ -23,7 +23,9 @@
     "hooks:status": "tsx scripts/hooks-install.ts status",
     "shot": "node scripts/shot.mjs",
     "assets:fetch": "tsx scripts/assets/fetch.ts",
-    "assets:build": "tsx scripts/assets/build.ts"
+    "assets:build": "tsx scripts/assets/build.ts",
+    "theme:check": "tsx scripts/themes/check.ts",
+    "theme:new": "tsx scripts/themes/new.ts"
   },
   "devDependencies": {
     "@gltf-transform/core": "4.5.1",

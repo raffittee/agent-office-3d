@@ -1,0 +1,45 @@
+{
+  "$schema": "../theme.schema.json",
+  "id": "traditional",
+  "name": "Traditional Office",
+  "schema": 1,
+  "description": "Carpet tiles, cubicles, fluorescent strip lights, wooden desks, filing cabinets, a water cooler and framed certificates on the walls.",
+  "author": "Agent Office contributors",
+  "license": "CC0-1.0",
+  "thumbnail": "thumb.png",
+  "layout": { "template": "corridor", "wallHeight": 2.7 },
+  "palette": { "base": "#e9e2d0", "accent": "#2f5d50", "background": "#d9d4c7" },
+  "materials": {
+    "floor": { "preset": "carpet", "color": "#a3adbb" },
+    "corridorFloor": { "preset": "carpet", "color": "#b0a68f" },
+    "coreFloor": { "preset": "tile", "color": "#ddd6c6" },
+    "loungeFloor": { "preset": "carpet", "color": "#a08c74" },
+    "wall": { "preset": "plaster", "color": "#e8e1cf" },
+    "exteriorWall": { "preset": "plaster", "color": "#d8cfb8" },
+    "trim": { "color": "#7a5c3e" },
+    "ground": { "color": "#bdb5a3" }
+  },
+  "lighting": { "ambient": "#f4f8ff", "ground": "#a9a291", "ambientIntensity": 2.0, "sun": { "color": "#ffffff", "intensity": 1.4 }, "practicals": "fluorescent" },
+  "kit": { "top": "#8a5a35", "frame": "#4a3b2e", "seat": "#2f4f6f" },
+  "furniture": {
+    "desk": { "procedural": "cubicle", "colors": { "body": "#9aa0a6" } },
+    "desk_back": { "procedural": "cubicle", "colors": { "body": "#9aa0a6" } },
+    "sofa": { "procedural": "tufted" },
+    "armchair": { "procedural": "tufted" },
+    "filing_cabinet": { "colors": { "body": "#a7a9a3" } },
+    "meeting_table": { "colors": { "top": "#6e4528" } },
+    "reception_desk": { "colors": { "body": "#5e3c22", "top": "#d8cfb8" } }
+  },
+  "decor": [
+    { "kind": "fluorescent", "on": "everywhere", "density": 0.8 },
+    { "kind": "certificates", "on": "everywhere", "density": 0.6 },
+    { "kind": "wainscot", "on": "everywhere", "color": "#8a6a4a" }
+  ],
+  "roomVariants": [
+    { "accent": "#2f5d50", "carpet": "#8fa392", "chair": "#2f4f6f" },
+    { "accent": "#7a2e3a", "carpet": "#a8868a", "chair": "#5a2a30" },
+    { "accent": "#2e4a7a", "carpet": "#8b9bb8", "chair": "#2e3f5e" },
+    { "accent": "#a57c2a", "carpet": "#b3a47f", "chair": "#4a4030" },
+    { "accent": "#5f5f5f", "carpet": "#9ea1a6", "chair": "#3a3c40" }
+  ]
+}

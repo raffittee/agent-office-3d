@@ -62,6 +62,8 @@ export interface OfficeDeps {
   accountName?: (provider: ProviderId, account: string) => string | undefined;
   /** Simulated agents are in the office (OfficeSnapshot.meta.demo). */
   demo?: boolean;
+  /** The default theme pack id (OfficeSnapshot.meta.theme, from AGENT_OFFICE_THEME). */
+  theme?: string;
   now?: () => number;
 }
 
@@ -776,6 +778,7 @@ export class Office {
         startedAt: this.deps.startedAt,
         version: this.deps.version,
         ...(build ? { build } : {}),
+        ...(this.deps.theme ? { theme: this.deps.theme } : {}),
       },
     };
   }

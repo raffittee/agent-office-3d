@@ -531,3 +531,47 @@ Branch `phase-1`. One commit per task, each pushed. At the end of the phase ther
   ($0 is fine) and the "Universal Animation Library" from OpenGameArt, and tell me where the files are. Wiring them in
   is a new entry in the pipeline (ADR 0005).
 
+
+## Phase 4: Theme system (branch `phase-4`)
+
+### P4-01 to P4-09: themes — done, 2026-10-25 05:45
+
+- **Four built-in themes that switch live** (Settings → Theme): **Modern** (the look so far, now the default),
+  **Industrial Loft** (brick, concrete, steel beams, ducts, factory windows, Edison bulbs, pallet tables), **Traditional
+  Office** (carpet, cubicles, fluorescent strips, framed certificates, leather sofas) and **Startup** (open plan with
+  glass partitions, wood floors, neon, plant walls, string lights, loud colors). Switching keeps every agent where it is.
+- **Themes are data**: `themes/<id>/theme.json`, checked by `npm run theme:check` (also in CI) against
+  `themes/theme.schema.json`. A pack sets colors and patterns per surface, lighting, a layout template, decor, per-room
+  palettes, and per furniture kind a recolor, an alternative built-in look, or a glTF model.
+- **Layout templates**: `corridor` (rooms with doors, as before), `open-plan` (glass partitions, rooms open into each
+  other at the sides) and `loft` (low dividers, taller walls). A test checks that every template keeps the same places
+  for 1 to 20 rooms and that all of them can be reached.
+- **Server default**: `AGENT_OFFICE_THEME=industrial npm start` sets the theme for browsers that haven't picked one.
+  `?theme=<id>` in the URL opens a theme directly.
+- **Decisions I made on your behalf:**
+  - The traditional theme's drop ceiling is drawn as hanging light strips: a real ceiling would hide the office from
+    the isometric camera.
+  - Standing desks aren't in the Startup theme: they would change where agents sit, and themes must never change
+    behavior.
+  - Theme `postfx` (bloom, ambient occlusion) is accepted in packs but not drawn yet, to stay within the performance
+    budget on integrated GPUs.
+- Clean-up: removed leftover profiling counters from the Phase 3 performance pass.
+
+### P4-10 Authoring kit — done, 2026-10-25 06:00
+
+- **Make your own theme without code:** `npm run theme:new -- harbour --name "Harbour Office"` creates a pack with
+  every setting filled in (`--from industrial` starts from another theme). `docs/themes.md` walks through it step by
+  step: colors, patterns, lighting, furniture looks, room colors, decor, models, checking and thumbnails.
+- **Preview page:** http://127.0.0.1:4848/preview.html?theme=cabin shows every piece of furniture of a theme side by
+  side, labelled, and reloads as you edit the theme's file under `npm run dev`.
+- **Example theme "Cozy Cabin"** (`themes/cabin/`): wood walls, warm bulbs, plaid seats, and two models of its own (a
+  potted cactus and a round side table), made from code so they're our own work (CC0).
+- The theme picker now shows a real thumbnail of each theme (`npm run shot -- --thumbs` re-renders them).
+- CI now screenshots every theme and the preview page (artifact `office-screenshots`).
+
+### Phase 4 closed — 2026-10-25 06:00
+
+- All 10 tasks are ticked. Pull request `phase-4` → `main`.
+- **Try it:** Settings (gear icon) → Theme. Or `AGENT_OFFICE_THEME=industrial npm start` to change the default.
+- **Needs your machine:** the frame-rate check, now per theme (the industrial and traditional themes draw the most
+  detail): http://127.0.0.1:4848/?mock=1&sessions=30&stats=1&theme=traditional.

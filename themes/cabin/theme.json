@@ -1,0 +1,42 @@
+{
+  "$schema": "../theme.schema.json",
+  "id": "cabin",
+  "name": "Cozy Cabin",
+  "schema": 1,
+  "description": "The example custom theme from docs/themes.md: log-cabin wood, warm bulbs, plaid seats, and two models of its own (a potted cactus and a round side table).",
+  "author": "Agent Office contributors",
+  "license": "CC0-1.0",
+  "thumbnail": "thumb.png",
+  "layout": { "template": "corridor", "wallHeight": 3.0 },
+  "palette": { "base": "#f3e7d3", "accent": "#a8452f", "background": "#e9dfcf" },
+  "materials": {
+    "floor": { "preset": "wood", "color": "#b98a5a" },
+    "corridorFloor": { "preset": "wood", "color": "#a77b4f" },
+    "coreFloor": { "preset": "wood", "color": "#b48656" },
+    "loungeFloor": { "preset": "carpet", "color": "#8f5a3c" },
+    "wall": { "preset": "wood", "color": "#c9a477" },
+    "exteriorWall": { "preset": "wood", "color": "#8a5d3a" },
+    "trim": { "color": "#5e3d24" },
+    "ground": { "color": "#9fae84" }
+  },
+  "lighting": { "ambient": "#fff2dd", "ground": "#a58f72", "ambientIntensity": 1.9, "sun": { "color": "#ffe6c2", "intensity": 1.5 }, "practicals": "warm" },
+  "kit": { "top": "#c58f5a", "frame": "#4a3323", "seat": "#a8452f" },
+  "furniture": {
+    "plant_tall": { "model": "models/cactus.glb" },
+    "cafe_table": { "model": "models/side-table.glb" },
+    "sofa": { "procedural": "tufted", "colors": { "seat": "#7b3b2a" } },
+    "armchair": { "procedural": "tufted", "colors": { "seat": "#2f5d50" } },
+    "bookshelf": { "colors": { "body": "#6e4a2c" } }
+  },
+  "decor": [
+    { "kind": "beams", "on": "everywhere", "density": 0.4, "color": "#5e3d24" },
+    { "kind": "string_lights", "on": "everywhere", "density": 0.6 },
+    { "kind": "pendant_bulbs", "on": "rooms", "density": 0.7 }
+  ],
+  "roomVariants": [
+    { "accent": "#a8452f", "carpet": "#c98a6c", "chair": "#a8452f" },
+    { "accent": "#2f5d50", "carpet": "#86a89a", "chair": "#2f5d50" },
+    { "accent": "#c9a227", "carpet": "#dcc27a", "chair": "#8a6d16" },
+    { "accent": "#34507a", "carpet": "#8fa2c2", "chair": "#34507a" }
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "$schema": "../theme.schema.json",
+  "id": "startup",
+  "name": "Startup",
+  "schema": 1,
+  "description": "An open-plan space with light wood floors, bean bags, ping-pong, neon signs, plant walls, string lights and loud colors.",
+  "author": "Agent Office contributors",
+  "license": "CC0-1.0",
+  "thumbnail": "thumb.png",
+  "layout": { "template": "open-plan", "wallHeight": 3.0 },
+  "palette": { "base": "#fafafa", "accent": "#ff4f8b", "background": "#e8ecf3" },
+  "materials": {
+    "floor": { "preset": "wood", "color": "#d8b98f" },
+    "corridorFloor": { "preset": "concrete", "color": "#cfcdc8" },
+    "coreFloor": { "preset": "wood", "color": "#d2b083" },
+    "loungeFloor": { "preset": "carpet", "color": "#9fc9c0" },
+    "wall": { "preset": "plain", "color": "#ffffff" },
+    "exteriorWall": { "preset": "plain", "color": "#f3f3f3" },
+    "trim": { "color": "#2b2d33" },
+    "ground": { "color": "#d9dde3" }
+  },
+  "lighting": { "ambient": "#ffffff", "ground": "#c7c2d0", "ambientIntensity": 2.0, "sun": { "color": "#fff8ee", "intensity": 1.5 }, "practicals": "neon" },
+  "kit": { "top": "#f2efe9", "frame": "#222428", "seat": "#ffcc4d" },
+  "furniture": {
+    "meeting_table": { "procedural": "trestle" },
+    "cafe_table": { "procedural": "trestle" },
+    "desk": { "procedural": "trestle" },
+    "desk_back": { "procedural": "trestle" },
+    "sofa": { "colors": { "seat": "#5b5fc7", "body": "#4a4eb0" } },
+    "vending_machine": { "colors": { "body": "#ff4f8b" } }
+  },
+  "decor": [
+    { "kind": "neon", "on": "everywhere", "density": 0.8 },
+    { "kind": "plant_wall", "on": "everywhere", "density": 0.6 },
+    { "kind": "string_lights", "on": "core", "density": 0.7, "color": "#ffe08a" }
+  ],
+  "roomVariants": [
+    { "accent": "#ff4f8b", "carpet": "#ffc2d6", "chair": "#ff4f8b" },
+    { "accent": "#ffb000", "carpet": "#ffe3a3", "chair": "#ffb000" },
+    { "accent": "#00b3a4", "carpet": "#a6e8e1", "chair": "#00b3a4" },
+    { "accent": "#7b5cff", "carpet": "#d3c8ff", "chair": "#7b5cff" },
+    { "accent": "#ff6a3d", "carpet": "#ffc9b5", "chair": "#ff6a3d" },
+    { "accent": "#4cbf4c", "carpet": "#c4ecc4", "chair": "#4cbf4c" }
+  ]
+}

@@ -9,6 +9,7 @@ import { attachInput, CameraRig, type ViewInsets } from './camera';
 import { CharacterView } from './characters';
 import { Overlay } from './overlay';
 import { onThemesChanged, themeById, type ThemeEntry } from '../themes/registry';
+import { EffectsView } from './effects';
 import { ModelView } from './models';
 import { loadRigModel, RigView } from './rig';
 import { ambientAt, approachAmbient, effectiveHour, parseHourParam, type Ambient, type DaylightMode } from '../core/daylight';
@@ -74,7 +75,8 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
   const models = new ModelView((ready) => building.setLook(theme.look, ready));
   const chars = new CharacterView();
   const screens = new ScreenView();
-  scene.add(building.root, models.root, chars.root, screens.mesh);
+  const effects = new EffectsView();
+  scene.add(building.root, models.root, chars.root, screens.mesh, effects.root);
   const applyTheme = (next: ThemeEntry) => {
     theme = next;
     applyLighting(parts, next.look);
@@ -269,6 +271,7 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
       chars.root.visible = true;
       chars.sync(sim.chars.values(), dt);
     }
+    effects.sync(sim, view(), now, dt);
     sim.effects.length = 0;
     if (!useRig()) scene.updateMatrixWorld();
     const tRender = performance.now();
@@ -370,6 +373,7 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
       overlay.dispose();
       building.dispose();
       models.dispose();
+      effects.dispose();
       screens.dispose();
       chars.dispose();
       parts.dispose();

@@ -657,3 +657,8 @@ Branch `phase-1`. One commit per task, each pushed. At the end of the phase ther
 - **The office follows your local time:** golden light at dawn and dusk, a dark blue night where lamps, screens and
   rooms with the light on stand out, and empty rooms fade into the dark. Settings → "Day and night" can fix it to
   always day or always night. `?hour=21:30` in the URL shows any time of day.
+
+### P6-03 Waiting-for-a-command gags — done, 2026-10-25 08:05
+
+- When a long command finishes, the agent now gets **real confetti** in 3D; when it fails, **a little rain cloud**
+  rains on its head. A very long wait grows **a cobweb** by its chair (bigger after 20 minutes) before it dozes off.

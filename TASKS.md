@@ -543,7 +543,9 @@ Python and both examples) in the office alongside the built-in providers.
   - Sun, sky and exposure follow local time; light through the windows; practical lights at night.
   - A setting: automatic, always day, or always night.
   - **Ref:** `client/src/world/render/{daylight,lighting}.ts`.
-- [ ] **P6-03 Shell-wait gags** (S)
+- [x] **P6-03 Shell-wait gags** (S) — done: the escalation (hourglass, popcorn, crossed arms and chair spins, yawns,
+  cobweb, nap) already ran in the sim since P2-04; `render3d/effects.ts` adds the 3D side: a confetti burst on success,
+  a rain cloud with drops on failure, and a cobweb by the chair that doubles after 20 minutes (three instanced meshes).
   - Hourglass, popcorn, crossed arms, cobwebs, dozing off. Celebrate when the command succeeds; a rain cloud when
     it fails.
   - **Ref:** `client/src/world/sim/shell.ts`.

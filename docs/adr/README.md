@@ -6,6 +6,6 @@ never renumber. Supersede an ADR with a new one instead of rewriting it.
 | ADR | Title | Status |
 | --- | --- | --- |
 | [0001](0001-stack.md) | Stack and repository layout | accepted |
-| [0002](0002-event-protocol.md) | Provider-neutral event protocol | proposed (finalized in P1-01) |
+| [0002](0002-event-protocol.md) | Provider-neutral event protocol | accepted |
 | [0003](0003-renderer-and-camera.md) | Renderer, camera and cutaway | accepted |
 | [0004](0004-assets.md) | Asset sources and pipeline | accepted |

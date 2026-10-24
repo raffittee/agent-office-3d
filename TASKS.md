@@ -128,7 +128,9 @@ The plan, phase by phase. [CLAUDE.md](CLAUDE.md) has the design, contracts and r
 
 ## Phase 1: Model-agnostic core (server only, no 3D)
 
-- [ ] **P1-01 Protocol** (M)
+- [x] **P1-01 Protocol** (M) — done: `shared/protocol.ts` (AgentEvent with ADR 0002's job/continues/error,
+  snapshot types with required `provider`), `shared/validate.ts` + `shared/agent-event.schema.json`, 10 tests;
+  CLAUDE.md contract updated, ADR 0002 accepted.
   - In `shared/protocol.ts`, define: `AgentEvent`, `ProviderId`, capabilities, `OfficeSnapshot`, `AgentInfo`,
     `RoomInfo`, `FeedItem`, `Notice`, `AgentDetail`, `AgentStatus` and `ActivityKind`.
   - Add a JSON Schema and a hand-written validator for `AgentEvent` (no dependencies).

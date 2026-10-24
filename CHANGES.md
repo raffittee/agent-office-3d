@@ -208,3 +208,18 @@ The protocol didn't need to change. Denials map to `tool.end {ok:false}` + `turn
   - the status line now says Phase 0 is done;
   - the command table separates what exists from what's planned.
 - TASKS.md: P1-01 and P1-03 now include the ADR 0002 changes.
+
+---
+
+# Phase 1 run (2026-10-25)
+
+Branch `phase-1`. One commit per task, each pushed. At the end of the phase there's a PR, merged once CI is green.
+
+### P1-01 Protocol — done
+
+- `shared/protocol.ts` is now the source of truth for the event and snapshot types. CLAUDE.md shows the final
+  shape, and ADR 0002 is accepted.
+- `shared/validate.ts` is a dependency-free validator. It accepts unknown fields, so newer emitters keep working,
+  but returns only the known ones. `shared/agent-event.schema.json` is the schema for SDK authors. Tests keep the
+  schema and the constants in sync.
+- Renamed Habblaud's `shells` to `jobs` in `AgentInfo`.

@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/raffittee/agent-office-3d/shared/agent-event.schema.json",
+  "title": "AgentEvent v1",
+  "description": "One event from an AI coding agent, in Agent Office's provider-neutral protocol (ADR 0002). Unknown properties are allowed and ignored.",
+  "type": "object",
+  "required": ["v", "provider", "account", "session", "at", "type"],
+  "properties": {
+    "v": { "const": 1 },
+    "provider": {
+      "anyOf": [
+        { "enum": ["claude-code", "gemini-cli", "codex"] },
+        { "type": "string", "pattern": "^custom:[a-z0-9][a-z0-9._-]{0,39}$" }
+      ]
+    },
+    "account": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$" },
+    "session": { "$ref": "#/$defs/id" },
+    "agent": { "$ref": "#/$defs/id" },
+    "parentAgent": { "$ref": "#/$defs/id" },
+    "continues": { "$ref": "#/$defs/id" },
+    "cwd": { "type": "string", "minLength": 1, "maxLength": 4096 },
+    "at": { "type": "number", "exclusiveMinimum": 0, "maximum": 100000000000000 },
+    "pid": { "type": "integer", "minimum": 1, "maximum": 2147483647 },
+    "procStart": { "type": "string", "maxLength": 64 },
+    "type": {
+      "enum": [
+        "session.start",
+        "session.end",
+        "turn.start",
+        "turn.end",
+        "tool.start",
+        "tool.end",
+        "waiting",
+        "subagent.start",
+        "subagent.end",
+        "job.start",
+        "job.end",
+        "tasks",
+        "usage",
+        "compact",
+        "heartbeat"
+      ]
+    },
+    "tool": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "name": { "$ref": "#/$defs/id" },
+        "input": {},
+        "ok": { "type": "boolean" },
+        "error": { "type": "string", "maxLength": 64 },
+        "background": { "type": "boolean" }
+      }
+    },
+    "waiting": {
+      "type": "object",
+      "required": ["reason"],
+      "properties": {
+        "reason": { "enum": ["permission", "question", "input"] },
+        "text": { "$ref": "#/$defs/text" }
+      }
+    },
+    "job": {
+      "type": "object",
+      "required": ["id"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "label": { "$ref": "#/$defs/text" },
+        "command": { "$ref": "#/$defs/text" },
+        "ok": { "type": "boolean" }
+      }
+    },
+    "subagent": {
+      "type": "object",
+      "properties": {
+        "role": { "type": "string", "maxLength": 200 },
+        "title": { "$ref": "#/$defs/text" },
+        "background": { "type": "boolean" },
+        "ok": { "type": "boolean" }
+      }
+    },
+    "prompt": { "$ref": "#/$defs/text" },
+    "title": { "$ref": "#/$defs/text" },
+    "model": { "type": "string", "maxLength": 200 },
+    "gitBranch": { "type": "string", "maxLength": 400 },
+    "tokens": {
+      "type": "object",
+      "properties": {
+        "in": { "type": "number", "minimum": 0 },
+        "out": { "type": "number", "minimum": 0 },
+        "cached": { "type": "number", "minimum": 0 }
+      }
+    },
+    "tasks": {
+      "type": "array",
+      "maxItems": 500,
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "status"],
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "title": { "$ref": "#/$defs/text" },
+          "status": { "enum": ["pending", "in_progress", "completed"] },
+          "activeForm": { "$ref": "#/$defs/text" }
+        }
+      }
+    }
+  },
+  "allOf": [
+    { "if": { "properties": { "type": { "enum": ["tool.start", "tool.end"] } } }, "then": { "required": ["tool"] } },
+    { "if": { "properties": { "type": { "const": "waiting" } } }, "then": { "required": ["waiting"] } },
+    { "if": { "properties": { "type": { "enum": ["job.start", "job.end"] } } }, "then": { "required": ["job"] } },
+    { "if": { "properties": { "type": { "enum": ["subagent.start", "subagent.end"] } } }, "then": { "required": ["agent"] } },
+    { "if": { "properties": { "type": { "const": "tasks" } } }, "then": { "required": ["tasks"] } },
+    { "if": { "properties": { "type": { "const": "usage" } } }, "then": { "anyOf": [{ "required": ["tokens"] }, { "required": ["model"] }] } }
+  ],
+  "$defs": {
+    "id": { "type": "string", "minLength": 1, "maxLength": 200, "pattern": "^[^\\u0000-\\u001f\\u007f]+$" },
+    "text": { "type": "string", "maxLength": 65536 }
+  }
+}

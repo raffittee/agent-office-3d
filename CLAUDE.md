@@ -106,7 +106,9 @@ idea for Claude Code and Codex. Use it as the reference for behavior, data sourc
 
 ## Core contracts
 
-These are sketches. Finalize them in Phase 1; after that, only make additive changes.
+Finalized in P1-01. **The source of truth is [`shared/protocol.ts`](shared/protocol.ts)** (validator:
+`shared/validate.ts`; JSON Schema for SDK authors: `shared/agent-event.schema.json`). From now on, only make
+additive changes.
 
 ### Ingest: `AgentEvent`
 
@@ -116,33 +118,28 @@ export type ProviderId = 'claude-code' | 'gemini-cli' | 'codex' | `custom:${stri
 export interface AgentEvent {
   v: 1;
   provider: ProviderId;
-  /** Account / config dir the session belongs to ('default' when the tool has only one). */
-  account: string;
-  /** Provider session id. Main agent id = `${provider}:${account}:${session}`. */
-  session: string;
-  /** Subagent id inside the session; absent = the main agent. */
-  agent?: string;
+  account: string;          // slug: 'default' or 8 hex chars of SHA-256 of the config dir. Never a path.
+  session: string;          // main agent id = `${provider}:${account}:${session}`
+  agent?: string;           // subagent id inside the session; absent = the main agent
   parentAgent?: string;
-  /** Project directory → room. */
-  cwd?: string;
-  /** Epoch ms at the source. */
-  at: number;
-  /** PID of the agent process (hook shims send process.ppid), for liveness checks. */
-  pid?: number;
+  cwd?: string;             // project directory → room
+  at: number;               // epoch ms at the source
+  pid?: number;             // the agent process (resolved through shell wrappers)
+  procStart?: string;       // process start time, to detect PID reuse
   type:
-    | 'session.start' | 'session.end'
-    | 'turn.start' | 'turn.end'
-    | 'tool.start' | 'tool.end'
-    | 'waiting'
-    | 'subagent.start' | 'subagent.end'
-    | 'tasks' | 'usage' | 'compact' | 'heartbeat';
-  tool?: { id?: string; name: string; input?: unknown; ok?: boolean; background?: boolean };
+    | 'session.start' | 'session.end' | 'turn.start' | 'turn.end' | 'tool.start' | 'tool.end' | 'waiting'
+    | 'subagent.start' | 'subagent.end' | 'job.start' | 'job.end' | 'tasks' | 'usage' | 'compact' | 'heartbeat';
+  tool?: { id?: string; name: string; input?: unknown; ok?: boolean; error?: string; background?: boolean };
   waiting?: { reason: 'permission' | 'question' | 'input'; text?: string };
-  /** turn.start: the user's prompt (masked and truncated before it is broadcast). */
-  prompt?: string;
+  job?: { id: string; label?: string; command?: string; ok?: boolean };
+  subagent?: { role?: string; title?: string; background?: boolean; ok?: boolean };
+  continues?: string;       // session.start: the session this one replaces in the same process (/clear)
+  prompt?: string;          // turn.start; masked and truncated before broadcast
+  title?: string;
   model?: string;
   tokens?: { in?: number; out?: number; cached?: number };
-  tasks?: { id: string; title: string; status: 'pending' | 'in_progress' | 'completed' }[];
+  tasks?: { id: string; title: string; status: 'pending' | 'in_progress' | 'completed'; activeForm?: string }[];
+  gitBranch?: string;
 }
 ```
 
@@ -154,14 +151,16 @@ The status machine lives in the reducer and is the same for every provider:
 | `turn.start`, `tool.*` | `working` |
 | `waiting` | `waiting`, until the next `tool.*` or `turn.*` |
 | `turn.end` | `idle`, or `shell` if background jobs are still running |
+| `job.start` / `job.end` | open / close a background job; closing the last one turns `shell` into `idle` |
 | `subagent.end` | `done`: the subagent walks to its parent, then leaves |
-| `session.end`, or liveness lost | `offline`: removed after a grace period |
+| `session.end`, or liveness lost | `offline`: removed after a grace period (repeated `session.end` is harmless) |
 
 ### Broadcast: `OfficeSnapshot`
 
 Habblaud's `OfficeSnapshot`, `AgentInfo`, `RoomInfo`, `FeedItem` and `Notice`, re-shaped:
 
-- `provider: ProviderId` is required on agents and accounts.
+- `provider: ProviderId` is required on agents, accounts, sources and feed items.
+- Habblaud's `shells` is `jobs` here (fed by `job.*` events).
 - `AgentStatus` (`working | waiting | idle | shell | done | offline`) and the `ActivityKind` taxonomy stay as in
   Habblaud. The sim depends on them; providers don't.
 - `meta.providers: { id, label, color, capabilities }[]` lets the UI turn features on per provider.
@@ -433,7 +432,7 @@ Update this table as commands land. *(planned)* marks the ones that don't exist 
   `test/boundaries.test.ts`. See [ADR 0001](docs/adr/0001-stack.md).
 - **D12:** Codex verification and fixtures move to P5-01, because Codex isn't installed on the development machine.
 - **D13:** The event protocol gains `job.start`/`job.end`, `session.start.continues`, `tool.error` and slugged
-  account ids. See [ADR 0002](docs/adr/0002-event-protocol.md) (proposed; P1-01 finalizes it).
+  account ids. See [ADR 0002](docs/adr/0002-event-protocol.md) (accepted in P1-01).
 - **D14:** Gemini CLI ≥ 0.65.0 is supported, with `light` (default on Windows) and `full` hook profiles. Tailing the
   chat file is mandatory. See [docs/providers/gemini-cli.md](docs/providers/gemini-cli.md).
 

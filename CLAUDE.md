@@ -345,7 +345,7 @@ These rules come from Habblaud's `mod/habblaud-codex/hook.mjs`.
   (tool output, file contents) in the shim, before it leaves the agent's process tree.
 - Send the agent's PID as `pid`. That is `process.ppid`, unless the parent is a shell wrapper (`pwsh`,
   `powershell`, `cmd`, `bash`, `sh`), in which case use the shell's parent. Gemini CLI runs every hook through a
-  shell. Resolve it once, on session start, because the lookup costs ~0.3 s on Windows.
+  shell. Resolve it once, on session start: on Windows the lookup costs ~1 s (`wmic`) to 3 s (PowerShell CIM).
 - Register as few events as possible. Each hook is a blocking process spawn (~0.4 s on Windows through PowerShell).
 - Installers merge into the CLI's config idempotently, back the file up first, and offer `uninstall` and `status`.
 
@@ -398,7 +398,7 @@ Update this table as commands land. *(planned)* marks the ones that don't exist 
 | `npm start` | Runs the built server (`dist/server/index.js`) |
 | `node spikes/renderer/measure.mjs` · `node spikes/assets/measure.mjs <dir>` | Re-run the Phase 0 measurements |
 | `npm run demo` *(planned)* | Dev mode with simulated agents from several providers |
-| `npm run hooks:install -- --provider gemini-cli` *(planned)* | Install a provider's hook shim (also `status`, `uninstall`) |
+| `npm run hooks:install -- --provider gemini-cli` | Install a provider's hooks (`--profile light` or `full`; also `hooks:status`, `hooks:uninstall`) |
 | `npm run theme:check` · `npm run theme:new -- <id>` *(planned)* | Validate theme packs and scaffold a new one |
 
 ## How to work in this repo

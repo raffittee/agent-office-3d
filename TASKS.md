@@ -193,7 +193,11 @@ The plan, phase by phase. [CLAUDE.md](CLAUDE.md) has the design, contracts and r
   - Liveness: check the PID with `process.kill(pid, 0)`, and fall back to a heartbeat timeout.
   - Wrap each adapter's boot in `beginBoot` / `endBoot` pairs.
   - **Ref:** `server/sources/source.ts`.
-- [ ] **P1-08 Hook shim kit & installer** (M)
+- [x] **P1-08 Hook shim kit & installer** (M) — done: `hooks/shim.mjs` (stdin with timeout and cap, port from
+  `~/.agent-office/hooks.json` or env, 8 KB/200 KB trimming, 1.5 s POST to 127.0.0.1 only, always exit 0, agent
+  PID through shell wrappers) and `scripts/hooks-install.ts` (`--provider`, install/uninstall/status, backup,
+  idempotent merge, profiles, version check from package.json); `npm run hooks:*`; tests run the shim as a real
+  process and the installer in a fake HOME.
   - Shared shim logic in `hooks/`: read stdin with a timeout and a size cap, look up the config, truncate, POST with
     a timeout, and always exit 0.
   - Resolve the agent PID: `process.ppid`, or its parent when the parent is a shell wrapper (see CLAUDE.md › Hook

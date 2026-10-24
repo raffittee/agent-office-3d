@@ -85,7 +85,7 @@ describe('folder boundaries', () => {
     expect(bad).toEqual([]);
   });
 
-  it('hook shims import only node:*', () => {
-    expect(violations('hooks', ['.mjs', '.js'], (s) => s.startsWith('node:'))).toEqual([]);
+  it('hook shims import only node:* (and the shared kit next to them)', () => {
+    expect(violations('hooks', ['.mjs', '.js'], (s) => s.startsWith('node:') || /^\.\/[\w-]+\.mjs$/.test(s))).toEqual([]);
   });
 });

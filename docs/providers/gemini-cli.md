@@ -160,7 +160,8 @@ Not needed on 0.65.0 (hooks are on unless `hooksConfig.enabled: false`). On 0.15
   sequential. In the TUI an "Executing Hooks: node …" spinner is visible while they run.
 - **Liveness.** The shim's `process.ppid` is the **shell** (`pwsh.exe`), not Gemini. The agent's PID is its
   grandparent. The shell is still alive while the shim runs, so the shim must look the grandparent up itself
-  (Windows: one CIM query, ~300 ms; Linux: `/proc/<ppid>/stat`; macOS: `ps -o ppid=`), and only on `SessionStart`.
+  (Windows: `wmic`, ~1 s, or a CIM query through PowerShell, 2–3 s, measured in P1-08; Linux: `/proc/<ppid>/stat`;
+  macOS: `ps -o ppid=`), and only on `SessionStart`.
   On Linux, `bash -c` with a single command may `exec` node directly, so check the parent's name before climbing.
 - **ACP mode** (`--acp`, used by editor integrations) fires **no** `SessionStart`, `BeforeTool`, `AfterTool` or
   `Notification` hooks, only `BeforeAgent`, `AfterAgent`, `PreCompress` and `SessionEnd`

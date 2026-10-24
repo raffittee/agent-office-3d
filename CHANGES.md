@@ -280,3 +280,17 @@ Branch `phase-1`. One commit per task, each pushed. At the end of the phase ther
   others), collects their status for `/api/health`, and gives the UI each provider's badge color and capabilities.
 - Every 2 seconds it checks whether each agent's process is still running, and marks agents whose terminal was
   closed as gone. Agents without a known process (custom agents) are considered gone after 2 minutes of silence.
+
+### P1-08 Hook shim kit & installer — done
+
+- `hooks/shim.mjs`: the small script each AI CLI runs on every event. It follows the safety rules: it never slows
+  or breaks the agent (always exits cleanly, gives up after 1.5 s), only talks to this computer, and cuts long text
+  before sending.
+- `npm run hooks:install -- --provider gemini-cli` (plus `hooks:status`, `hooks:uninstall`) edits Gemini's
+  settings safely: it backs the file up first, only touches Agent Office's own entries, and running it twice changes
+  nothing. Its `light` profile (the default on Windows) skips the per-tool hooks that cost ~0.4 s each there.
+- Two Windows findings while building this:
+  - Finding the Gemini process behind PowerShell takes 1–3 s, not the 0.3 s I'd estimated. It still happens only
+    once per session; docs are corrected.
+  - `gemini --version` hangs when not run in a terminal, so the installer reads the version from Gemini's
+    package files instead. It already warns that your 0.15.1 is too old.

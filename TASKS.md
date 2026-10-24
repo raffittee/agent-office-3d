@@ -177,7 +177,10 @@ The plan, phase by phase. [CLAUDE.md](CLAUDE.md) has the design, contracts and r
   - **Ref:** `server/http/{guard,sse,app,static}.ts`, `server/config.ts`, `server/index.ts`,
     `server/http/http.test.ts`.
   - **Done when:** the guard tests (Host, Origin, Content-Type) are ported and pass.
-- [ ] **P1-06 Ingest endpoints** (M)
+- [x] **P1-06 Ingest endpoints** (M) — done: `server/ingest/ingest.ts` (`POST /api/events` for `custom:*`
+  providers, batches of ≤ 100, all-or-nothing; `POST /api/hooks/:provider` through the adapter's `onHook`;
+  local-only, rate-limited per source) and `server/ingest/mask.ts` (deep masking and truncation on entry);
+  12 tests incl. bad Host, Origin, Content-Type, schema and oversized bodies.
   - `POST /api/events` for custom agents and `POST /api/hooks/:provider` for the shims.
   - Both are local-only, JSON-only, capped at 256 KB per body, rate-limited per source, validated, and masked on
     entry.

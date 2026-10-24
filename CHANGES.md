@@ -265,3 +265,11 @@ Branch `phase-1`. One commit per task, each pushed. At the end of the phase ther
 - `/api/health` deliberately doesn't expose file paths.
 - Configuration from `AGENT_OFFICE_PORT`, `_HOST`, `_DATA_DIR`, `_DEMO` and `_ALLOWED_HOSTS`. Smoke-tested the
   built server.
+
+### P1-06 Ingest endpoints — done
+
+- `POST /api/events` lets custom agents report what they do. It only accepts `custom:…` providers, so a script
+  can't create fake Claude or Gemini agents.
+- `POST /api/hooks/<provider>` receives what the Gemini / Claude / Codex hook scripts send.
+- Both are reachable only from this computer, only JSON, at most 256 KB, rate-limited, validated, and every piece of
+  text is secret-masked before it's stored or shown.

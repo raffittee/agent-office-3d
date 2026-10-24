@@ -8,6 +8,7 @@ import { createApiHandler } from './http/app';
 import { createRequestGuard } from './http/guard';
 import { Hub } from './http/sse';
 import { createStaticHandler } from './http/static';
+import { createIngestHandler } from './ingest/ingest';
 import { errMsg, log } from './log';
 import { NameStore } from './model/names';
 import { Office } from './model/office';
@@ -32,7 +33,8 @@ const tick = setInterval(() => office.tick(), 250);
 tick.unref();
 
 const guard = createRequestGuard({ allowedHosts: config.allowedHosts });
-const api = createApiHandler({ office, hub, version: config.version, sources: () => [], providers: () => [] });
+const ingest = createIngestHandler({ apply: (e) => office.apply(e), hooks: () => undefined });
+const api = createApiHandler({ office, hub, version: config.version, sources: () => [], providers: () => [], ingest });
 
 type Handler = (req: http.IncomingMessage, res: http.ServerResponse, pathname: string) => void;
 let fallback: Handler = createStaticHandler(join(config.rootDir, 'dist', 'client'));

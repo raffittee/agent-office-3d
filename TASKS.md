@@ -563,9 +563,19 @@ Python and both examples) in the office alongside the built-in providers.
   the tab hidden (opt-in, asks permission), bell/click sounds per notice, "(n) Agent Office" tab title; toasts existed.
   - A browser notification and a toast when an agent needs you.
   - **Ref:** `client/src/ui/notify.ts`.
-- [ ] **P6-07 Seasonal overlays** (S)
+- [x] **P6-07 Seasonal overlays** (S) — done: `client/src/themes/seasonal.ts` (calendar rule, `seasonalLook` /
+  `seasonalEntry` on top of any theme: wall, rug and lamp tints; the pack's plant models set aside) and
+  `render3d/kit.ts` `seasonalParts` (jack-o'-lanterns, ghosts, decorated trees, gifts in the plants' footprints);
+  setting "Seasonal decorations" and `?season=`.
   - Halloween and holiday overlay packs that can be applied on top of any theme.
   - **Ref:** `client/src/world/render/seasonal.ts`.
+
+**Exit:** the office feels alive (subjective review).
+
+**Exit status (2026-10-25):** ready for your review. Idle agents socialize, the light follows the clock, rooms
+celebrate merges and sound the alarm on red CI, waits grow cobwebs, sounds and notifications are opt-in, and the
+seasonal decorations follow the calendar. Screenshots were checked in the cloud environment; the feel (and the sounds)
+need a look on your machine.
 
 ---
 

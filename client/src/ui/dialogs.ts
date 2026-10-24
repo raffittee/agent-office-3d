@@ -191,6 +191,12 @@ export function openSettings(root: HTMLElement, world: WorldApi, alerts?: Alerts
         ['day', t('Always day')],
         ['night', t('Always night')],
       ], (v) => set({ daylight: v })),
+      select(t('Seasonal decorations'), o.season, [
+        ['auto', t('Follow the calendar')],
+        ['none', t('Off')],
+        ['halloween', t('Halloween')],
+        ['holiday', t('Holidays')],
+      ], (v) => set({ season: v })),
       select(t('Walls in front'), o.cutaway, [
         ['cut', t('Cut down')],
         ['hide', t('Hidden')],

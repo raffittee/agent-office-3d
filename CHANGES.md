@@ -686,3 +686,20 @@ Branch `phase-1`. One commit per task, each pushed. At the end of the phase ther
 - **Notifications (off by default):** a browser notification when an agent needs you while the tab is in the
   background (the browser asks for permission once; clicking it brings you to the agent). The tab title shows how many
   agents are waiting for you, e.g. "(2) Agent Office". Toasts for every notice were already there.
+
+### P6-07 Seasonal decorations — done, 2026-10-25 06:44
+
+- **Halloween and the holidays, on top of any theme:** in October the plants become jack-o'-lanterns and ghosts and the
+  walls take a purple tint; in December (through January 1) they become decorated trees and gifts with green trim and
+  warmer lamps. Settings → "Seasonal decorations" follows the calendar by default, or can be turned off or fixed to
+  one. `?season=holiday` in the URL previews one. The layout and the agents' paths never change.
+- Since today is in October, you'll see the Halloween look right away; turn it off in Settings if you prefer.
+
+### Phase 6 closed — 2026-10-25 06:44
+
+- All 7 tasks are ticked. Pull request `phase-6` → `main`.
+- **New since Phase 5:** idle agents hang out and play, day and night follow your clock, rooms party on merges and
+  sound the alarm on red CI, long waits get gags, optional sounds and browser notifications, seasonal decorations.
+- **Needs your machine:** the exit check is subjective ("the office feels alive"): run `npm run demo`, turn on sounds
+  in Settings, and tell me what feels off.
+

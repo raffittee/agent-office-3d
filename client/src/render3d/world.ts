@@ -9,6 +9,7 @@ import { attachInput, CameraRig, type ViewInsets } from './camera';
 import { CharacterView } from './characters';
 import { Overlay } from './overlay';
 import { onThemesChanged, themeById, type ThemeEntry } from '../themes/registry';
+import { seasonalEntry, seasonFor, type Season, type SeasonMode } from '../themes/seasonal';
 import type { SoundCue } from '../audio/scheduler';
 import { SoundCues, type SoundView } from '../core/sound-cues';
 import { EffectsView } from './effects';
@@ -29,9 +30,11 @@ export interface WorldSettings extends WorldOptions {
   theme: string;
   /** Day and night (P6-02): follow the local time, or always day / night. */
   daylight: DaylightMode;
+  /** Seasonal decorations (P6-07): follow the calendar, off, or a fixed one. */
+  season: SeasonMode;
 }
 
-export const DEFAULT_WORLD_SETTINGS: WorldSettings = { ...DEFAULT_WORLD_OPTIONS, cutaway: 'cut', characters: 'rigged', theme: '', daylight: 'auto' };
+export const DEFAULT_WORLD_SETTINGS: WorldSettings = { ...DEFAULT_WORLD_OPTIONS, cutaway: 'cut', characters: 'rigged', theme: '', daylight: 'auto', season: 'auto' };
 
 /** Where the pipeline's character assets are served from, and the default character. */
 const CHARACTER_BASE = 'assets/characters';
@@ -73,7 +76,13 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
   // world matrices are updated once per frame in the loop (before attachments), not again inside render()
   scene.matrixWorldAutoUpdate = false;
   // ---- theme: the pack picked in settings, else the server's default (AGENT_OFFICE_THEME), else the built-in default
-  let theme = themeById(options.theme || store.snapshot?.meta.theme);
+  // ---- seasonal overlay (P6-07) on top of the theme: ?season=halloween|holiday|none forces one (screenshots)
+  const seasonParam = new URLSearchParams(location.search).get('season');
+  const seasonOverride = seasonParam === 'halloween' || seasonParam === 'holiday' || seasonParam === 'none' ? seasonParam : null;
+  const season = (): Season => seasonFor(seasonOverride ?? options.season, new Date());
+  let shownSeason = season();
+  const themeFor = (id: string | undefined): ThemeEntry => seasonalEntry(themeById(id), (shownSeason = season()));
+  let theme = themeFor(options.theme || store.snapshot?.meta.theme);
   const sim = new Sim({ options: () => options, roomTheme: (seed) => theme.look.roomTheme(seed), template: theme.look.template });
   const building = new BuildingView(theme.look);
   const models = new ModelView((ready) => building.setLook(theme.look, ready));
@@ -114,15 +123,21 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
   const targetAmbient = () => ambientAt(effectiveHour(options.daylight, hourOverride, new Date()));
   let ambient: Ambient = targetAmbient();
   let ambientAt_ = 0;
+  let seasonCheckAt = 0;
   const updateDaylight = (t: number) => {
     if (t - ambientAt_ < 250) return;
     ambientAt_ = t;
+    // the calendar moves on (a tab left open over midnight on November 1st)
+    if (t - seasonCheckAt > 60_000) {
+      seasonCheckAt = t;
+      if (season() !== shownSeason) applyTheme(themeFor(theme.look.id));
+    }
     // eases over about a second when the setting changes; the clock itself moves slowly anyway
     ambient = approachAmbient(ambient, targetAmbient(), 0.3);
     applyDaylight(parts, theme.look, ambient);
     building.setAmbient(ambient.night, ambient.inside);
   };
-  const offThemes = onThemesChanged(() => applyTheme(themeById(theme.look.id)));
+  const offThemes = onThemesChanged(() => applyTheme(themeFor(theme.look.id)));
   const rig2d = new CameraRig();
   const overlay = new Overlay(overlayParent);
   canvas.tabIndex = 0;
@@ -163,7 +178,7 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
     if (!snap) return;
     // no theme picked here: follow the server's default
     if (!options.theme && snap.meta.theme && snap.meta.theme !== theme.look.id) {
-      const next = themeById(snap.meta.theme);
+      const next = themeFor(snap.meta.theme);
       if (next.look.id !== theme.look.id) applyTheme(next);
     }
     sim.applySnapshot(snap, Date.now());
@@ -367,9 +382,9 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
       const themeChanged = o.theme !== undefined && o.theme !== options.theme;
       options = { ...options, ...o };
       if (themeChanged) {
-        const next = themeById(options.theme || store.snapshot?.meta.theme);
+        const next = themeFor(options.theme || store.snapshot?.meta.theme);
         if (next.look.id !== theme.look.id) applyTheme(next);
-      }
+      } else if (o.season !== undefined && season() !== shownSeason) applyTheme(themeFor(theme.look.id));
       if (o.followSelected === false) rig2d.follow = null;
       if (o.followSelected && selection?.type === 'agent') followAgent(selection.id);
     },

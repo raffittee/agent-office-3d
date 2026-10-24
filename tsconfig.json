@@ -17,5 +17,7 @@
     "useDefineForClassFields": true,
     "noEmit": true
   },
-  "include": ["client/src", "shared"]
+  "include": ["client/src", "shared"],
+  // Tests that read fixtures need Node types: server/tsconfig.json checks them.
+  "exclude": ["shared/**/*.test.ts"]
 }

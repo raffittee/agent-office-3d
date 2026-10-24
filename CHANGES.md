@@ -1,7 +1,8 @@
-# Changes log (overnight Phase 0 run)
+# Changes log
 
-A running log of what was done while you were away, what was decided on your behalf, and what needs your eyes.
-Newest task at the bottom. Branch: `phase-0` (pushed to `origin`; `main` is untouched).
+A running log of what was done, what was decided on your behalf, and what needs your eyes. Newest entry at the
+bottom. Timestamps are your local time (UTC+08:00). Each phase has its own branch (`phase-N`), merged into `main`
+through a pull request when the phase ends.
 
 ## Start here
 
@@ -208,3 +209,193 @@ The protocol didn't need to change. Denials map to `tool.end {ok:false}` + `turn
   - the status line now says Phase 0 is done;
   - the command table separates what exists from what's planned.
 - TASKS.md: P1-01 and P1-03 now include the ADR 0002 changes.
+
+---
+
+# Phase 1 run (2026-10-25)
+
+Branch `phase-1`. One commit per task, each pushed. At the end of the phase there's a PR, merged once CI is green.
+
+### P1-01 Protocol — done
+
+- `shared/protocol.ts` is now the source of truth for the event and snapshot types. CLAUDE.md shows the final
+  shape, and ADR 0002 is accepted.
+- `shared/validate.ts` is a dependency-free validator. It accepts unknown fields, so newer emitters keep working,
+  but returns only the known ones. `shared/agent-event.schema.json` is the schema for SDK authors. Tests keep the
+  schema and the constants in sync.
+- Renamed Habblaud's `shells` to `jobs` in `AgentInfo`.
+
+### P1-02 Activity layer — done
+
+- Ported Habblaud's activity text generator, translated to English. That's what turns "`npm test`" into the
+  "Running tests" bubble. Secrets are masked before anything is shown.
+- Tool tables per provider: Claude Code (Habblaud's list, plus the Windows `PowerShell` tool), Gemini CLI (from the
+  tool names captured in P0-04), and a generic one for custom agents that guesses from tool names.
+- PowerShell commands are now understood too (`Get-Content x`, Windows paths with `\`).
+- All of Habblaud's secret-masking tests pass in English, and every tool seen in the real fixtures maps to the
+  right kind of activity.
+
+### P1-04 Rooms & names — done (ahead of P1-03)
+
+- Done before P1-03 because the office model needs it.
+- Rooms are keyed by project folder. On Windows the key ignores case and slash direction, so a session started
+  from VS Code (`c:\…`) and one from the desktop app (`C:\…`) share a room. Folders with the same name get their
+  parent folder added ("company/app" vs "other/app"). Rooms can be renamed, and the names persist.
+- Agents get names from a new list of 120 international names. Each session keeps its name across restarts.
+- Habblaud's "pick your character per project" editor isn't ported yet; it's in the backlog.
+
+### P1-03 Office reducer — done
+
+- The heart of the server: every event from any provider goes through one function that decides each agent's
+  state (working, waiting, idle, waiting-for-shell, done, offline), its bubble text, the activity feed and the
+  pop-up notices. It's Habblaud's model rewritten around our event protocol, keeping its rules: grace periods
+  before agents leave, "Done in 30s" bubbles, "Needs you" bubbles, no duplicate alerts within 10 s, and no
+  notifications while the server catches up at startup.
+- New: `/clear` keeps the same character (the session links to the old one); denied permissions don't show
+  "Done"; background shells keep the agent in "waiting for the shell" until the last one ends.
+- 22 tests, one per state transition plus these flows.
+
+### P1-05 HTTP + SSE — done
+
+- The web server: `/api/snapshot`, `/api/agents/:id`, `/api/health`, and a live stream at `/api/stream` that pushes
+  changes to the browser. It serves the built page with sensible caching.
+- Security edge guard ported from Habblaud and tested:
+  - requests addressed to a foreign host name are refused (DNS-rebinding protection);
+  - state-changing requests must be JSON from a local origin (CSRF protection);
+  - no cross-origin access to the API.
+- `/api/health` deliberately doesn't expose file paths.
+- Configuration from `AGENT_OFFICE_PORT`, `_HOST`, `_DATA_DIR`, `_DEMO` and `_ALLOWED_HOSTS`. Smoke-tested the
+  built server.
+
+### P1-06 Ingest endpoints — done
+
+- `POST /api/events` lets custom agents report what they do. It only accepts `custom:…` providers, so a script
+  can't create fake Claude or Gemini agents.
+- `POST /api/hooks/<provider>` receives what the Gemini / Claude / Codex hook scripts send.
+- Both are reachable only from this computer, only JSON, at most 256 KB, rate-limited, validated, and every piece of
+  text is secret-masked before it's stored or shown.
+
+### P1-07 Adapter framework & liveness — done
+
+- A common frame every provider plugs into: it starts them in order (one broken provider doesn't break the
+  others), collects their status for `/api/health`, and gives the UI each provider's badge color and capabilities.
+- Every 2 seconds it checks whether each agent's process is still running, and marks agents whose terminal was
+  closed as gone. Agents without a known process (custom agents) are considered gone after 2 minutes of silence.
+
+### P1-08 Hook shim kit & installer — done
+
+- `hooks/shim.mjs`: the small script each AI CLI runs on every event. It follows the safety rules: it never slows
+  or breaks the agent (always exits cleanly, gives up after 1.5 s), only talks to this computer, and cuts long text
+  before sending.
+- `npm run hooks:install -- --provider gemini-cli` (plus `hooks:status`, `hooks:uninstall`) edits Gemini's
+  settings safely: it backs the file up first, only touches Agent Office's own entries, and running it twice changes
+  nothing. Its `light` profile (the default on Windows) skips the per-tool hooks that cost ~0.4 s each there.
+- Two Windows findings while building this:
+  - Finding the Gemini process behind PowerShell takes 1–3 s, not the 0.3 s I'd estimated. It still happens only
+    once per session; docs are corrected.
+  - `gemini --version` hangs when not run in a terminal, so the installer reads the version from Gemini's
+    package files instead. It already warns that your 0.15.1 is too old.
+
+### P1-09 Claude Code adapter — done
+
+- Claude Code sessions now appear in the office by themselves, with no hooks to install. Every second the server
+  reads Claude's own files:
+  - the list of open sessions decides each agent's state (working, waiting for you, idle, waiting for a shell);
+  - the conversation file supplies prompts, tools, tasks, tokens and the session title;
+  - the `subagents/` folder supplies subagents.
+- Checked live against this machine: this very session showed up as "working" in the right room, with its title, the
+  command it was running, and a background job. Your other open session (3d-snake-game) showed up as idle.
+- **Subagent transcripts are now verified against a real file.** To capture one, I ran one tiny read-only subagent
+  (it listed the ADR files). Its sanitized transcript is in `test/fixtures/claude-code/subagent/`. Two things are
+  new since Habblaud's notes:
+  - the subagent's `.meta.json` gains `finished: true` when it's done (I use it as an end signal);
+  - a subagent ends with a `SubagentHandback` tool call rather than a normal reply.
+- Privacy rules applied:
+  - the files holding full API requests and the `credential_org` record are skipped before they're even parsed;
+  - file contents in Write/Edit tool calls never leave the adapter;
+  - `.key` files are never opened.
+- A reused process ID can't keep a dead session alive. On Windows the process start time is checked once per
+  session (P0-05's `procStart`).
+- New settings:
+  - `AGENT_OFFICE_CLAUDE_DIRS` overrides which Claude folders are watched;
+  - `AGENT_OFFICE_IN_DOCKER` turns off process checks.
+- 66 new tests, ported from Habblaud's, plus replays of every real Claude fixture.
+- Not ported yet: Habblaud's GitHub-event detection (PR/merge/CI celebrations) and the "already answered question"
+  tweak. Both are cosmetic and are listed for Phase 6.
+
+### P1-10 Gemini CLI adapter — done (one live check left for you)
+
+- `hooks/gemini-cli.mjs` is the script Gemini runs on each event. It strips private content before anything leaves
+  Gemini: file contents, command output and the model's replies stay behind. Only the tool name, its inputs
+  (without file bodies), success or failure, the exit code and a background process ID are sent.
+- The server combines Gemini's hooks with its chat file, which is needed for three things:
+  - **denying or cancelling a permission fires no hook**; only the chat file shows it, so the agent stops waiting
+    instead of being stuck;
+  - model and token counts appear only there;
+  - with the `light` profile (Windows default, since each hook costs ~0.4 s), tool activity is read from the chat
+    file instead of from slow per-tool hooks.
+- Subagents are matched exactly. Gemini's `invoke_agent` call names the subagent's own chat file, so there's no
+  guessing.
+- Background commands become jobs. Gemini says nothing when they end, so the server checks whether their process
+  still exists.
+- `/clear` keeps the same character (the old session ends, and the new one starts in the same process).
+- Safety: the server only reads files that look like Gemini chat files (`.gemini/tmp/<project>/chats/…`). Another
+  program on your computer can't make it read anything else.
+- Tested by replaying all 7 real Gemini captures from Phase 0 through the actual hook script, the server and the
+  office: allow, deny, Esc-cancel, `/clear`, resume, failures, subagent, background job and editor (ACP) mode. Also
+  checked live: the hook script, run as a real process, posted to a running server, and the agent showed
+  "waiting: Confirm Write: allowed.txt".
+- **Needs you (for the Phase 1 exit check):** a real Gemini session.
+  1. `npm i -g @google/gemini-cli@latest` (you have 0.15.1; hooks need ≥ 0.65).
+  2. Sign in by running `gemini` once.
+  3. `npm run hooks:install -- --provider gemini-cli`.
+  4. Start `npm run dev` and use Gemini in any folder.
+  I didn't touch your `~/.gemini` settings.
+
+### Phase 1 partial commit (yours) — 2026-10-25 03:57
+
+- `09e9cf7` "Partial completion of phase 1": the demo simulator (`shared/demo/simulator.ts`, its tests,
+  `shared/demo/mock.ts`, `server/adapters/demo.ts`, `npm run demo`). The reducer and rooms moved from `server/model/`
+  to `shared/model/` so the browser can run them too.
+
+### Fix: Gemini replay tests on Linux — 2026-10-25 04:04
+
+- The 5 Gemini replay tests failed on Linux (and in CI's Ubuntu job since P1-10). The test helper used the Linux
+  `basename()` on the Windows paths stored in the recorded samples. It now uses `win32.basename`, which handles both.
+  The adapter itself was fine.
+
+### P1-11 Demo simulator — done, 2026-10-25 04:05
+
+- Reviewed your partial commit: it already met the task. The same seed always gives the same office; four providers
+  are mixed (Claude Code, Gemini CLI, Codex, Demo); `AGENT_OFFICE_DEMO=1`, `--demo` and `npm run demo` start it.
+- Checked live: the built server in demo mode showed 5 agents in 3 rooms with all four badges.
+
+### P1-12 Debug page — done, 2026-10-25 04:07
+
+- `client/src/debug/`: rooms, then their agents (subagents indented under their parent), each with a provider badge,
+  status, job count and current activity. Live over `/api/stream`; `?mock=1` runs the demo office inside the
+  browser with no server data.
+- Checked in Chromium: demo agents and this cloud session's own Claude Code session showed up side by side. Status
+  changes sent to `/api/events` reached the page in about 200 ms (the target is 2 s).
+
+### Fix: Claude Code status missed on Windows — 2026-10-25 04:20
+
+- CI's Windows job caught a real bug: the reader of `sessions/<pid>.json` skipped files whose modification time and
+  size hadn't changed. `"busy"` and `"idle"` are the same length, and on Windows two quick writes can share a
+  timestamp, so an agent could stay "working" after it went idle. The files are tiny, so they're now re-read every
+  poll and compared by content. A new test reproduces the old failure.
+
+### Fix: Windows CI timing in the hook shim test — 2026-10-25 04:21
+
+- On a CI runner without `wmic`, PowerShell can take more than 3 s to start, so the test that looks up the shim's
+  parent process failed now and then. The 3 s limit stays for real hooks (they must never stall the agent; they fall
+  back to the parent PID). The test now allows 12 s, since it checks that the lookup is right, not how fast it is.
+
+### Phase 1 closed — 2026-10-25 04:25
+
+- All 12 tasks are ticked. Pull request `phase-1` → `main`.
+- **Exit check, one item left for you:** a real Gemini CLI session on your machine (needs Gemini ≥ 0.65 and a
+  sign-in; see P1-10 above). Real Claude Code sessions, the demo, the 2 s latency and all tests are verified.
+- **Decision I made:** start Phase 2 anyway. Phase 2 is the browser side and runs on the demo data, so nothing in it
+  depends on the Gemini check. If your Gemini test shows a problem, the fix goes into the Gemini adapter alone.
+

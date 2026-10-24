@@ -128,7 +128,9 @@ The plan, phase by phase. [CLAUDE.md](CLAUDE.md) has the design, contracts and r
 
 ## Phase 1: Model-agnostic core (server only, no 3D)
 
-- [ ] **P1-01 Protocol** (M)
+- [x] **P1-01 Protocol** (M) — done: `shared/protocol.ts` (AgentEvent with ADR 0002's job/continues/error,
+  snapshot types with required `provider`), `shared/validate.ts` + `shared/agent-event.schema.json`, 10 tests;
+  CLAUDE.md contract updated, ADR 0002 accepted.
   - In `shared/protocol.ts`, define: `AgentEvent`, `ProviderId`, capabilities, `OfficeSnapshot`, `AgentInfo`,
     `RoomInfo`, `FeedItem`, `Notice`, `AgentDetail`, `AgentStatus` and `ActivityKind`.
   - Add a JSON Schema and a hand-written validator for `AgentEvent` (no dependencies).
@@ -136,13 +138,19 @@ The plan, phase by phase. [CLAUDE.md](CLAUDE.md) has the design, contracts and r
     `account` ids. Then update the sketch in CLAUDE.md and mark ADR 0002 accepted.
   - **Ref:** `shared/types.ts`.
   - **Done when:** tests cover valid and invalid events.
-- [ ] **P1-02 Activity layer** (M)
+- [x] **P1-02 Activity layer** (M) — done: `shared/activity.ts` (masking, truncate, shell parsing with a
+  PowerShell mode, `describeCommand`, jobs, specials; English via `shared/i18n.ts`), tool tables in
+  `shared/tools/` (claude-code incl. PowerShell, gemini-cli from P0-04, generic for custom agents); Habblaud's
+  masking tests ported; every tool in both providers' fixtures maps to its expected kind.
   - In `shared/activity.ts`, port `maskSecrets`, `truncate`, `basename`, `shellWords`, `splitShell` and
     `describeCommand`.
   - Add one tool table per provider: `claude-code` from Habblaud's `describeTool`; `gemini-cli` from P0-04.
   - **Ref:** `shared/activity.ts`, `shared/activity.test.ts`.
   - **Done when:** the ported masking tests pass, and each provider's fixture tools map to the expected kinds.
-- [ ] **P1-03 Office reducer** (L)
+- [x] **P1-03 Office reducer** (L) — done: `server/model/office.ts` is a reducer (`apply(AgentEvent)`) keeping
+  Habblaud's rules (grace periods, synthesized Done/Needs-you/shell bubbles, notice dedupe, quiet boot), plus
+  `/clear` continuity via `continues`, jobs (`job.*` → `shell`), denials, liveness targets and `markOffline`;
+  22 tests cover every status transition.
   - `server/model/office.ts`: `apply(event)` updates the agent and room records.
   - Implement the status machine from `CLAUDE.md`, including the offline and done grace periods, plus `shell`
     while `job.*` events leave a background job open (ADR 0002). Duplicate `session.end` events must be harmless.
@@ -152,12 +160,16 @@ The plan, phase by phase. [CLAUDE.md](CLAUDE.md) has the design, contracts and r
   - Add `rev` and `commit()`.
   - **Ref:** `server/model/office.ts`, `server/model/model.test.ts`.
   - **Done when:** there's a test for every status transition.
-- [ ] **P1-04 Rooms & names** (M)
+- [x] **P1-04 Rooms & names** (M) — done (before P1-03, which needs it): `server/model/rooms.ts` (slots,
+  display names, case-insensitive Windows keys), `room-aliases.ts`, `names.ts` (persisted per session),
+  `shared/names.ts` (120 international names), `shared/hash.ts`, `server/log.ts`; ported tests.
   - Key rooms by normalized `cwd`, with stable slots and a cooldown before a slot is reused.
   - Disambiguate display names, and support room aliases.
   - Give agents names from an international list, persisted in the data dir.
   - **Ref:** `server/model/rooms.ts`, `room-aliases.ts`, `names.ts`, `shared/names.ts`.
-- [ ] **P1-05 HTTP + SSE** (M)
+- [x] **P1-05 HTTP + SSE** (M) — done: `server/http/{guard,sse,static,app}.ts` (ported), `server/config.ts`
+  (AGENT_OFFICE_* env), `server/index.ts` wiring (office tick, hub, guard, static or Vite); guard, route, SSE and
+  static-cache tests ported; built server smoke-tested.
   - A `node:http` app with the edge guard.
   - An SSE hub: a snapshot on connect, then `feed` and `notice` events, with a ping every 15 s.
   - Routes: `GET /api/snapshot`, `/api/agents/:id`, `/api/health`.
@@ -165,17 +177,27 @@ The plan, phase by phase. [CLAUDE.md](CLAUDE.md) has the design, contracts and r
   - **Ref:** `server/http/{guard,sse,app,static}.ts`, `server/config.ts`, `server/index.ts`,
     `server/http/http.test.ts`.
   - **Done when:** the guard tests (Host, Origin, Content-Type) are ported and pass.
-- [ ] **P1-06 Ingest endpoints** (M)
+- [x] **P1-06 Ingest endpoints** (M) — done: `server/ingest/ingest.ts` (`POST /api/events` for `custom:*`
+  providers, batches of ≤ 100, all-or-nothing; `POST /api/hooks/:provider` through the adapter's `onHook`;
+  local-only, rate-limited per source) and `server/ingest/mask.ts` (deep masking and truncation on entry);
+  12 tests incl. bad Host, Origin, Content-Type, schema and oversized bodies.
   - `POST /api/events` for custom agents and `POST /api/hooks/:provider` for the shims.
   - Both are local-only, JSON-only, capped at 256 KB per body, rate-limited per source, validated, and masked on
     entry.
   - **Done when:** tests reject a bad Host, a bad Origin, a bad schema and an oversized body.
-- [ ] **P1-07 Adapter framework & liveness** (M)
+- [x] **P1-07 Adapter framework & liveness** (M) — done: `server/adapters/adapter.ts` (`ProviderAdapter`,
+  `AdapterSet`: ordered start with failure isolation, counted boots, validated+masked `emit`, sources, provider
+  meta, hook routing; liveness every 2 s via the adapter, a PID probe or a 2-min heartbeat timeout); wired into
+  `server/index.ts`; ported tests.
   - Write the `ProviderAdapter` interface and an `AdapterSet` (start, stop, sources, health).
   - Liveness: check the PID with `process.kill(pid, 0)`, and fall back to a heartbeat timeout.
   - Wrap each adapter's boot in `beginBoot` / `endBoot` pairs.
   - **Ref:** `server/sources/source.ts`.
-- [ ] **P1-08 Hook shim kit & installer** (M)
+- [x] **P1-08 Hook shim kit & installer** (M) — done: `hooks/shim.mjs` (stdin with timeout and cap, port from
+  `~/.agent-office/hooks.json` or env, 8 KB/200 KB trimming, 1.5 s POST to 127.0.0.1 only, always exit 0, agent
+  PID through shell wrappers) and `scripts/hooks-install.ts` (`--provider`, install/uninstall/status, backup,
+  idempotent merge, profiles, version check from package.json); `npm run hooks:*`; tests run the shim as a real
+  process and the installer in a fake HOME.
   - Shared shim logic in `hooks/`: read stdin with a timeout and a size cap, look up the config, truncate, POST with
     a timeout, and always exit 0.
   - Resolve the agent PID: `process.ppid`, or its parent when the parent is a shell wrapper (see CLAUDE.md › Hook
@@ -186,7 +208,10 @@ The plan, phase by phase. [CLAUDE.md](CLAUDE.md) has the design, contracts and r
     `server/test/hooks-install.test.ts`, `server/test/codex-hook.test.ts`.
   - **Done when:** tests run the shim as a real process against a test server, and the installer against a fake
     HOME.
-- [ ] **P1-09 Claude Code adapter** (L)
+- [x] **P1-09 Claude Code adapter** (L) — done: `server/adapters/claude-code/` (registry with a `procStart` check,
+  transcript parser emitting AgentEvent fragments, shells → `job.*`, subagents incl. the new `finished` meta flag) and
+  `server/adapters/accounts.ts`; a real subagent captured into `test/fixtures/claude-code/subagent/`; 66 tests incl.
+  fixture replays; the live session shows up in `/api/snapshot`.
   - Port the session registry, watcher, tail, transcript parser, subagents and shells into
     `server/adapters/claude-code/`, emitting `AgentEvent`s.
   - Keep Habblaud's boot behavior: read the last ~1 MB of each transcript, then the rest in the background.
@@ -196,7 +221,11 @@ The plan, phase by phase. [CLAUDE.md](CLAUDE.md) has the design, contracts and r
     `test/fixtures/claude-code/` (none existed in P0-05).
   - **Ref:** `server/sources/{registry,watcher,tail,transcript,subagents,shells}.ts` and their tests.
   - **Done when:** the fixture tests pass, and a real session appears.
-- [ ] **P1-10 Gemini CLI adapter** (L)
+- [x] **P1-10 Gemini CLI adapter** (L) — done: `hooks/gemini-cli.mjs` (slims payloads in the shim) and
+  `server/adapters/gemini-cli/` (hooks → events, FIFO tool pairing, chat-file tailing for denials/cancels, tokens,
+  light-profile tools and subagents matched by `invoke_agent.agentId`, background PIDs probed as jobs, `/clear`
+  pairing); every P0-04 capture replays into the expected statuses through the real shim transform, and the live
+  shim → server path was checked. **Real Gemini session still to check:** needs Gemini ≥ 0.65 and a sign-in.
   - Write `hooks/gemini-cli.mjs` and an installer that targets `~/.gemini/settings.json` (or
     `$GEMINI_CLI_HOME/.gemini/settings.json`), using matcher `"*"` for every event. The installer checks
     `gemini --version` ≥ 0.65.0 and warns otherwise.
@@ -211,17 +240,30 @@ The plan, phase by phase. [CLAUDE.md](CLAUDE.md) has the design, contracts and r
   - Liveness comes from the `pid` (the agent, resolved by the shim through the shell wrapper).
   - **Done when:** P0-04's fixtures replay into the expected status sequence (including allow, deny, cancel,
     `/clear` and resume), and a real Gemini session appears.
-- [ ] **P1-11 Demo simulator** (M)
+- [x] **P1-11 Demo simulator** (M) — done: `shared/demo/simulator.ts` (ported, pure, seeded; mixes `claude-code`,
+  `gemini-cli`, `codex` and `custom:demo` with each provider's own tool names), `server/adapters/demo.ts` (runs it
+  beside the real adapters on `AGENT_OFFICE_DEMO=1` / `--demo` / `npm run demo`, adds badges for providers only the
+  demo simulates) and `shared/demo/mock.ts` (simulator + the real reducer in memory, for `?mock=1`; the browser
+  wiring lands with the store in P2-01). The reducer and rooms moved to `shared/model/` so the browser can run them;
+  `shared/names.ts` gained `NameSource` and `MemoryNames`. Also fixed the Gemini replay tests on Linux (Windows
+  transcript paths).
   - Port `shared/demo/simulator.ts`, mixing providers (`claude-code`, `gemini-cli`, `codex`, `custom:demo`).
   - The same seed always produces the same office.
   - Turned on with `AGENT_OFFICE_DEMO=1` on the server, or `?mock=1` in the browser.
-- [ ] **P1-12 Debug page** (S)
+- [x] **P1-12 Debug page** (S) — done: `client/src/debug/` (`model.ts` groups a snapshot into rooms → agents with
+  subagents under their parent, tested; `page.ts` renders provider badge, status, jobs and activity live over
+  `/api/stream`, or from the in-browser demo office with `?mock=1`), shown by `client/src/main.ts`. Checked in
+  Chromium against the built server (demo agents and a real Claude Code session side by side); status changes posted
+  to `/api/events` reach the stream in ~200 ms.
   - A temporary page listing rooms → agents, each with a provider badge, status and current activity, live over
     SSE.
   - It's deleted in P2-10.
 
 **Exit:** a real Claude Code session and a real Gemini CLI session on this machine both show up in the debug page;
 their status changes (working, waiting, idle, offline) appear within 2 s; the demo runs; all tests pass.
+
+> **Exit status (2026-10-25):** met except the live Gemini CLI session, which needs Gemini ≥ 0.65 and a sign-in on
+> the user's machine. Phase 2 starts anyway: it runs on demo data and doesn't depend on that check.
 
 ---
 

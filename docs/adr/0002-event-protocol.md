@@ -1,6 +1,6 @@
 # ADR 0002: Provider-neutral event protocol
 
-- **Status:** proposed. P1-01 finalizes the types; after that, changes are additive only.
+- **Status:** accepted (P1-01, 2026-10-25). The types live in `shared/protocol.ts`; changes are additive only.
 - **Date:** 2026-10-24
 - **Evidence:** [Gemini CLI notes](../providers/gemini-cli.md), [Claude Code notes](../providers/claude-code.md)
 

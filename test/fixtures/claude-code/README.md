@@ -23,7 +23,7 @@ noted.
 | `transcript-denied.jsonl` | A tool call rejected by a safety rule: `permissionDecision.decision: reject`, `toolDenialKind: permission-rule` |
 | `transcript-background-shell.jsonl` | Background launch (`toolUseResult.backgroundTaskId`), then later the `<task-notification>` (`queue-operation` enqueue → `queued_command` attachment → remove). Two slices of one session. |
 | `transcript-task-stop.jsonl` | Background launch, then `TaskStop` (`task_type: local_bash`). Two slices of one session. |
-| `transcript-compact.jsonl` | `system` `compact_boundary` followed by the `isCompactSummary` user record |
+| `transcript-compact.jsonl` | `system` `compact_boundary` followed by the `isCompactSummary` user record, then the `/compact` command record (its `<command-name>` tags restored as structure in P1-09) |
+| `subagent/<sessionId>.jsonl`, `subagent/<sessionId>/subagents/agent-*.jsonl` + `.meta.json` | A real background `Explore` subagent (2.1.310, captured in P1-09), laid out like a session folder. Parent side: the `Agent` call, `async_launched` with `agentId`, then the hand-back and the `<task-notification>` (queue → attachment → remove). Subagent side: its attachments, `api-request*` (omitted), `Glob`/`Read`, and the closing `SubagentHandback` call (`toolEndsTurn: true`). The meta gains `model` and `finished: true`. |
 
-Missing on this machine (capture later): subagent transcripts with `.meta.json` (P1-09); registry `waiting` and
-`shell` statuses.
+Missing on this machine (capture later): registry `waiting` and `shell` statuses.

@@ -10,13 +10,17 @@
   },
   "scripts": {
     "dev": "tsx watch --clear-screen=false --exclude ./client/** server/index.ts --dev",
+    "demo": "tsx watch --clear-screen=false --exclude ./client/** server/index.ts --dev --demo",
     "dev:client": "vite --config vite.config.ts",
     "build": "npm run build:client && npm run build:server",
     "build:client": "vite build --config vite.config.ts",
     "build:server": "node scripts/build-server.mjs",
     "start": "node dist/server/index.js",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p server/tsconfig.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "hooks:install": "tsx scripts/hooks-install.ts install",
+    "hooks:uninstall": "tsx scripts/hooks-install.ts uninstall",
+    "hooks:status": "tsx scripts/hooks-install.ts status"
   },
   "devDependencies": {
     "@types/node": "22.20.5",

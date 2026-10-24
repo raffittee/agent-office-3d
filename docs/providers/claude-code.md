@@ -50,10 +50,22 @@ are synthetic. These are the first checks against real files. Evidence: [`test/f
 `~/.claude` only, with `CLAUDE_CONFIG_DIR` unset, so the account is `default`. `~/.claude.json` exists. Per the
 rules, only its email and organization may be read; the spike didn't need it.
 
+## Subagents (verified in P1-09, 2.1.310)
+
+- The files are where Habblaud says: `<sessionId>/subagents/agent-<agentId>.jsonl`, with
+  `agent-<agentId>.meta.json` beside it.
+- The meta also carries `model`, `isBuiltIn` and `requestNonInteractive`. Once the subagent hands its result back,
+  it gains **`finished: true`**, which the adapter uses as an end signal.
+- A subagent ends with a **`SubagentHandback`** tool call, and its result record has `toolEndsTurn: true`. There's
+  no `end_turn` reply.
+- Parent side: the `Agent` tool result has `status: async_launched`, `isAsync` and the `agentId`. Two messages
+  arrive at the end: a peer `<agent-message>` and a `<task-notification>` whose `task-id` is the agent id. Each one
+  arrives as a `queue-operation` enqueue, then a `queued_command` attachment, then a remove.
+- Subagent transcripts also contain `api-request*` records and a `credential_org` attachment. These are skipped the
+  same way as in main transcripts.
+
 ## Not verified here
 
-- **Subagent transcripts** (`<sessionId>/subagents/**/agent-*.jsonl` + `.meta.json`): none exist on this machine.
-  Capture them in P1-09 the first time a real subagent runs, before porting `subagents.ts`.
 - **`waiting` and `shell` registry statuses**: not observed (see above).
 - **`PermissionRequest` hook** (2.1.287+): Phase 7.
 

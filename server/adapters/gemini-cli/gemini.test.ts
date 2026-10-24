@@ -1,7 +1,7 @@
 // Gemini CLI: the hook shim's body, the chat-file parser, and P0-04's real captures (test/fixtures/gemini-cli/)
 // replayed through the shim's transformation, the adapter and the office reducer.
 import { appendFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { basename, join, resolve } from 'node:path';
+import { join, resolve, win32 } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { AgentEvent, AgentStatus } from '../../../shared/protocol';
@@ -179,7 +179,7 @@ function replay(env: ReturnType<typeof replayEnv>, hookFile: string, chat: Array
     const p = { ...h.payload };
     const at = Date.parse(String(p.timestamp));
     env.setClock(at);
-    if (typeof p.transcript_path === 'string') p.transcript_path = join(env.chats, basename(p.transcript_path));
+    if (typeof p.transcript_path === 'string') p.transcript_path = join(env.chats, win32.basename(p.transcript_path));
     while (pending.length && pending[0]!.at <= at) {
       const c = pending.shift()!;
       const file = c.into(String(p.session_id));

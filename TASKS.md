@@ -288,7 +288,10 @@ their status changes (working, waiting, idle, offline) appear within 2 s; the de
 - [x] **P2-03 Navigation** (S) — done: `client/src/core/nav/{grid,astar}.ts` and their 7 tests, ported as is.
   - Port the grid and A*, with their tests.
   - **Ref:** `client/src/world/path/*`.
-- [ ] **P2-04 Simulation core** (L)
+- [x] **P2-04 Simulation core** (L) — done: `client/src/core/sim/` (ported: sim, behavior, character, spots, steps,
+  elevator, room-state, shell gag) + `core/options.ts`. Characters expose neutral data only; `jobs` replaces `shells`;
+  the job-done celebration keys on `JOB_DONE_TOOL`. Left out: social gatherings and personas (P6-01), GitHub room
+  effects (backlog), the World visitor (never), the 2D art module (P3-03). 57 ported tests, no `three` import.
   - Port the sim, behavior, character, spots, steps and elevator modules.
   - Reconcile incoming snapshots with the characters on screen.
   - Modes: work, wait, idle, shell, deliver, leave. Idle activities are picked by weight.

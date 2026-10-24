@@ -429,3 +429,16 @@ Branch `phase-1`. One commit per task, each pushed. At the end of the phase ther
 
 - The walk grid and A* path finder, ported as they are, with their 7 tests.
 
+### P2-04 Simulation core — done, 2026-10-25 04:33
+
+- `client/src/core/sim/` is Habblaud's office simulation, ported. It turns each snapshot into people who:
+  arrive by elevator, switch on a dark room's light, sit and type, raise a hand when waiting for you, wander when
+  idle (coffee, water cooler, restroom, lounge, window, bookshelf, arcade, snacks, phone, stretching), eat popcorn
+  while a background job runs (then fidget, gather cobwebs and nap as it drags on), cheer when it finishes, carry a
+  result to their parent as a subagent, and on leaving switch off the light and take the elevator. Rooms are built,
+  dismantled, and moved so no gaps are left between them.
+- It only produces plain data (position, direction, pose, held item, icons, bubbles); the 3D view will read it.
+- Left out for now: social life (group games, chats, personalities: Phase 6) and GitHub celebrations (backlog).
+  Habblaud's World visitor is never ported.
+- 57 tests ported from Habblaud (2 about the 2D appearance were dropped until Phase 3 brings characters).
+

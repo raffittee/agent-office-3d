@@ -269,7 +269,9 @@ their status changes (working, waiting, idle, offline) appear within 2 s; the de
 
 ## Phase 2: 3D world MVP (placeholder art)
 
-- [ ] **P2-01 Client shell & store** (M)
+- [x] **P2-01 Client shell & store** (M) — done: `client/src/net/store.ts` (ported: SSE, reconnect with backoff,
+  `online` retry, stale-build notice, feed dedupe; `?mock=1` runs `shared/demo/mock.ts` in the page), `app.ts`/`main.ts`
+  (full-window `#world` canvas under a `#ui` layer, `styles.css` tokens with dark mode); the debug list reads the store.
   - Port the SSE store: reconnect with backoff, plus a mock mode backed by the demo simulator.
   - Lay out the app: canvas plus panels.
   - **Ref:** `client/src/net/store.ts`, `client/src/app.ts`, `client/src/main.ts`.

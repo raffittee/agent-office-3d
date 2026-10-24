@@ -393,3 +393,17 @@ Branch `phase-1`. One commit per task, each pushed. At the end of the phase ther
 - **Decision I made:** start Phase 2 anyway. Phase 2 is the browser side and runs on the demo data, so nothing in it
   depends on the Gemini check. If your Gemini test shows a problem, the fix goes into the Gemini adapter alone.
 
+## Phase 2: 3D world MVP (branch `phase-2`)
+
+### P2-01 Client shell & store — done, 2026-10-25 04:20
+
+- `client/src/net/store.ts` keeps the browser's copy of the office. It's ported from Habblaud's, without the parts
+  for later phases (permissions, messages, character editor, timelapse):
+  - it reconnects by itself when the server restarts, waiting 2 s, 4 s, 8 s and so on up to 30 s, and at once when
+    the network comes back;
+  - `?mock=1` runs the demo office inside the page (also `&seed=`, `&speed=`, `&sessions=`);
+  - it notices when the server starts serving a newer build of the page.
+- The page is now a full-window canvas (for the 3D office) with a panel layer on top, with light and dark colors.
+  Until the real panels arrive (P2-10), the debug list sits on the right.
+- 16 store tests (ported and translated, plus mock mode).
+

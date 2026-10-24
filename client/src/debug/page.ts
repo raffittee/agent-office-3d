@@ -1,8 +1,8 @@
 // Debug page (P1-12, temporary: deleted in P2-10). Rooms → agents with a provider badge, status and activity, live
-// over SSE (/api/stream), or from the in-browser demo office with ?mock=1.
-import { createMockOffice } from '../../../shared/demo/mock';
+// from the store (SSE, or the in-browser demo office with ?mock=1).
 import { t } from '../../../shared/i18n';
 import type { OfficeSnapshot } from '../../../shared/protocol';
+import type { ConnectionState, OfficeStore } from '../net/store';
 import { debugRooms } from './model';
 
 const STATUS_COLORS: Record<string, string> = {
@@ -15,17 +15,18 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 const CSS = `
-  :root { color-scheme: light dark; font: 14px/1.4 system-ui, sans-serif; }
-  body { margin: 0; padding: 16px; }
-  header { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; margin-bottom: 12px; }
-  h1 { font-size: 18px; margin: 0; }
-  .muted { opacity: 0.65; }
-  section { border: 1px solid #8884; border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; }
-  h2 { font-size: 15px; margin: 0 0 6px; }
-  table { border-collapse: collapse; width: 100%; table-layout: fixed; }
-  td:nth-child(1) { width: 18%; } td:nth-child(2) { width: 14%; } td:nth-child(3) { width: 12%; } td:nth-child(4) { width: 14%; }
-  td { padding: 3px 8px 3px 0; vertical-align: top; }
-  .badge { display: inline-block; padding: 0 6px; border-radius: 4px; color: #fff; font-size: 12px; white-space: nowrap; }
+  .debug { position: absolute; top: 0; right: 0; bottom: 0; width: min(480px, 100%); overflow: auto; padding: 12px 16px;
+    box-sizing: border-box; background: var(--panel); color: var(--text); pointer-events: auto; }
+  .debug header { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; margin-bottom: 12px; }
+  .debug h1 { font-size: 16px; margin: 0; }
+  .debug .muted { opacity: 0.65; }
+  .debug section { border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; }
+  .debug h2 { font-size: 14px; margin: 0 0 6px; overflow-wrap: anywhere; }
+  .debug table { border-collapse: collapse; width: 100%; table-layout: fixed; font-size: 13px; }
+  .debug td { padding: 3px 6px 3px 0; vertical-align: top; overflow-wrap: anywhere; }
+  .debug td:nth-child(1) { width: 22%; } .debug td:nth-child(2) { display: none; } .debug td:nth-child(3) { width: 24%; }
+  .debug td:nth-child(4) { width: 20%; }
+  .debug .badge { display: inline-block; padding: 0 6px; border-radius: 4px; color: #fff; font-size: 12px; white-space: nowrap; }
 `;
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, text?: string, cls?: string): HTMLElementTagNameMap[K] {
@@ -71,35 +72,26 @@ function render(root: HTMLElement, status: HTMLElement, snap: OfficeSnapshot): v
   root.replaceChildren(...out);
 }
 
-export function startDebugPage(app: HTMLElement): void {
+export function startDebugPage(app: HTMLElement, store: OfficeStore): void {
   const style = el('style', CSS);
   document.head.append(style);
-  const mock = new URLSearchParams(location.search).has('mock');
   const header = el('header');
-  const conn = el('span', t('connecting…'), 'muted');
+  const conn = el('span', '', 'muted');
   const status = el('span', '', 'muted');
   header.append(el('h1', t('Agent Office: debug')), conn, status);
   const rooms = el('main');
+  app.classList.add('debug');
   app.replaceChildren(header, rooms);
 
-  if (mock) {
-    conn.textContent = t('mock mode (simulated in this browser)');
-    const office = createMockOffice({}, Date.now());
-    const tick = () => render(rooms, status, office.step(Date.now()).snapshot);
-    tick();
-    setInterval(tick, 250);
-    return;
-  }
-
-  // EventSource reconnects by itself (the server sends retry: 2000) and gets a full snapshot on every connect.
-  const es = new EventSource('/api/stream');
-  es.addEventListener('open', () => (conn.textContent = t('live')));
-  es.addEventListener('error', () => (conn.textContent = t('reconnecting…')));
-  es.addEventListener('snapshot', (ev) => {
-    try {
-      render(rooms, status, JSON.parse((ev as MessageEvent<string>).data) as OfficeSnapshot);
-    } catch {
-      conn.textContent = t('bad snapshot');
-    }
-  });
+  const LABELS: Record<ConnectionState, string> = {
+    connecting: t('connecting…'),
+    open: t('live'),
+    closed: t('disconnected, retrying…'),
+    mock: t('mock mode (simulated in this browser)'),
+  };
+  const showConnection = (c: ConnectionState) => (conn.textContent = LABELS[c]);
+  showConnection(store.connection);
+  store.on('connection', showConnection);
+  store.on('snapshot', (snap) => render(rooms, status, snap));
+  if (store.snapshot) render(rooms, status, store.snapshot);
 }

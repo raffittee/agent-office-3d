@@ -891,6 +891,12 @@ export class Sim {
     if (s.phase === 0) {
       ch.alpha = 0;
       ch.setPose('stand');
+      // still waiting for its turn, unseen, and no longer coming in (the agent left, or a subagent already finished):
+      // it never appears. Without this it would wait out the whole arrival queue and only then leave (soak, P8-02).
+      if (ch.leaving || ch.mode === 'leave' || ch.mode === 'deliver') {
+        ch.gone = true;
+        return true;
+      }
       if (now >= ch.hiddenUntil) {
         el.request(ch.id);
         s.phase = 1;

@@ -1,6 +1,6 @@
 {
   "name": "agent-office",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "description": "A 3D virtual office that shows, live, what your AI coding agents are doing.",
   "license": "MIT",

@@ -1,7 +1,7 @@
 {
   "name": "agent-office-messages",
   "displayName": "Agent Office: messages from the office",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Brings the messages you type in Agent Office into the Claude Code session, as if you had typed them in the terminal.",
   "author": {
     "name": "Agent Office"

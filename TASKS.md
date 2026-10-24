@@ -354,6 +354,12 @@ their status changes (working, waiting, idle, offline) appear within 2 s; the de
 hand, wander when idle, deliver as a subagent, leave, turn out the lights, dismantle the room. Real Claude and
 Gemini sessions appear, and clicking an agent opens its drawer.
 
+> **Exit status (2026-10-25):** met in the cloud environment, except the frame rate, which needs a real GPU. The demo
+> plays the whole lifecycle (covered by the ported sim tests and seen in screenshots); 30 agents in 6 rooms cost 38
+> draw calls; a real Claude Code session appears live and its drawer opens. To check on your machine: `npm run
+> build && npm start`, open `http://127.0.0.1:4848/?mock=1&sessions=30&stats=1` and read the fps in the top bar. The
+> live Gemini check carries over from Phase 1.
+
 ---
 
 ## Phase 3: Characters & art pipeline

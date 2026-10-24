@@ -478,3 +478,15 @@ Branch `phase-1`. One commit per task, each pushed. At the end of the phase ther
   300, or the details panel won't open.
 - With 30 demo agents in 6 rooms: 38 draw calls.
 
+### Phase 2 closed — 2026-10-25 04:52
+
+- All 11 tasks are ticked. Pull request `phase-2` → `main`.
+- **Two checks need your machine:**
+  1. **Frame rate.** Run `npm run build && npm start`, open
+     http://127.0.0.1:4848/?mock=1&sessions=30&stats=1 and read the fps in the top bar. The target is 50 or more.
+     The cloud has no GPU, so I could only count draw calls: 38 for 30 agents, against a budget of 300.
+  2. **A live Gemini session** (carried over from Phase 1).
+- Verified here: the demo plays the whole lifecycle; a real Claude Code session (this one) appears in 3D and opens
+  its details; screenshots look right; all tests pass.
+- Added `?stats=1` (frame rate, draw calls, agents in the top bar) for that check.
+

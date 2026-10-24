@@ -497,7 +497,9 @@ no page errors, 37–52 draw calls) and renders the preview page; `themes/cabin/
   - Helpers for session, turn, tool and waiting events, with an automatic heartbeat.
   - Examples: a minimal agent loop on the Gemini API, and one on an OpenAI-compatible or Ollama endpoint, both
     reporting events.
-- [ ] **P5-03 "Add a provider" guide** (S)
+- [x] **P5-03 "Add a provider" guide** (S) — done: `docs/providers/adding-a-provider.md` (observe the real CLI first,
+  fixtures, tool table, adapter, liveness order, capabilities, shim rules, installer, accounts, tests), with the Codex
+  adapter as the worked example.
   - A checklist in `docs/providers/adding-a-provider.md`: fixtures, tool table, liveness, capabilities, shim rules,
     tests.
 - [ ] **P5-04 Accounts & usage** (M)

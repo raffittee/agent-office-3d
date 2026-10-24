@@ -604,3 +604,8 @@ Branch `phase-1`. One commit per task, each pushed. At the end of the phase ther
 - **Two working example agents:** one on the Gemini API (Python) and one on any OpenAI-compatible endpoint, Ollama by
   default (TypeScript). Both were tested here against fake model servers; with a real key (or Ollama) they run as-is.
 - Reporting never crashes or slows the agent: if the office isn't running, events are simply dropped.
+
+### P5-03 "Add a provider" guide — done, 2026-10-25 06:50
+
+- `docs/providers/adding-a-provider.md`: the checklist for teaching the office a new coding CLI, from recording what
+  the real tool writes to the tests, with the Codex work as the example. (For your own agent, the SDK is enough.)

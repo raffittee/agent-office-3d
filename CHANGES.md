@@ -627,7 +627,7 @@ Branch `phase-1`. One commit per task, each pushed. At the end of the phase ther
 
 - **Decision (ADR 0006): the office won't accept OpenTelemetry for now.** I captured the real telemetry Codex and
   Gemini CLI send. It doesn't say when a turn or session ends or which folder an agent works in, it includes command
-  output and system instructions, and it's 40 to 250 times larger than what the hooks send. The hooks and file
+  output and system instructions, and it's 26 to 120 times larger than what the hooks send. The hooks and file
   readers stay the way tools report. Numbers in `docs/spikes/otlp.md`.
 
 ### Phase 5 closed — 2026-10-25 07:25

@@ -514,7 +514,7 @@ no page errors, 37–52 draw calls) and renders the preview page; `themes/cabin/
   - **Ref:** `server/accounts/*`, `client/src/ui/usage.ts`.
 - [x] **P5-05 Spike: OTLP receiver** (M) — done: real Codex 0.164.0 and Gemini CLI 0.65.0 telemetry captured with
   `docs/spikes/otlp/receiver.mjs`; measurements and the mapping in `docs/spikes/otlp.md`; decision **not to ship it**
-  in ADR 0006 (no turn or session end, no cwd, content in the payloads, 40–250× the shim traffic).
+  in ADR 0006 (no turn or session end, no cwd, content in the payloads, 26–120× the shim traffic).
   - Accept OTLP/HTTP JSON logs at `/v1/logs` (local only) as another generic path.
   - Map the telemetry events from Claude Code, Gemini CLI and Codex to `AgentEvent`s.
   - Decide whether to keep it, and record the decision in an ADR.

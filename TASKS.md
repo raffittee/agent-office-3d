@@ -390,16 +390,26 @@ Gemini sessions appear, and clicking an agent opens its drawer.
 - [x] **P3-04 Held items** (S) — done: coffee, water, laptop, papers, book, box, phone, controller, paddle and popcorn
   follow the right hand bone, drawn as one instanced mesh for everyone.
   - Attach items to bone sockets: coffee, laptop, papers, phone, controller, paddle, popcorn.
-- [ ] **P3-05 Live monitors** (M)
+- [x] **P3-05 Live monitors** (M) — done: `render3d/screens.ts` (all desk screens as one instanced mesh textured from
+  a shared 512×512 canvas atlas; code, terminal, browser, search, docs, chat, tasks, alert, progress, idle, standby,
+  off; animated tiles redrawn every 250 ms; dimmed with the room) and `render3d/screens-model.ts` (pure: mode from the
+  seated occupant via `screenModeFor`, screen placement on the monitor; tested).
   - Desk screens show a screen mode (code, terminal, browser, docs, chat, alert) from small shared canvas
     textures, and go dark with the room.
   - **Ref:** `screenModeFor` in `client/src/world/sim/behavior.ts`, `client/src/art/dynamic.ts`.
-- [ ] **P3-06 Performance pass** (M)
+- [x] **P3-06 Performance pass** (M) — done: off-screen robots not drawn and animated at ¼ rate, one world-matrix
+  update per frame, pose layers without world-matrix queries, allocation-free hot paths, per-phase timings in
+  `world.stats()` and `?stats=1`; results and method in `docs/perf.md` (38 agents, 6 rooms: 72 draw calls). Frame
+  rate needs a real GPU (the cloud renders in software).
   - Instancing, static geometry merging, frustum culling, a texture atlas.
   - Skip animation updates for characters that are off-screen.
   - Record the results against the budget in `docs/perf.md`.
 
 **Exit:** rigged characters with at least 10 poses, and the performance budget in `CLAUDE.md` is met.
+
+> **Exit status (2026-10-25):** rigged characters animate 15 poses (a test checks ≥ 10); draw calls are within budget
+> (72 for 38 agents and 6 rooms, about 160 projected for 15 rooms). The 60 fps check needs the user's integrated GPU:
+> `/?mock=1&sessions=30&stats=1` (see `docs/perf.md`). The characters are the interim robot (ADR 0005).
 
 ---
 

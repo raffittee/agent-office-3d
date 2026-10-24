@@ -94,6 +94,12 @@ const tmpV = new THREE.Vector3();
 const tmpM = new THREE.Matrix4();
 const tmpC = new THREE.Color();
 const ZERO = new THREE.Matrix4().makeScale(0, 0, 0);
+const ONE = new THREE.Vector3(1, 1, 1);
+const tmpE = new THREE.Euler();
+const fwd = new THREE.Vector3();
+const right = new THREE.Vector3();
+const at = new THREE.Vector3();
+const size3 = new THREE.Vector3();
 const HELD_COLORS: Partial<Record<HeldItem, string>> = {
   coffee: '#f4efe6',
   water: '#8cc6f0',
@@ -125,12 +131,11 @@ const HELD_SIZE: Partial<Record<HeldItem, [number, number, number]>> = {
  */
 function rotateInCharacterSpace(bone: THREE.Bone, root: THREE.Object3D, axis: THREE.Vector3, angle: number): void {
   if (!angle || !bone.parent) return;
-  // parent's rotation relative to the character root
-  root.getWorldQuaternion(tmpQ2).invert();
-  bone.parent.getWorldQuaternion(tmpQ).premultiply(tmpQ2);
-  const local = tmpV.copy(axis).applyQuaternion(tmpQ.invert());
+  // the parent's rotation relative to the character root, from local rotations (no world matrices needed)
+  tmpQ2.identity();
+  for (let n: THREE.Object3D | null = bone.parent; n && n !== root; n = n.parent) tmpQ2.premultiply(n.quaternion);
+  const local = tmpV.copy(axis).applyQuaternion(tmpQ2.invert());
   bone.quaternion.premultiply(tmpQ.setFromAxisAngle(local.normalize(), angle));
-  bone.updateMatrixWorld(true);
 }
 
 export class RigView {
@@ -232,7 +237,6 @@ export class RigView {
     if (!L.arms && !L.head && !L.lean) return;
     const rig = poseRig(c.pose, c.animT, c.info.seed, c.seated, c.held);
     const b = r.bones;
-    r.root.updateMatrixWorld(true);
     if (L.lean && b.spine) rotateInCharacterSpace(b.spine, r.root, X, rig.lean);
     if (L.head && b.head) rotateInCharacterSpace(b.head, r.root, X, rig.head);
     if (L.arms) {
@@ -248,13 +252,18 @@ export class RigView {
     }
   }
 
-  /** Brings the rigged characters in line with the sim. `visible(c)` = on screen (full-rate animation). */
+  private placed: { c: Character; r: Rigged; seated: boolean }[] = [];
+
+  /**
+   * Brings the rigged characters in line with the sim (clips, layers, placement). `visible(c)` = on screen (drawn,
+   * full-rate animation). Call attach() after the scene's world matrices are updated.
+   */
   sync(list: Iterable<Character>, dt: number, visible: (c: Character) => boolean): void {
+    this.placed.length = 0;
     this.frame++;
     const seen = new Set<string>();
     const all = [...list].filter((c) => !c.gone);
     this.grow(all.length);
-    let i = 0;
     for (const c of all) {
       seen.add(c.id);
       let r = this.chars.get(c.id);
@@ -263,42 +272,62 @@ export class RigView {
         this.chars.set(c.id, r);
       }
       const show = c.alpha > 0.02 && !c.inside;
-      r.root.visible = show;
-      if (!show) {
-        for (const m of [this.shadows, this.badges, this.lanyards, this.held]) m.setMatrixAt(i, ZERO);
-        i++;
-        continue;
-      }
+      // off-screen characters aren't drawn (and animate at a quarter of the rate, below)
+      const onScreen = show && visible(c);
+      r.root.visible = onScreen;
+      if (!show) continue;
       r.yaw = turnTowards(r.yaw, dirYaw(c.dir), dt * 10);
       const seated = isSeatedPose(c.pose, c.seated);
       const base = baseClipFor(c.pose, c.seated, (k) => !!r!.actions[k]);
       this.play(r, base);
       // off-screen characters animate at a quarter of the rate (P3-06)
       r.pending += dt;
-      const onScreen = visible(c);
       if (onScreen || this.frame % 4 === 0) {
         for (const [bone, q] of r.rest) bone.quaternion.copy(q);
+        const P = ((globalThis as any).__perf ??= { mixer: 0, layer: 0, matrix: 0, building: 0, n: 0 });
+        let t = performance.now();
         r.mixer.update(r.pending);
+        P.mixer += performance.now() - t;
         r.pending = 0;
+        t = performance.now();
         if (onScreen) this.layer(r, c, base);
+        P.layer += performance.now() - t;
       }
       const prof = this.model.profile;
       const s = prof.scale * (r.sub ? 0.86 : 1) * Math.min(1, 0.4 + c.alpha * 0.6);
       r.root.scale.setScalar(s);
       r.root.position.set(mx(c.x + c.offX), seated ? prof.seat.up : 0, mz(c.y + c.offY));
       r.root.rotation.set(0, r.yaw, 0);
-      r.root.updateMatrixWorld(true);
-      // attachments
+      this.placed.push({ c, r, seated });
+    }
+    for (const [id, r] of this.chars) {
+      if (seen.has(id)) continue;
+      this.root.remove(r.root);
+      r.mixer.stopAllAction();
+      r.material.dispose();
+      this.chars.delete(id);
+    }
+  }
+
+  /** Places the instanced attachments (shadow, badge, lanyard, held item) from the bones' world matrices. */
+  attach(): void {
+    let i = 0;
+    for (const { c, r, seated } of this.placed) {
       this.shadows.setMatrixAt(i, tmpM.makeTranslation(mx(c.x + c.offX), 0.012, mz(c.y + c.offY)));
       const chest = r.bones.chest ?? r.bones.spine;
+      tmpQ.setFromEuler(tmpE.set(0, r.yaw, 0));
+      fwd.set(0, 0, 1).applyQuaternion(tmpQ);
+      right.set(1, 0, 0).applyQuaternion(tmpQ);
       if (chest) {
-        chest.getWorldPosition(tmpV);
-        tmpQ.setFromEuler(new THREE.Euler(0, r.yaw, 0));
-        const fwd = new THREE.Vector3(0, 0, 1).applyQuaternion(tmpQ);
-        const right = new THREE.Vector3(1, 0, 0).applyQuaternion(tmpQ);
-        this.badges.setMatrixAt(i, tmpM.compose(tmpV.clone().addScaledVector(fwd, 0.17).addScaledVector(right, 0.08).add(new THREE.Vector3(0, 0.05, 0)), tmpQ, new THREE.Vector3(1, 1, 1)));
+        tmpV.setFromMatrixPosition(chest.matrixWorld);
+        at.copy(tmpV).addScaledVector(fwd, 0.17).addScaledVector(right, 0.08);
+        at.y += 0.05;
+        this.badges.setMatrixAt(i, tmpM.compose(at, tmpQ, ONE));
         this.badges.setColorAt(i, tmpC.set(this.providerColors.get(c.info.provider) ?? '#888888'));
-        this.lanyards.setMatrixAt(i, r.sub ? tmpM.compose(tmpV.clone().addScaledVector(fwd, 0.18).addScaledVector(right, -0.06), tmpQ, new THREE.Vector3(1, 1, 1)) : ZERO);
+        if (r.sub) {
+          at.copy(tmpV).addScaledVector(fwd, 0.18).addScaledVector(right, -0.06);
+          this.lanyards.setMatrixAt(i, tmpM.compose(at, tmpQ, ONE));
+        } else this.lanyards.setMatrixAt(i, ZERO);
       } else {
         this.badges.setMatrixAt(i, ZERO);
         this.lanyards.setMatrixAt(i, ZERO);
@@ -306,11 +335,10 @@ export class RigView {
       const hand = r.bones.handR ?? r.bones.lowerArmR;
       const size = HELD_SIZE[c.held];
       if (hand && size && c.held !== 'none') {
-        hand.getWorldPosition(tmpV);
-        tmpQ.setFromEuler(new THREE.Euler(0, r.yaw, 0));
-        const fwd = new THREE.Vector3(0, 0, 1).applyQuaternion(tmpQ);
-        const at = c.held === 'laptop' && seated ? tmpV.clone().addScaledVector(fwd, 0.12).setY(Math.max(0.68, tmpV.y - 0.05)) : tmpV.clone().addScaledVector(fwd, 0.06);
-        this.held.setMatrixAt(i, tmpM.compose(at, tmpQ, new THREE.Vector3(...size)));
+        tmpV.setFromMatrixPosition(hand.matrixWorld);
+        if (c.held === 'laptop' && seated) at.copy(tmpV).addScaledVector(fwd, 0.12).setY(Math.max(0.68, tmpV.y - 0.05));
+        else at.copy(tmpV).addScaledVector(fwd, 0.06);
+        this.held.setMatrixAt(i, tmpM.compose(at, tmpQ, size3.set(size[0], size[1], size[2])));
         this.held.setColorAt(i, tmpC.set(HELD_COLORS[c.held] ?? '#cccccc'));
       } else this.held.setMatrixAt(i, ZERO);
       i++;
@@ -319,13 +347,6 @@ export class RigView {
       m.count = i;
       m.instanceMatrix.needsUpdate = true;
       if (m.instanceColor) m.instanceColor.needsUpdate = true;
-    }
-    for (const [id, r] of this.chars) {
-      if (seen.has(id)) continue;
-      this.root.remove(r.root);
-      r.mixer.stopAllAction();
-      r.material.dispose();
-      this.chars.delete(id);
     }
   }
 

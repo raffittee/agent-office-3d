@@ -119,10 +119,34 @@ describe('the placeholder kit', () => {
     }
   });
 
-  it('desk monitors face the person: desk to the south, desk_back to the north', () => {
-    const glow = (k: 'desk' | 'desk_back') => furnitureParts(k).find((p) => p.mat === 'glow')!;
-    expect(glow('desk').z0).toBeLessThan(0.25);
-    expect(glow('desk_back').z0).toBeGreaterThan(0.25);
+  it('desk screens sit on the monitor and face the person: desk to the south, desk_back to the north', async () => {
+    const { deskScreen } = await import('./screens-model');
+    for (const k of ['desk', 'desk_back'] as const) {
+      const sc = deskScreen(k)!;
+      const monitor = furnitureParts(k).find((p) => p.y1 > 1.1 && p.x1 - p.x0 > 0.5)!;
+      // on the monitor's face that looks at the sitter
+      expect(Math.abs(sc.z - (sc.facing === 1 ? monitor.z1 : monitor.z0))).toBeLessThan(0.01);
+      expect(sc.y - sc.h / 2).toBeGreaterThanOrEqual(monitor.y0);
+      expect(sc.y + sc.h / 2).toBeLessThanOrEqual(monitor.y1);
+    }
+    expect(deskScreen('desk')!.facing).toBe(1);
+    expect(deskScreen('desk_back')!.facing).toBe(-1);
+    expect(deskScreen('stool')).toBeNull();
+  });
+
+  it('a desk screen follows its occupant and the room light', async () => {
+    const { deskScreenMode } = await import('./screens-model');
+    const c = new Character(agent({ activity: { id: 'x', kind: 'test', icon: '🧪', text: 'Running tests', at: T0 } }));
+    c.mode = 'work';
+    expect(deskScreenMode(c, 1)).toBe('terminal');
+    c.mode = 'wait';
+    expect(deskScreenMode(c, 1)).toBe('alert');
+    c.mode = 'shell';
+    expect(deskScreenMode(c, 1)).toBe('progress');
+    c.mode = 'idle';
+    expect(deskScreenMode(c, 1)).toBe('idle');
+    expect(deskScreenMode(null, 1)).toBe('standby');
+    expect(deskScreenMode(c, 0)).toBe('off');
   });
 });
 

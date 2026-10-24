@@ -10,6 +10,7 @@ import { CharacterView } from './characters';
 import { Overlay } from './overlay';
 import { loadRigModel, RigView } from './rig';
 import { createScene, type Quality } from './scene';
+import { ScreenView } from './screens';
 import { mx, mz, tm } from './units';
 
 export type Selection = { type: 'agent'; id: string } | { type: 'room'; id: string } | null;
@@ -43,7 +44,7 @@ export interface WorldApi {
   screenPositionOf(agentId: string): { x: number; y: number } | null;
   setViewInsets(insets: Partial<ViewInsets>): void;
   /** Frame stats for the debug readout and the smoke test. */
-  stats(): { fps: number; calls: number; triangles: number; agents: number; rooms: number };
+  stats(): { fps: number; cpuMs: number; phases: { sim: number; sync: number; render: number; labels: number }; calls: number; triangles: number; agents: number; rooms: number };
   readonly sim: Sim;
   destroy(): void;
 }
@@ -55,10 +56,13 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
   let options: WorldSettings = { ...DEFAULT_WORLD_SETTINGS, ...initial };
   const parts = createScene(canvas, quality);
   const { renderer, scene } = parts;
+  // world matrices are updated once per frame in the loop (before attachments), not again inside render()
+  scene.matrixWorldAutoUpdate = false;
   const sim = new Sim({ options: () => options });
   const building = new BuildingView();
   const chars = new CharacterView();
-  scene.add(building.root, chars.root);
+  const screens = new ScreenView();
+  scene.add(building.root, chars.root, screens.mesh);
   const rig2d = new CameraRig();
   const overlay = new Overlay(overlayParent);
   canvas.tabIndex = 0;
@@ -79,6 +83,11 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
   const hoverCbs = new Set<(h: { id: string; x: number; y: number } | null) => void>();
   let framed = false;
   let fps = 0;
+  /** Smoothed JavaScript time per frame (sim, scene sync, render submission, labels), in ms. */
+  let cpuMs = 0;
+  /** Smoothed time per phase (ms): the sim, scene sync (meshes, rigs, screens), render submission, labels. */
+  const phases = { sim: 0, sync: 0, render: 0, labels: 0 };
+  const ema = (k: keyof typeof phases, v: number) => (phases[k] = phases[k] ? phases[k] * 0.95 + v * 0.05 : v);
 
   // ---- data
   const applyProviders = () => {
@@ -179,12 +188,15 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
   const frame = (t: number) => {
     raf = 0;
     if (!running) return;
+    const t0 = performance.now();
     const dt = Math.min(0.1, Math.max(0, (t - last) / 1000));
     last = t;
     if (dt > 0) fps = fps ? fps * 0.95 + (1 / dt) * 0.05 : 1 / dt;
     const now = Date.now();
     if (parts.resize() || !framed) rig2d.setViewport(canvas.clientWidth, canvas.clientHeight);
+    const tSim = performance.now();
     sim.update(dt, now);
+    ema('sim', performance.now() - tSim);
     if (!framed && sim.initialized) {
       framed = true;
       const b = building.bounds(sim);
@@ -193,7 +205,11 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
       rig2d.target.copy(rig2d.targetGoal);
     }
     rig2d.update(dt);
+    const tSync = performance.now();
+    const tb = performance.now();
     building.sync(sim, rig2d.yaw, options.cutaway, now);
+    screens.sync(sim, now);
+    { const P = (globalThis as any).__perf; if (P) P.building += performance.now() - tb; }
     const onScreen = (c: { x: number; y: number }) => {
       tmpV.set(mx(c.x), 0.8, mz(c.y));
       rig2d.project(tmpV, pt);
@@ -203,14 +219,27 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
       rig!.root.visible = true;
       chars.root.visible = false;
       rig!.sync(sim.chars.values(), dt, onScreen);
+      // one world-matrix update per frame: the attachments read bone positions from it, and render() skips its own
+      const tm0 = performance.now();
+      scene.updateMatrixWorld();
+      const P = (globalThis as any).__perf; if (P) { P.matrix += performance.now() - tm0; P.n++; }
+      rig!.attach();
     } else {
       if (rig) rig.root.visible = false;
       chars.root.visible = true;
       chars.sync(sim.chars.values(), dt);
     }
     sim.effects.length = 0;
+    if (!useRig()) scene.updateMatrixWorld();
+    const tRender = performance.now();
+    ema('sync', tRender - tSync);
     renderer.render(scene, rig2d.camera);
+    const tLabels = performance.now();
+    ema('render', tLabels - tRender);
     overlay.update(sim.chars.values(), sim.rooms.values(), view(), rig2d, options, selection?.type === 'agent' ? selection.id : null, now);
+    ema('labels', performance.now() - tLabels);
+    const spent = performance.now() - t0;
+    cpuMs = cpuMs ? cpuMs * 0.95 + spent * 0.05 : spent;
     raf = requestAnimationFrame(frame);
   };
   const start = () => {
@@ -285,7 +314,7 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
     setViewInsets(insets) {
       rig2d.insets = { ...rig2d.insets, ...insets };
     },
-    stats: () => ({ fps: Math.round(fps), calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, agents: sim.chars.size, rooms: [...sim.rooms.values()].filter((r) => !r.ghost).length }),
+    stats: () => ({ fps: Math.round(fps), cpuMs: +cpuMs.toFixed(2), phases: { sim: +phases.sim.toFixed(2), sync: +phases.sync.toFixed(2), render: +phases.render.toFixed(2), labels: +phases.labels.toFixed(2) }, calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, agents: sim.chars.size, rooms: [...sim.rooms.values()].filter((r) => !r.ghost).length }),
     destroy() {
       stop();
       offSnap();
@@ -293,6 +322,7 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
       document.removeEventListener('visibilitychange', onVisibility);
       overlay.dispose();
       building.dispose();
+      screens.dispose();
       chars.dispose();
       parts.dispose();
     },

@@ -5,6 +5,7 @@
 // Boot: an adapter that rebuilds open sessions at start calls ctx.beginBoot() before and ctx.endBoot() after,
 // ALWAYS as a pair (in a `finally`, also for an async boot). The office counts boots: while any adapter boots there
 // are no notices, and the feed is held to come out in chronological order at the end of the last one.
+import type { ProviderAccount } from '../accounts/service';
 import type { ActivityDescription } from '../../shared/activity';
 import type { AgentEvent, ProviderCapabilities, ProviderId, ProviderMeta, SourceInfo } from '../../shared/protocol';
 import { validateAgentEvent } from '../../shared/validate';
@@ -40,6 +41,8 @@ export interface ProviderAdapter {
    * a heartbeat timeout).
    */
   alive?(target: LivenessTarget): boolean | undefined;
+  /** The accounts it watches, with plan usage when the tool records it (P5-04; server/accounts/service.ts). */
+  accounts?(): ProviderAccount[];
 }
 
 /** Agents without a PID are offline after this long without events (the SDK sends a heartbeat every 30 s). */
@@ -138,6 +141,15 @@ export class AdapterSet {
   /** Provider badges and capabilities for meta.providers. */
   providers(): ProviderMeta[] {
     return this.list.map((a) => ({ id: a.id, label: a.label, color: a.color, capabilities: { ...a.capabilities } }));
+  }
+
+  /** An adapter's accounts (empty when it has none or fails). */
+  accountsOf(provider: ProviderId | string): ProviderAccount[] {
+    try {
+      return this.of(provider)?.accounts?.() ?? [];
+    } catch {
+      return [];
+    }
   }
 
   /** The adapter that accepts hook payloads for `provider`, if any. */

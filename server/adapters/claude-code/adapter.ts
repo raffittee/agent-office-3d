@@ -8,6 +8,7 @@
 //
 // Performance: the ~1 s poll touches only the session registries, the open sessions' transcripts and those
 // sessions' subagents/ folders (never the archive of old transcripts). fs.watch is only an accelerator.
+import type { ProviderAccount } from '../../accounts/service';
 import { existsSync, readdirSync, readFileSync, statSync, watch, type FSWatcher } from 'node:fs';
 import { join } from 'node:path';
 import type { JobOutcome } from '../../../shared/activity';
@@ -167,7 +168,7 @@ export class ClaudeCodeAdapter implements ProviderAdapter {
   readonly capabilities: ProviderCapabilities = { transcript: false, approve: false, message: false, usage: false, subagents: true };
 
   private ctx: AdapterContext | null = null;
-  private accounts: ClaudeAccount[] = [];
+  private accountList: ClaudeAccount[] = [];
   private accountsAt = -Infinity;
   private readers = new Map<string, RegistryReader>();
   private sessions = new Map<string, SessionTracker>();
@@ -223,7 +224,12 @@ export class ClaudeCodeAdapter implements ProviderAdapter {
   }
 
   sources(): SourceInfo[] {
-    return this.accounts.map((a) => this.sourceInfo.get(a.dir) ?? { provider: this.id, label: a.slug, path: a.dir, sessions: 0, ok: true });
+    return this.accountList.map((a) => this.sourceInfo.get(a.dir) ?? { provider: this.id, label: a.slug, path: a.dir, sessions: 0, ok: true });
+  }
+
+  /** Watched config folders (usage comes from the statusline tap, read by the accounts service). */
+  accounts(): ProviderAccount[] {
+    return this.accountList.map((a) => ({ id: a.slug, dir: a.dir }));
   }
 
   /** A session still in the registry is alive (its PID and process start were checked there). */
@@ -330,12 +336,12 @@ export class ClaudeCodeAdapter implements ProviderAdapter {
     if (now - this.accountsAt >= ACCOUNTS_REFRESH_MS) {
       this.accountsAt = now;
       try {
-        this.accounts = (this.opts.accounts ?? discoverClaudeAccounts)();
+        this.accountList = (this.opts.accounts ?? discoverClaudeAccounts)();
       } catch (err) {
         log.warnOnce(`claude-accounts:${errMsg(err)}`, `Claude Code: could not list accounts (${errMsg(err)}).`);
       }
     }
-    return this.accounts;
+    return this.accountList;
   }
 
   poll(boot = false): void {

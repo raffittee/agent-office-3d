@@ -88,4 +88,13 @@ describe('folder boundaries', () => {
   it('hook shims import only node:* (and the shared kit next to them)', () => {
     expect(violations('hooks', ['.mjs', '.js'], (s) => s.startsWith('node:') || /^\.\/[\w-]+\.mjs$/.test(s))).toEqual([]);
   });
+
+  it('the SDKs stand alone: the TypeScript one imports nothing, the Python one only the standard library', () => {
+    expect(importsOf(readFileSync(join(root, 'sdk/ts/agent-office.ts'), 'utf8'))).toEqual([]);
+    expect(violations('sdk/ts/examples', ['.ts'], (s) => s.startsWith('node:') || s === '../agent-office')).toEqual([]);
+    const py = readFileSync(join(root, 'sdk/python/agent_office.py'), 'utf8');
+    const mods = [...py.matchAll(/^(?:from|import) ([\w.]+)/gm)].map((m) => m[1]!.split('.')[0]!);
+    const stdlib = new Set(['__future__', 'json', 'os', 're', 'threading', 'time', 'urllib', 'uuid', 'contextlib', 'typing']);
+    expect(mods.filter((m) => !stdlib.has(m))).toEqual([]);
+  });
 });

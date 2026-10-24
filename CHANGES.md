@@ -575,3 +575,66 @@ Branch `phase-1`. One commit per task, each pushed. At the end of the phase ther
 - **Try it:** Settings (gear icon) → Theme. Or `AGENT_OFFICE_THEME=industrial npm start` to change the default.
 - **Needs your machine:** the frame-rate check, now per theme (the industrial and traditional themes draw the most
   detail): http://127.0.0.1:4848/?mock=1&sessions=30&stats=1&theme=traditional.
+
+## Phase 5: More providers & generic ingest (branch `phase-5`)
+
+### P5-01 Codex adapter — done, 2026-10-25 06:25
+
+- **Codex sessions now appear in the office**, with their subagents, background commands and token counts. It works
+  without any setup (the office reads Codex's own files), and `npm run hooks:install -- --provider codex` adds faster
+  updates and the "needs you" state for permission prompts. After installing, open Codex, type `/hooks` and trust the
+  Agent Office hooks: Codex asks once.
+- **Verified for real, not from notes:** Codex isn't on your machine, but it installs from npm, so I ran Codex 0.164.0
+  here against a fake local model (no OpenAI account, nothing sent anywhere) and captured what it actually writes.
+  Several things had changed since Habblaud's notes (tool names, how background commands and subagents are recorded),
+  and the adapter follows the real files. Details: `docs/providers/codex.md`.
+- **Privacy:** file contents from edits, command output and the model's replies never leave Codex's process; only file
+  names, exit codes and ids do.
+- Also watched: extra Codex homes via `CODEX_HOME`, `~/.codex*`, or `AGENT_OFFICE_CODEX_DIRS`.
+- **Needs your machine (optional):** if you use Codex, run `npm run hooks:install -- --provider codex`, trust the hooks
+  in `/hooks`, and check that a permission prompt shows the raised hand (that one case can't be produced without a
+  real model).
+
+### P5-02 SDK emitters — done, 2026-10-25 06:45
+
+- **Any agent can now show up in the office.** Two one-file SDKs without dependencies: TypeScript
+  (`sdk/ts/agent-office.ts`) and Python (`sdk/python/agent_office.py`). A few calls (`session_start`, `turn_start`,
+  `with office.tool(...)`, `subagent(...)`, `waiting(...)`, `close()`) and the agent sits, types, raises its hand and
+  leaves like the others. How-to: `sdk/README.md`.
+- **Two working example agents:** one on the Gemini API (Python) and one on any OpenAI-compatible endpoint, Ollama by
+  default (TypeScript). Both were tested here against fake model servers; with a real key (or Ollama) they run as-is.
+- Reporting never crashes or slows the agent: if the office isn't running, events are simply dropped.
+
+### P5-03 "Add a provider" guide — done, 2026-10-25 06:50
+
+- `docs/providers/adding-a-provider.md`: the checklist for teaching the office a new coding CLI, from recording what
+  the real tool writes to the tests, with the Codex work as the example. (For your own agent, the SDK is enough.)
+
+### P5-04 Accounts & usage — done, 2026-10-25 07:10
+
+- **Plan usage in the top bar:** each account shows its 5-hour and weekly bars (green, then amber above 70%, red above
+  90%), with the reset times in the tooltip. Codex numbers come from its own files automatically.
+- **For Claude Code, run `npm run usage:install` once.** It puts a small "tap" in front of your statusline that saves
+  only the two usage numbers Claude Code already hands the statusline. Your own statusline keeps working exactly as
+  before (`npm run usage:uninstall` puts it back). No credentials and no network involved.
+- Accounts are named by their email when Claude Code knows it (only the email and organization are read).
+- Gemini CLI doesn't record plan usage anywhere we can read, so its chip shows the account without bars.
+- In the demo, the numbers are made up and the tooltip says so.
+- **Needs your machine:** after `npm run usage:install`, open a Claude Code session and check the bars appear (the
+  statusline format came from Habblaud's notes; I couldn't capture it here without a signed-in session).
+
+### P5-05 Spike: OTLP receiver — done, 2026-10-25 07:25
+
+- **Decision (ADR 0006): the office won't accept OpenTelemetry for now.** I captured the real telemetry Codex and
+  Gemini CLI send. It doesn't say when a turn or session ends or which folder an agent works in, it includes command
+  output and system instructions, and it's 26 to 120 times larger than what the hooks send. The hooks and file
+  readers stay the way tools report. Numbers in `docs/spikes/otlp.md`.
+
+### Phase 5 closed — 2026-10-25 07:25
+
+- All 5 tasks are ticked. Pull request `phase-5` → `main`.
+- **New since Phase 4:** Codex in the office (with or without hooks), SDKs for your own agents, plan usage in the
+  top bar.
+- **Needs your machine (optional):**
+  - `npm run usage:install` for the Claude Code usage bars.
+  - `npm run hooks:install -- --provider codex` if you use Codex (trust the hooks in Codex's `/hooks`).

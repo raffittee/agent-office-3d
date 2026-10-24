@@ -1,0 +1,191 @@
+#!/usr/bin/env node
+// Ported from habblaud scripts/statusline-tap.mjs (MIT, © 2026 Márcio Junior)
+// Agent Office statusline tap for Claude Code (P5-04): records the plan usage (5-hour and weekly windows) without
+// reading any credentials. Claude Code sends its statusline command a JSON on stdin that includes `rate_limits`
+// ({five_hour: {used_percentage, resets_at}, seven_day: {...}}, resets_at in seconds). This script sits in front of
+// the user's own statusline:
+//
+//   node "<agent-office>/hooks/statusline-tap.mjs" -- <the original statusline command>
+//
+// 1. reads stdin;
+// 2. if it has rate_limits, writes ~/.agent-office/usage/claude-code-<account>.json with ONLY
+//    {provider, account, fetchedAt, five_hour, seven_day} (nothing else from stdin);
+// 3. runs the original command with the same stdin, inheriting stdout/stderr, and exits with its code.
+//
+// Never breaks or slows the statusline: any capture failure is ignored. Installed by `npm run usage:install`.
+// The account is the same slug the server uses (shared accountSlug: 'default' for ~/.claude, else 8 hex characters
+// of the SHA-256 of the config folder). Never the path.
+import { spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
+import { mkdirSync, readFileSync, realpathSync, renameSync, statSync, writeFileSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { delimiter, isAbsolute, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+/** Identical values written less than this long ago are not written again. */
+const MIN_REWRITE_MS = 10_000;
+
+/** The original command: everything after `--`. */
+export function originalCommand(argv) {
+  const i = argv.indexOf('--');
+  const rest = i >= 0 ? argv.slice(i + 1) : argv;
+  return rest.join(' ').trim();
+}
+
+/** The account's config folder: from transcript_path (before "/projects/"), CLAUDE_CONFIG_DIR, or ~/.claude. */
+export function configDirOf(input, env = process.env, home = env.HOME || env.USERPROFILE || homedir()) {
+  const tp = typeof input?.transcript_path === 'string' ? input.transcript_path.replace(/\\/g, '/') : '';
+  const at = tp.lastIndexOf('/projects/');
+  if (at > 0) return resolve(tp.slice(0, at));
+  const fromEnv = (env.CLAUDE_CONFIG_DIR ?? '').split(',')[0].trim();
+  if (fromEnv) return resolve(fromEnv.replace(/^~(?=[\\/]|$)/, home));
+  return join(home, '.claude');
+}
+
+/** Same as server/adapters/accounts.ts accountSlug. */
+export function accountSlug(dir, defaultDir, platform = process.platform) {
+  const norm = (p) => (platform === 'win32' ? resolve(p).toLowerCase() : resolve(p));
+  if (norm(dir) === norm(defaultDir)) return 'default';
+  return createHash('sha256').update(norm(dir)).digest('hex').slice(0, 8);
+}
+
+function percent(w) {
+  if (!w || typeof w !== 'object') return undefined;
+  const raw = w.used_percentage ?? w.utilization ?? w.used_percent;
+  const n = typeof raw === 'string' && raw.trim() ? Number(raw) : raw;
+  return typeof n === 'number' && Number.isFinite(n) ? Math.min(100, Math.max(0, n)) : undefined;
+}
+
+function windowOf(w) {
+  const utilization = percent(w);
+  if (utilization === undefined) return undefined;
+  const r = w.resets_at;
+  const resets = typeof r === 'number' && Number.isFinite(r) ? r : typeof r === 'string' && r.trim() ? r.trim() : undefined;
+  return resets === undefined ? { utilization } : { utilization, resets_at: resets };
+}
+
+/** The record written (undefined when the JSON has no usable rate_limits). */
+export function usageRecord(input, now, env = process.env, home = env.HOME || env.USERPROFILE || homedir()) {
+  const rl = input && typeof input === 'object' ? input.rate_limits : undefined;
+  if (!rl || typeof rl !== 'object') return undefined;
+  const five = windowOf(rl.five_hour);
+  const week = windowOf(rl.seven_day);
+  if (!five && !week) return undefined;
+  const account = accountSlug(configDirOf(input, env, home), join(home, '.claude'));
+  const rec = { provider: 'claude-code', account, fetchedAt: now };
+  if (five) rec.five_hour = five;
+  if (week) rec.seven_day = week;
+  return rec;
+}
+
+export function usageDirOf(env = process.env, home = env.HOME || env.USERPROFILE || homedir()) {
+  const d = (env.AGENT_OFFICE_DATA_DIR ?? '').trim();
+  return join(d ? resolve(d.replace(/^~(?=[\\/]|$)/, home)) : join(home, '.agent-office'), 'usage');
+}
+
+/** Writes atomically (tmp + rename, mode 600). Returns false when nothing needed to change. */
+export function writeUsage(rec, dir, now) {
+  const file = join(dir, `${rec.provider}-${rec.account}.json`);
+  try {
+    const prev = JSON.parse(readFileSync(file, 'utf8'));
+    const same = JSON.stringify([prev.five_hour, prev.seven_day]) === JSON.stringify([rec.five_hour, rec.seven_day]);
+    if (same && typeof prev.fetchedAt === 'number' && now - prev.fetchedAt >= 0 && now - prev.fetchedAt < MIN_REWRITE_MS) return false;
+  } catch {
+    // the first record (or unreadable): write it
+  }
+  mkdirSync(dir, { recursive: true, mode: 0o700 });
+  const tmp = `${file}.${process.pid}.tmp`;
+  writeFileSync(tmp, `${JSON.stringify(rec)}\n`, { mode: 0o600 });
+  renameSync(tmp, file);
+  return true;
+}
+
+function isFile(p) {
+  try {
+    return statSync(p).isFile();
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * The shell Claude Code runs the statusline in: /bin/sh outside Windows; on Windows, Git Bash
+ * (CLAUDE_CODE_GIT_BASH_PATH, or bin\bash.exe of the git.exe on PATH; never the PATH's `bash`, which may be WSL's),
+ * else Node's default (cmd.exe).
+ */
+export function originalShell(env = process.env) {
+  if (process.platform !== 'win32') return true;
+  const explicit = (env.CLAUDE_CODE_GIT_BASH_PATH ?? '').trim();
+  if (explicit && isFile(explicit)) return explicit;
+  for (const dir of (env.PATH ?? '').split(delimiter)) {
+    if (!dir || !isAbsolute(dir) || !isFile(join(dir, 'git.exe'))) continue;
+    const bash = [resolve(dir, '..', 'bin', 'bash.exe'), resolve(dir, '..', '..', 'bin', 'bash.exe')].find(isFile);
+    if (bash) return bash;
+  }
+  return true;
+}
+
+/** The capture: never throws. */
+export function tap(stdinText, env = process.env, now = Date.now()) {
+  try {
+    if (!stdinText || !stdinText.includes('rate_limits')) return false;
+    const rec = usageRecord(JSON.parse(stdinText), now, env);
+    return rec ? writeUsage(rec, usageDirOf(env), now) : false;
+  } catch {
+    return false;
+  }
+}
+
+async function readStdin() {
+  if (process.stdin.isTTY) return Buffer.alloc(0);
+  const chunks = [];
+  for await (const c of process.stdin) chunks.push(c);
+  return Buffer.concat(chunks);
+}
+
+async function main() {
+  let input = Buffer.alloc(0);
+  try {
+    input = await readStdin();
+  } catch {
+    // no readable stdin: just the original command
+  }
+  const command = originalCommand(process.argv.slice(2));
+  if (!command) {
+    tap(input.toString('utf8'));
+    return;
+  }
+  // the original command starts first (the capture runs while it works): no extra delay
+  let child;
+  try {
+    child = spawn(command, { shell: originalShell(), stdio: ['pipe', 'inherit', 'inherit'] });
+  } catch {
+    tap(input.toString('utf8'));
+    process.exitCode = 127;
+    return;
+  }
+  const done = new Promise((ok) => {
+    child.on('error', () => ok(127));
+    child.on('close', (code, signal) => ok(code ?? (signal ? 1 : 0)));
+  });
+  for (const sig of ['SIGTERM', 'SIGINT', 'SIGHUP']) process.on(sig, () => child.kill(sig));
+  child.stdin.on('error', () => {}); // the command may exit without reading stdin (EPIPE)
+  child.stdin.end(input);
+  tap(input.toString('utf8'));
+  process.exitCode = await done;
+}
+
+/** Run directly (not imported by tests)? Real paths compared (the repo may be a symlink). */
+function isMain() {
+  try {
+    return !!process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
+  } catch {
+    return false;
+  }
+}
+
+if (isMain()) {
+  main().catch(() => {
+    process.exitCode = process.exitCode || 1;
+  });
+}

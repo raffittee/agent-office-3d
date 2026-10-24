@@ -5,6 +5,7 @@ import http from 'node:http';
 import { join } from 'node:path';
 import { AdapterSet } from './adapters/adapter';
 import { ClaudeCodeAdapter } from './adapters/claude-code/adapter';
+import { CodexAdapter } from './adapters/codex/adapter';
 import { DemoAdapter } from './adapters/demo';
 import { GeminiCliAdapter } from './adapters/gemini-cli/adapter';
 import { loadConfig } from './config';
@@ -14,6 +15,7 @@ import { Hub } from './http/sse';
 import { createStaticHandler } from './http/static';
 import { createIngestHandler } from './ingest/ingest';
 import { errMsg, log } from './log';
+import { AccountsService, demoUsage } from './accounts/service';
 import { NameStore } from './model/names';
 import { Office } from '../shared/model/office';
 import { RoomAliases } from './model/room-aliases';
@@ -29,12 +31,21 @@ const aliases = new RoomAliases(join(config.dataDir, 'rooms.json'));
 aliases.load();
 
 const demo = config.demo ? new DemoAdapter() : undefined;
-const adapters = new AdapterSet([new ClaudeCodeAdapter({ inDocker: config.inDocker }), new GeminiCliAdapter({ home: config.home }), ...(demo ? [demo] : [])]);
+const adapters = new AdapterSet([new ClaudeCodeAdapter({ inDocker: config.inDocker }), new GeminiCliAdapter({ home: config.home }), new CodexAdapter({ home: config.home }), ...(demo ? [demo] : [])]);
 /** Provider badges: the running adapters, plus the ones only the demo simulates (Codex). */
 const providers = () => (demo ? [...adapters.providers(), ...demo.extraProviders(adapters.providers())] : adapters.providers());
 
+const accounts = new AccountsService({
+  usageDir: join(config.dataDir, 'usage'),
+  home: config.home,
+  providers,
+  accountsOf: (id) => adapters.accountsOf(id),
+  ...(demo ? { extraUsage: demoUsage } : {}),
+});
+
 const office = new Office({
   names,
+  accounts: (sessions) => accounts.accounts(sessions),
   roomAlias: (path) => aliases.get(path),
   version: config.version,
   startedAt: Date.now(),
@@ -50,6 +61,16 @@ const tick = setInterval(() => office.tick(), 250);
 tick.unref();
 const liveness = setInterval(() => adapters.checkLiveness(office), LIVENESS_MS);
 liveness.unref();
+// plan usage changes outside any event (a statusline tap, a token_count): refresh the accounts when it does
+let usageKey = '';
+const usageTimer = setInterval(() => {
+  const key = accounts.usageKey();
+  if (key !== usageKey) {
+    usageKey = key;
+    office.markDirty();
+  }
+}, 5_000);
+usageTimer.unref();
 
 const guard = createRequestGuard({ allowedHosts: config.allowedHosts });
 const ingest = createIngestHandler({ apply: (e) => office.apply(e), hooks: (p) => adapters.hooks(p) });

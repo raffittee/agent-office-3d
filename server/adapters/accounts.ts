@@ -117,3 +117,43 @@ export function discoverClaudeAccounts(env: NodeJS.ProcessEnv = process.env, hom
   });
   return dirs.map((dir) => ({ dir, slug: accountSlug(dir, defaultDir) }));
 }
+
+export interface CodexHome {
+  /** Absolute CODEX_HOME. */
+  dir: string;
+  /** AgentEvent.account. */
+  slug: string;
+}
+
+/**
+ * Codex homes: `AGENT_OFFICE_CODEX_DIRS` (comma-separated) when set; otherwise `CODEX_HOME` and every `$HOME/.codex*`
+ * folder with a Codex layout (isCodexHome). The default (`~/.codex`) first. Only the layout is checked: `auth.json`
+ * and `config.toml` are never opened.
+ */
+export function discoverCodexHomes(env: NodeJS.ProcessEnv = process.env, home: string = env.HOME || env.USERPROFILE || homedir()): CodexHome[] {
+  const defaultDir = resolve(home, '.codex');
+  const found: string[] = [];
+  const override = splitList(env.AGENT_OFFICE_CODEX_DIRS);
+  if (override.length) found.push(...override.map((p) => expandHome(p, home)));
+  else {
+    try {
+      for (const ent of readdirSync(home, { withFileTypes: true })) {
+        if (!ent.name.startsWith('.codex')) continue;
+        if (!ent.isDirectory() && !ent.isSymbolicLink()) continue;
+        const p = resolve(home, ent.name);
+        if (isCodexHome(p)) found.push(p);
+      }
+    } catch {
+      // unreadable $HOME
+    }
+    const env1 = env.CODEX_HOME?.trim();
+    if (env1) {
+      const abs = expandHome(env1, home);
+      if (isDir(abs)) found.push(abs);
+    }
+  }
+  const dirs: string[] = [];
+  for (const d of found) if (!dirs.some((x) => samePath(x, d))) dirs.push(d);
+  dirs.sort((a, b) => (samePath(a, defaultDir) ? 0 : 1) - (samePath(b, defaultDir) ? 0 : 1) || a.localeCompare(b));
+  return dirs.map((dir) => ({ dir, slug: accountSlug(dir, defaultDir) }));
+}

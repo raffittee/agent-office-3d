@@ -1,6 +1,6 @@
 # Agent Office — guide for AI agents
 
-> **Status: Phases 0–4 done (pending on the user's machine: a live Gemini CLI check and the frame-rate checks); Phase 5 next.** The phased plan lives in [TASKS.md](TASKS.md).
+> **Status: Phases 0–5 done (pending on the user's machine: a live Gemini CLI check, the frame-rate checks and the Claude usage tap); Phase 6 next.** The phased plan lives in [TASKS.md](TASKS.md).
 > Provider facts: [docs/providers/](docs/providers/). Decisions: [docs/adr/](docs/adr/). Spike results:
 > [docs/spikes/](docs/spikes/).
 
@@ -320,16 +320,24 @@ points below summarize it.
 
 ### Codex
 
-Source: Habblaud. **Not verified**: Codex isn't installed on this machine, so the check moved to P5-01 (see
-[docs/providers/codex.md](docs/providers/codex.md)).
+Source: **verified against the real CLI, Codex 0.164.0, in P5-01**. [docs/providers/codex.md](docs/providers/codex.md)
+is the reference; the points below summarize it.
 
-- **Open sessions:** `<CODEX_HOME>/thread-writer-locks/<threadId>.lock`.
-- **Rollouts:** `sessions/YYYY/MM/DD/rollout-*-<threadId>.jsonl`.
+- **Open sessions:** `<CODEX_HOME>/thread-writer-locks/<threadId>.lock` (empty; check existence only, never `flock`).
+  A main thread is alive while its lock exists.
+- **Rollouts:** `sessions/YYYY/MM/DD/rollout-<time>-<threadId>.jsonl`, `history_mode: paginated`: turns from
+  `task_started`/`task_complete` (`turn_id`), prompts from `item_completed` `UserMessage`, tools from `response_item`
+  `function_call`/`custom_tool_call` (`call_id`), tokens and plan `rate_limits` from `token_count`. A subagent has its
+  own rollout whose `session_meta.source.subagent.thread_spawn.parent_thread_id` names the parent.
+- **Background commands:** `exec_command` output `Process running with session ID N`; the job ends when that
+  `CommandExecution` item completes.
 - **Hooks:** in `<CODEX_HOME>/hooks.json`: `SessionStart`, `SessionEnd`, `UserPromptSubmit`, `PreToolUse`,
-  `PostToolUse`, `Stop`, `SubagentStart`, `SubagentStop`, `PermissionRequest`. The user trusts each hook in
-  `/hooks`. Trust is a hash of the command, so the command must carry no flags.
+  `PostToolUse`, `Stop`, `SubagentStart`, `SubagentStop`, `PermissionRequest`. A subagent's hooks carry the parent's
+  `session_id` plus its `agent_id`; `tool_use_id` = the rollout's `call_id`; a shell call is `Bash` in hooks and
+  `exec_command` in rollouts. The user trusts each hook in `/hooks` (a hash of the command, options and position), so
+  the command has no flags and our groups go at the end.
 - **Off limits:** never read `auth.json` or `config.toml`.
-- **Messages:** sent with `codex queue --thread=<id> --message=<text>`.
+- **Messages:** sent with `codex queue` (Phase 7).
 
 ### Custom agents
 
@@ -391,6 +399,7 @@ These rules come from Habblaud's `mod/habblaud-codex/hook.mjs`.
   | `AGENT_OFFICE_DATA_DIR` | `~/.agent-office` | |
   | `AGENT_OFFICE_DEMO` | off | `1` turns on simulated agents. |
   | `AGENT_OFFICE_CLAUDE_DIRS` | discovered | Comma-separated Claude config folders to watch, replacing discovery. |
+  | `AGENT_OFFICE_CODEX_DIRS` | discovered | Comma-separated Codex homes to watch (else `CODEX_HOME` and `~/.codex*`). |
   | `AGENT_OFFICE_IN_DOCKER` | auto | `1` skips PID checks (the agents' PIDs belong to the host). |
   | `AGENT_OFFICE_THEME` | `modern` | Default theme pack id for browsers that haven't picked one. |
 
@@ -405,9 +414,10 @@ Update this table as commands land. *(planned)* marks the ones that don't exist 
 | `npm start` | Runs the built server (`dist/server/index.js`) |
 | `node spikes/renderer/measure.mjs` · `node spikes/assets/measure.mjs <dir>` | Re-run the Phase 0 measurements |
 | `npm run demo` | Dev mode with simulated agents from several providers (`AGENT_OFFICE_DEMO=1` or `--demo` on any run) |
-| `npm run hooks:install -- --provider gemini-cli` | Install a provider's hooks (`--profile light` or `full`; also `hooks:status`, `hooks:uninstall`) |
+| `npm run hooks:install -- --provider gemini-cli` · `--provider codex` | Install a provider's hooks (Gemini: `--profile light` or `full`; also `hooks:status`, `hooks:uninstall`) |
 | `npm run assets:fetch` · `npm run assets:build` | Download pinned asset sources into `assets-src/`, then build the committed GLBs and profiles |
 | `npm run shot` | After `npm run build`: screenshot the demo office in Chrome (`--sessions 30`, `--out <dir>`); CI runs it |
+| `npm run usage:install` · `usage:status` · `usage:uninstall` | Put the statusline tap in front of each Claude Code account's statusline (plan usage) |
 | `npm run theme:check` · `npm run theme:new -- <id>` | Validate theme packs (`-- --write-schema` regenerates the schema) and scaffold a new one |
 | `/preview.html?theme=<id>` | Every furniture kind of a theme side by side (hot-reloads under `npm run dev`) |
 | `npm run shot -- --themes` · `-- --thumbs` | Screenshot every theme (CI) · rewrite the theme picker thumbnails |
@@ -448,6 +458,7 @@ Update this table as commands land. *(planned)* marks the ones that don't exist 
 - **D11:** **One npm package**, no workspaces. Folder rules are enforced by tsconfigs and
   `test/boundaries.test.ts`. See [ADR 0001](docs/adr/0001-stack.md).
 - **D12:** Codex verification and fixtures move to P5-01, because Codex isn't installed on the development machine.
+  Done in P5-01 with Codex 0.164.0 from npm, driven offline against a stub model.
 - **D13:** The event protocol gains `job.start`/`job.end`, `session.start.continues`, `tool.error` and slugged
   account ids. See [ADR 0002](docs/adr/0002-event-protocol.md) (accepted in P1-01).
 - **D14:** Gemini CLI ≥ 0.65.0 is supported, with `light` (default on Windows) and `full` hook profiles. Tailing the
@@ -457,5 +468,7 @@ Update this table as commands land. *(planned)* marks the ones that don't exist 
 
 - **D15:** Until the ADR 0004 human pack can be built, the default character is Quaternius's RobotExpressive (CC0),
   driven by a model-agnostic rig profile. See [ADR 0005](docs/adr/0005-interim-character.md).
+- **D16:** No OTLP receiver in v1: the CLIs' telemetry has no turn or session end and no working folder, and it
+  carries content (P5-05). See [ADR 0006](docs/adr/0006-otlp.md).
 
 ADRs are listed in [docs/adr/README.md](docs/adr/README.md).

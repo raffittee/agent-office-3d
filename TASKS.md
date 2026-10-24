@@ -479,31 +479,51 @@ no page errors, 37–52 draw calls) and renders the preview page; `themes/cabin/
 
 ## Phase 5: More providers & generic ingest
 
-- [ ] **P5-01 Codex adapter** (L)
+- [x] **P5-01 Codex adapter** (L) — done: Codex 0.164.0 installed from npm and driven offline against a stub model
+  (`docs/spikes/codex-probe/`); fixtures in `test/fixtures/codex/`; `docs/providers/codex.md` rewritten from them.
+  `server/adapters/codex/{adapter,rollout,hook}.ts` (locks for open sessions and liveness, rollouts tailed, hooks;
+  each fact once), `hooks/codex.mjs`, `shared/tools/codex.ts`, `hooks:install -- --provider codex`. Checked live:
+  the installed shim reaches the server and the session, its subagent and job appear.
   - First, the check moved here from P0-05: install Codex, run a session, capture a sanitized lock file and rollout
     slice into `test/fixtures/codex/`, and rewrite `docs/providers/codex.md` from the real files.
   - Port the locks, rollouts, hook shim and installer into `server/adapters/codex/` and `hooks/codex.mjs`.
   - **Ref:** `server/sources/codex/*`, `mod/habblaud-codex/hook.mjs`, `scripts/codex-install.ts` and their tests.
-- [ ] **P5-02 SDK emitters** (M)
+- [x] **P5-02 SDK emitters** (M) — done: `sdk/ts/agent-office.ts` (no imports; batching, heartbeat, PID, `tool()`
+  wrapper, subagents, jobs) and `sdk/python/agent_office.py` (standard library; background thread); examples
+  `sdk/python/examples/gemini_agent.py` (Gemini API) and `sdk/ts/examples/openai-agent.ts` (OpenAI-compatible,
+  Ollama by default); `sdk/README.md`; `test/sdk.test.ts` runs all four against the real ingest endpoint and stub
+  model servers.
   - `sdk/ts`, a zero-dependency `fetch` helper, and `sdk/python`, using only the standard library (`urllib`).
   - Helpers for session, turn, tool and waiting events, with an automatic heartbeat.
   - Examples: a minimal agent loop on the Gemini API, and one on an OpenAI-compatible or Ollama endpoint, both
     reporting events.
-- [ ] **P5-03 "Add a provider" guide** (S)
+- [x] **P5-03 "Add a provider" guide** (S) — done: `docs/providers/adding-a-provider.md` (observe the real CLI first,
+  fixtures, tool table, adapter, liveness order, capabilities, shim rules, installer, accounts, tests), with the Codex
+  adapter as the worked example.
   - A checklist in `docs/providers/adding-a-provider.md`: fixtures, tool table, liveness, capabilities, shim rules,
     tests.
-- [ ] **P5-04 Accounts & usage** (M)
+- [x] **P5-04 Accounts & usage** (M) — done: `server/accounts/service.ts` fills `snapshot.accounts` (one per watched
+  config folder or with sessions; email/org from `.claude.json` only; usage stale after 30 min); Claude usage from
+  `hooks/statusline-tap.mjs` (`npm run usage:install`, `scripts/usage-install.ts`), Codex usage from
+  `token_count.rate_limits`; Gemini has no source (P0-04). Top-bar chips in `client/src/ui/usage.ts`; demo numbers
+  labelled as such.
   - Detect accounts per provider, and show plan usage where the tool exposes it:
     - Claude: `rate_limits` from the statusline, or the mod;
     - Codex: `token_count.rate_limits`;
     - Gemini: only if P0-04 found a source.
   - **Ref:** `server/accounts/*`, `client/src/ui/usage.ts`.
-- [ ] **P5-05 Spike: OTLP receiver** (M)
+- [x] **P5-05 Spike: OTLP receiver** (M) — done: real Codex 0.164.0 and Gemini CLI 0.65.0 telemetry captured with
+  `docs/spikes/otlp/receiver.mjs`; measurements and the mapping in `docs/spikes/otlp.md`; decision **not to ship it**
+  in ADR 0006 (no turn or session end, no cwd, content in the payloads, 26–120× the shim traffic).
   - Accept OTLP/HTTP JSON logs at `/v1/logs` (local only) as another generic path.
   - Map the telemetry events from Claude Code, Gemini CLI and Codex to `AgentEvent`s.
   - Decide whether to keep it, and record the decision in an ADR.
 
 **Exit:** Codex sessions and an SDK-reporting custom agent appear alongside Claude Code and Gemini CLI.
+
+**Exit status (2026-10-25):** met. A real Codex 0.164.0 session (offline, stub model) and its subagent appeared live in
+the office through the installed shim and the lock and rollout files; `test/sdk.test.ts` shows SDK agents (TypeScript,
+Python and both examples) in the office alongside the built-in providers.
 
 ---
 

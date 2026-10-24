@@ -745,3 +745,22 @@ Branch `phase-1`. One commit per task, each pushed. At the end of the phase ther
 - Read-only, masked, and only with `AGENT_OFFICE_INTERACTIVE=1` (local only). Conversations can contain anything
   the agents read, so see [docs/interactive.md](docs/interactive.md).
 
+### P7-06 Interactive route tests — done, 2026-10-25 07:15
+
+- Every route that acts on a session is now tested against each way a request can be refused: features off, not on
+  this computer, wrong `Host`, a page from another site, or a body that isn't JSON. No visible change.
+
+### Phase 7 closed — 2026-10-25 07:15
+
+- All 6 tasks are ticked. Pull request `phase-7` → `main`.
+- **New since Phase 6** (all off by default, local only; [docs/interactive.md](docs/interactive.md)):
+  - approve Claude Code's permission requests and answer its questions from the office;
+  - message Claude Code, Codex and your own agents;
+  - read any agent's conversation, and browse recent sessions.
+- **Needs your machine:**
+  1. Start with `AGENT_OFFICE_INTERACTIVE=1`.
+  2. Run `npm run hooks:install -- --provider claude-code`.
+  3. Run `claude plugin marketplace add <this folder>`, then
+     `claude plugin install agent-office-messages@agent-office`.
+  4. Try it on a real session.
+

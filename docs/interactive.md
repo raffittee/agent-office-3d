@@ -1,8 +1,8 @@
 # Interacting from the office
 
 Phase 7 adds features that act on your agents' sessions: approving permission requests, answering questions,
-sending messages and reading conversations from the office. They are **off by default**. This page explains how to turn them on, what they can do, and what
-the risks are.
+sending messages and reading conversations from the office. They are **off by default**. This page explains how to
+turn them on, what they can do, and what the risks are.
 
 ## Turning them on
 

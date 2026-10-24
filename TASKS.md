@@ -612,9 +612,19 @@ need a look on your machine.
     the `chats/` format.
   - Mask everything, and add a session history.
   - **Ref:** `server/sources/terminal.ts`, `server/http/terminal.ts`, `server/sources/history.ts`.
-- [ ] **P7-06 Interactive route tests** (S)
+- [x] **P7-06 Interactive route tests** (S) — done: `test/interactive-routes.test.ts` drives every action route
+  (permissions, messages, inbox, conversation, history) through one table: off or non-loopback bind, non-loopback or
+  allow-listed Host, non-JSON body and foreign Origin are all refused (45 tests); a test fails if a new action prefix
+  isn't in the table.
   - Every action route requires a local bind, a local `Host`, JSON and a local `Origin`. Add negative tests for
     each.
+
+**Exit:** local-only actions work, with tests.
+
+**Exit status (2026-10-25):** met. Approving and answering (Claude Code), messages (Claude Code plugin, `codex queue`,
+SDK inbox) and the conversation view were verified live in the cloud environment against the real hook, Claude Code
+2.1.310's plugin test runner, codex-cli 0.164.0 and the built server; Gemini approvals were shown impossible (P7-03).
+On your machine: install the permission hook and the messages plugin and try them on a real session.
 
 ---
 

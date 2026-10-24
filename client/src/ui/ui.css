@@ -955,3 +955,38 @@
   color: var(--muted);
   font-size: 12px;
 }
+
+/* Accessibility (P8-03): provider shapes next to colors, focus rings, reduced motion */
+.ui-chip i[data-shape='diamond'] {
+  border-radius: 0;
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+}
+.ui-chip i[data-shape='square'] {
+  border-radius: 1px;
+}
+.ui-chip i[data-shape='triangle'] {
+  border-radius: 0;
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+.ui-chip i[data-shape='hexagon'] {
+  border-radius: 0;
+  clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
+}
+.ui-chip i[data-shape='star'] {
+  border-radius: 0;
+  clip-path: polygon(50% 0, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+}
+.ui-agent:focus-visible,
+.ui-room-head:focus-visible,
+.ui-feed-item:focus-visible,
+.ui-chip:focus-visible {
+  outline: 2px solid var(--accent, #3b7bd8);
+  outline-offset: 1px;
+}
+.ao-reduced-motion *,
+.ao-reduced-motion *::before,
+.ao-reduced-motion *::after {
+  animation: none !important;
+  transition: none !important;
+  scroll-behavior: auto !important;
+}

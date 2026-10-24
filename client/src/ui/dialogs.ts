@@ -20,6 +20,30 @@ export function modal(title: string, body: HTMLElement[], onClose: () => void): 
   back.addEventListener('click', (e) => {
     if (e.target === back) onClose();
   });
+  // keep Tab inside the dialog
+  box.addEventListener('keydown', (e) => {
+    if (e.key !== 'Tab') return;
+    const focusable = [...box.querySelectorAll<HTMLElement>('button, [href], input, select, textarea, summary, [tabindex]:not([tabindex="-1"])')].filter((x) => !x.hasAttribute('disabled') && x.offsetParent !== null);
+    if (!focusable.length) return;
+    const first = focusable[0]!;
+    const last = focusable[focusable.length - 1]!;
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  });
+  // focus goes back where it was when the dialog closes
+  const before = document.activeElement as HTMLElement | null;
+  const obs = new MutationObserver(() => {
+    if (back.isConnected) return;
+    obs.disconnect();
+    before?.focus?.();
+  });
+  // the caller appends the dialog right after this returns: watch only its parent's children
+  queueMicrotask(() => back.parentElement && obs.observe(back.parentElement, { childList: true }));
   setTimeout(() => close.focus(), 0);
   return back;
 }
@@ -197,6 +221,11 @@ export function openSettings(root: HTMLElement, world: WorldApi, alerts?: Alerts
         ['halloween', t('Halloween')],
         ['holiday', t('Holidays')],
       ], (v) => set({ season: v })),
+      select(t('Motion'), o.motion, [
+        ['auto', t('Follow the system')],
+        ['reduce', t('Reduce')],
+        ['full', t('Full')],
+      ], (v) => set({ motion: v })),
       select(t('Walls in front'), o.cutaway, [
         ['cut', t('Cut down')],
         ['hide', t('Hidden')],

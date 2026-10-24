@@ -1,0 +1,10 @@
+node_modules
+dist
+artifacts
+reference
+assets-src
+.git
+.github
+*.log
+docker-compose.override.yml
+.env

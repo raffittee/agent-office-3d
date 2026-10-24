@@ -28,7 +28,11 @@
     "usage:uninstall": "tsx scripts/usage-install.ts uninstall",
     "usage:status": "tsx scripts/usage-install.ts status",
     "theme:check": "tsx scripts/themes/check.ts",
-    "theme:new": "tsx scripts/themes/new.ts"
+    "theme:new": "tsx scripts/themes/new.ts",
+    "soak": "node --expose-gc --import tsx scripts/soak.ts",
+    "docker:up": "tsx scripts/docker-up.ts",
+    "docker:down": "tsx scripts/docker-up.ts down",
+    "release": "tsx scripts/release.ts"
   },
   "devDependencies": {
     "@gltf-transform/core": "4.5.1",

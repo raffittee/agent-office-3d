@@ -94,8 +94,17 @@ export function createFeed(store: OfficeStore, world: WorldApi): HTMLElement {
         ? items.map((f) => {
             const row = el('div', 'ui-feed-item');
             row.title = `${f.agentName} · ${f.roomName}\n${f.activity.detail ?? f.activity.text}`;
+            row.tabIndex = 0;
+            row.setAttribute('role', 'button');
             row.append(el('span', '', f.activity.icon), el('span', '', `${f.agentName}: ${f.activity.text}`), el('time', '', ago(now - f.activity.at)));
-            row.addEventListener('click', () => world.select({ type: 'agent', id: f.agentId }, { focus: true }));
+            const go = () => world.select({ type: 'agent', id: f.agentId }, { focus: true });
+            row.addEventListener('click', go);
+            row.addEventListener('keydown', (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                go();
+              }
+            });
             return row;
           })
         : [el('div', 'ui-empty', t('Nothing yet.'))]),
@@ -116,6 +125,8 @@ export function createToasts(store: OfficeStore, world: WorldApi): HTMLElement {
   store.on('notice', (n) => {
     const toast = el('div', 'ui-toast', n.text);
     toast.style.setProperty('--c', LEVEL_COLORS[n.level]);
+    // "needs you" is announced at once; the rest waits its turn (the container is a polite live region)
+    if (n.level === 'alert') toast.setAttribute('role', 'alert');
     const close = () => toast.remove();
     toast.addEventListener('click', () => {
       if (n.agentId) world.select({ type: 'agent', id: n.agentId }, { focus: true });

@@ -1,0 +1,31 @@
+# Agent Office in Docker (P8-05). Start it with `npm run docker:up`: the script finds your agents' folders and writes
+# docker-compose.override.yml (not versioned) with READ-ONLY mounts of only what the office reads, each at the same
+# path as on the host (so account ids and hook paths match):
+#   - Claude Code: <config>/projects and <config>/sessions (never the whole folder: credentials live there);
+#   - Codex: <home>/sessions, <home>/archived_sessions and <home>/thread-writer-locks (never auth.json or config.toml);
+#   - Gemini CLI: <home>/.gemini/tmp (the chat files; never oauth_creds.json);
+#   - ~/.agent-office/usage (plan usage from the statusline tap).
+# The port is published on the host's loopback only. The interactive features stay off in the container (it binds
+# 0.0.0.0 inside), and so does the PID check (AGENT_OFFICE_IN_DOCKER).
+name: agent-office
+
+services:
+  agent-office:
+    build: .
+    image: agent-office:local
+    container_name: agent-office
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${AGENT_OFFICE_PORT:-4848}:4848"
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    volumes:
+      - agent-office-data:/data
+
+volumes:
+  agent-office-data:

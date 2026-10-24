@@ -1,6 +1,7 @@
 // The DOM overlay above the canvas (P2-08): one label per character (name tag with a provider dot, bubble, icon)
 // and one per room (its name), placed from projected 3D positions, with level of detail and decluttering.
 import * as THREE from 'three';
+import { providerShape } from '../a11y';
 import type { Character } from '../core/sim/character';
 import type { RoomState } from '../core/sim/room-state';
 import type { WorldOptions } from '../core/options';
@@ -25,6 +26,11 @@ const CSS = `
 .ao-name { padding: 1px 6px; border-radius: 8px; background: rgba(20,22,26,.72); color: #fff; font-size: 11px;
   display: inline-flex; align-items: center; gap: 4px; }
 .ao-name i { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+.ao-name i[data-shape='diamond'] { border-radius: 0; clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); width: 8px; height: 8px; }
+.ao-name i[data-shape='square'] { border-radius: 1px; }
+.ao-name i[data-shape='triangle'] { border-radius: 0; clip-path: polygon(50% 0, 100% 100%, 0 100%); width: 8px; height: 8px; }
+.ao-name i[data-shape='hexagon'] { border-radius: 0; clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%); width: 8px; }
+.ao-name i[data-shape='star'] { border-radius: 0; clip-path: polygon(50% 0, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); width: 9px; height: 9px; }
 .ao-name.selected { background: var(--accent, #3b7bd8); }
 .ao-icon { font-size: 16px; line-height: 1; filter: drop-shadow(0 1px 1px rgba(0,0,0,.3)); }
 .ao-room { position: absolute; left: 0; top: 0; transform: translate(-50%, -50%); padding: 2px 10px; border-radius: 6px;
@@ -132,7 +138,9 @@ export class Overlay {
         e.icon.hidden = !label.icon;
         e.icon.textContent = label.icon ?? '';
       }
-      e.dot.style.background = this.providerColors.get(byId.get(p.id)?.info.provider ?? '') ?? '#888';
+      const provider = byId.get(p.id)?.info.provider ?? '';
+      e.dot.style.background = this.providerColors.get(provider) ?? '#888';
+      e.dot.dataset.shape = providerShape(provider);
       e.bubble.style.opacity = b ? String(b.opacity) : '1';
       e.el.style.transform = `translate(${Math.round(p.x)}px, ${Math.round(p.y - 4)}px) translate(-50%, -100%)`;
       e.el.hidden = false;

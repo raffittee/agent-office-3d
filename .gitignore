@@ -13,3 +13,4 @@ scratch/
 spikes/*/out/
 artifacts/
 assets-src/
+docker-compose.override.yml

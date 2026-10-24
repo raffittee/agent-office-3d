@@ -385,6 +385,12 @@ Branch `phase-1`. One commit per task, each pushed. At the end of the phase ther
   timestamp, so an agent could stay "working" after it went idle. The files are tiny, so they're now re-read every
   poll and compared by content. A new test reproduces the old failure.
 
+### Fix: Windows CI timing in the hook shim test — 2026-10-25 04:21
+
+- On a CI runner without `wmic`, PowerShell can take more than 3 s to start, so the test that looks up the shim's
+  parent process failed now and then. The 3 s limit stays for real hooks (they must never stall the agent; they fall
+  back to the parent PID). The test now allows 12 s, since it checks that the lookup is right, not how fast it is.
+
 ### Phase 1 closed — 2026-10-25 04:25
 
 - All 12 tasks are ticked. Pull request `phase-1` → `main`.

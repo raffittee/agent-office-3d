@@ -1,0 +1,210 @@
+# Changes log (overnight Phase 0 run)
+
+A running log of what was done while you were away, what was decided on your behalf, and what needs your eyes.
+Newest task at the bottom. Branch: `phase-0` (pushed to `origin`; `main` is untouched).
+
+## Start here
+
+**Phase 0 is complete: all 8 tasks are ticked in TASKS.md, each with its own commit, all pushed.** I stopped
+before Phase 1, as you asked, so you can review first.
+
+**Your to-do list (about 15 minutes):**
+
+1. **Check CI**: GitHub → Actions → the `phase-0` runs (Ubuntu + Windows). The repo is private and `gh` isn't
+   installed, so I couldn't see the result. Locally, typecheck, test (14 tests) and build all pass.
+2. **Review the plan changes** the spikes forced (under P0-04, P0-05 and P0-07 below). The big ones:
+   - Gemini hooks cost ~0.4 s each on Windows, so there's a `light` hook profile;
+   - a denied Gemini permission fires no hook, so we must read Gemini's chat files;
+   - the protocol gains background-job events (ADR 0002, still "proposed").
+3. **Merge `phase-0` into `main`** when you're happy, or tell me to.
+4. **Before Phase 1 ends:** upgrade and sign in to Gemini CLI (`npm i -g @google/gemini-cli@latest`, then run
+   `gemini` once). Your global install is 0.15.1, which has hooks off.
+5. **Before Phase 3:** download Quaternius "Universal Base Characters [Standard]" from itch.io ($0). It needs a
+   browser.
+6. Optional: put your name in `LICENSE`'s copyright line.
+
+**Exit criteria check:**
+
+- ADRs written: ✅ 0001–0004 (0002 is "proposed" until P1-01 finalizes the types).
+- Fixtures for Claude Code and Gemini CLI: ✅. Codex moved to P5-01 by your decision.
+- Spike numbers recorded: ✅ `docs/spikes/`.
+- No open decisions remain: ✅ D7–D14 in CLAUDE.md.
+
+**Nothing irreversible was done:**
+
+- No global installs; the Gemini 0.65 test ran from a scratch folder.
+- Your `~/.gemini` and `~/.claude` were only read. I never opened `*.key` files, credentials, or the
+  `credential_org` contents.
+- No assets are committed.
+- Nothing contacted Habblaud World.
+
+## Decisions you made before signing off
+
+| Open decision | Answer |
+| --- | --- |
+| Final name | **Agent Office** (env prefix `AGENT_OFFICE_` unchanged) |
+| Default camera | **Orthographic isometric**, perspective as a setting (P0-06 confirms with numbers) |
+| Character assets | **Quaternius CC0** (P0-07 verifies clips and licenses) |
+| UI languages | **English only** for v1, all strings through `t()` |
+| Packaging | **Single npm package**, folder rules enforced by `test/boundaries.test.ts` |
+| Codex fixtures | **Deferred to P5-01** (Codex isn't installed on this machine) |
+
+## Decisions I made on your behalf
+
+- **Work on a branch.** All Phase 0 commits are on `phase-0`, pushed to `origin`. Merge it into `main` when you're
+  happy (or tell me to).
+- **Copyright line** in `LICENSE` reads "the Agent Office contributors". Change it to your name if you prefer.
+- **README.** Your GitHub "Initial commit" README ("My virtual space for my agents") was replaced by a fuller stub.
+  The old text is still in commit `8b74886`.
+- **CI runs on every push** (not only `main`), on Ubuntu and Windows, Node 22.12, so the branch gets checked.
+
+## Task log
+
+### P0-01 Name & repo — done
+
+- Added `LICENSE` (MIT), `NOTICE.md` (Habblaud's MIT notice, non-affiliation statement), `README.md`, `.gitignore`.
+- `.claude/settings.local.json` (your local Claude permissions) is git-ignored.
+
+### P0-02 Tooling scaffold — done
+
+- `package.json`: `"type": "module"`, `engines.node >= 22.12`, **no runtime dependencies**, dev tools pinned exactly
+  (TypeScript 7.0.2, Vite 8.3.5, Vitest 5.0.5, esbuild 0.28.2, tsx 4.23.15, `@types/node` 22.20.5 so typecheck
+  catches APIs newer than our Node floor).
+- `tsconfig.json` (client + shared, DOM) and `server/tsconfig.json` (Node side, no DOM).
+- `npm run dev`: one server on `127.0.0.1:4848` with Vite in middleware mode (HMR). `npm run build`: Vite client +
+  esbuild server bundle. `npm start` runs the bundle.
+- Skeleton server: `/api/health` only (the rest is P1-05). Smoke-tested both dev and built servers; both bind to
+  `127.0.0.1` only.
+- `test/boundaries.test.ts` enforces CLAUDE.md's folder rules: no runtime deps, exact pins, server imports only
+  `node:*`/relative, `shared/` and `client/src/core/` never import `three`, hook shims import only `node:*`.
+- `.gitattributes` forces LF (shims and fixtures must be byte-identical across OSes).
+- Checks: `npm run typecheck`, `npm test` (9 tests), `npm run build` all pass locally on Windows / Node 26.7.
+- **Needs you:** the repo is private and `gh` isn't installed, so I couldn't read the CI result. Check the Actions
+  tab for the `phase-0` run (Ubuntu + Windows).
+
+### P0-03 Reference access — done
+
+- `docs/reference.md`: Habblaud path and full commit hash, a porting checklist, and a table of **Habblaud World code
+  that leaks into files we do port** (`client/src/world/sim/visitor.ts` is imported by `sim.ts`;
+  `client/src/net/world*.ts`; World fields in `shared/types.ts`, `server/model/office.ts`, `server/http/app.ts`).
+- CLAUDE.md's exclusion list now names those files explicitly.
+
+### P0-04 Spike: Gemini CLI data — done, with plan changes
+
+**How:** you have no Gemini login on this machine, and the global Gemini is 0.15.1 (hooks off by default). I ran
+the **real, latest Gemini CLI 0.65.0** from a scratch install against a **local stub of the Gemini API**, using
+`GOOGLE_GEMINI_BASE_URL` and an isolated `GEMINI_CLI_HOME`. Hook payloads and chat files are genuine CLI output;
+only the model's replies are scripted. I drove headless mode, the interactive TUI (through a pseudo-terminal) and
+ACP mode. Your real `~/.gemini` and your global install were **not touched**. Nothing was sent to Google.
+
+**Results:** `docs/providers/gemini-cli.md` answers every question in the task. There are 10 sanitized fixtures in
+`test/fixtures/gemini-cli/` and reusable probe tools in `docs/spikes/gemini-probe/`.
+
+**The spike contradicted the plan in these places. I applied the edits to CLAUDE.md and TASKS.md; please review:**
+
+1. **Matcher `.*` breaks session hooks.** `SessionStart`, `SessionEnd` and `PreCompress` compare the matcher by
+   exact string, so `.*` never fires them. Use `"*"` everywhere.
+2. **`PreCompress` fires before every model request**, so it can't mean "compacted". It's dropped from the mapping
+   and won't be registered.
+3. **A denied (or Esc-cancelled) permission fires no hook at all**: no `AfterTool`, no `AfterAgent`. Only the chat
+   file records it (`status: "cancelled"`, `"Request cancelled."`). Tailing `transcript_path` is now **required**
+   in P1-10, not optional.
+4. **Model and tokens never appear in hooks.** They come from the chat file only.
+5. **`process.ppid` is a PowerShell process, not Gemini.** Gemini runs every hook through a shell, so liveness by
+   `ppid` would mark agents offline right away. The hook shim rule now resolves the agent PID through the shell
+   wrapper.
+6. **Hooks are slow on Windows:** ~0.4 s each (PowerShell startup), and Gemini waits for them. A scripted session
+   went from ~6 s to ~19 s with all hooks on. P1-10 now has a `light` profile (no per-tool hooks; tool activity
+   from the chat file), the default on Windows, and a `full` profile.
+7. **Subagents exist** (`invoke_agent`), but their tool hooks carry the parent's `session_id`, so they're
+   attributed by nesting. Each subagent also has its own chat file.
+8. **`/clear` gives a new `session_id`** in the same process. Resume keeps the id.
+9. **Tool names changed:** `search_file_content` → `grep_search`; `read_many_files`, `save_memory` and
+   `write_todos` are gone; `invoke_agent`, background-shell tools and others are new.
+10. **ACP mode (editor integrations) fires almost no hooks.**
+11. Minimum supported Gemini version set to **0.65.0**.
+
+The protocol didn't need to change. Denials map to `tool.end {ok:false}` + `turn.end`, and tokens map to `usage`.
+
+**Needs you (before P1-10's exit check):** upgrade Gemini (`npm i -g @google/gemini-cli@latest`) and sign in once
+(`gemini`), so a real session can be tested in Phase 1. The spike didn't need it.
+
+### P0-05 Spike: Claude Code & Codex check — done
+
+- Checked Habblaud's Claude Code notes (written for 2.1.293) against your real files (2.1.306 and 2.1.309, VS Code
+  extension). The core still matches: the session registry, transcripts, background shells, compaction.
+  `docs/providers/claude-code.md` lists what's new:
+  - `procStart` in the registry → liveness can't be fooled by PID reuse;
+  - **`<pid>.<hash>.key` files in `sessions/`**, never to be read;
+  - transcripts now embed full **API request bodies** (`api-request*` records) and a **`credential_org`**
+    attachment, both to be skipped;
+  - a **`PowerShell`** tool on Windows;
+  - permission accept/reject decisions recorded in the transcript;
+  - VS Code writes `c:\` and the desktop app `C:\` for the same folder, so paths must match case-insensitively.
+- 8 fixtures in `test/fixtures/claude-code/`, **redacted to structure**: ids, types, tool names and decisions are
+  kept; all conversation text is `<redacted:N>`; tool inputs are synthetic; API request bodies and the
+  `credential_org` attachment are dropped. A test enforces this.
+- **Not captured:** a subagent transcript. None exists on this machine, and I didn't start a subagent or a
+  separate `claude` run just to make one (that would use your quota, and needs your OK). It's now the first step
+  of P1-09.
+- Codex: deferred as you decided. `docs/providers/codex.md` says so, and P5-01 now starts with the capture. The
+  Phase 0 exit criteria were edited to match.
+
+### P0-06 Spike: 3D renderer — done
+
+- Built a throwaway Three.js office: 15 rooms, 810 wall segments, 90 desks, 30 characters walking with Habblaud's
+  A*, and name labels. A Playwright harness measured 17 configurations on **your Intel UHD Graphics at 1080p**,
+  which is exactly the hardware class in our performance budget.
+- **Result: the budget is achievable.** CPU ~1 ms per frame. The GPU is limited by pixel fill, not draw calls:
+  11–14 ms per frame with antialiasing (MSAA ~5 ms of that) and shadows. So 60 fps holds, but there's **little room
+  for post-effects** (bloom, ambient occlusion) on integrated GPUs. They become an optional "high" quality tier.
+- **Camera:** orthographic isometric by default (as you chose), confirmed by the screenshots: far rooms stay
+  readable. Perspective becomes an optional "follow agent" camera.
+- **Cutaway:** walls facing the camera are **cut down to ~0.4 m** (better than hiding them, which loses room
+  outlines, or fading them, which looks striped). See the screenshots in `docs/spikes/renderer/`.
+- Implications recorded in **ADR 0003**: the default view frames 4–6 rooms (at a full 15-room view characters are
+  ~10 px tall); at most 2 draw calls per character in Phase 3; blob shadows for characters; labels need
+  decluttering (they collide at overview zoom).
+- Note: headless Chrome caps animation at ~55 fps even on an empty page, so budgets are measured as GPU-synced
+  frame cost instead.
+- Added dev dependencies `three` 0.186.1, `@types/three` 0.186.0 and `playwright-core` 1.64.1 (pinned).
+
+### P0-07 Spike: assets — done
+
+- **Characters:** Quaternius, as you chose. The free **Universal Animation Library** (45 clips, CC0, confirmed in
+  the bundled license file) covers idle, walk, run, sit and talk. It's **missing typing, waving, sleeping and a
+  raised hand**. Plan: build those four as small procedural bone overrides on top of the sitting and idle clips (no
+  new art needed); author real clips only if they look bad.
+- **Furniture:** the **Kenney Furniture Kit** (CC0, 140 low-poly models). Untextured models with materials named
+  "wood", "metal", "carpet"… are ideal for themes, which can recolor them by name. A few office kinds are missing
+  (water cooler, whiteboard, cubicles, ping-pong); they start as simple procedural shapes.
+- **Compression:** with meshopt, a character plus all 45 animations is **~0.3 MB** over the network, and the whole
+  furniture kit **~0.2 MB**. Loading takes under 0.1 s.
+- **Performance:** 30 animated characters run in ~13 ms per frame on your iGPU, which is within budget. 60 don't
+  fit, because the cost is per character (bones, materials) rather than polygons. ADR 0004 sets a character budget
+  for Phase 3: one material, no finger bones, a low-detail version for zoomed-out views.
+- `ASSETS.md` started. **No asset files are committed yet.**
+- **Needs you (before Phase 3):** download "Universal Base Characters [Standard]" from
+  https://quaternius.itch.io/universal-base-characters (pick $0 or tip). itch.io requires a browser, so I couldn't
+  fetch it.
+- Not tested: KTX2 texture compression (needs KTX-Software's `toktx`, not installed; nothing textured yet). It
+  moves to P3-01.
+
+### P0-08 ADRs & open decisions — done
+
+- `docs/adr/`:
+  - 0001 stack;
+  - 0002 event protocol (proposed);
+  - 0003 renderer and camera;
+  - 0004 assets;
+  - plus an index.
+- ADR 0002 proposes protocol additions from the spikes:
+  - `job.start` / `job.end` (otherwise the "waiting on a background shell" state could never end);
+  - `continues` on `session.start` (so `/clear` keeps the same character instead of one leaving and one arriving);
+  - a short `tool.error` kind;
+  - account ids as short hashes instead of folder paths.
+- CLAUDE.md:
+  - your answers and the spike results are recorded as decisions D7–D14;
+  - the status line now says Phase 0 is done;
+  - the command table separates what exists from what's planned.
+- TASKS.md: P1-01 and P1-03 now include the ADR 0002 changes.

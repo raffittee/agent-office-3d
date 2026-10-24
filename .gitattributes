@@ -1,0 +1,10 @@
+# LF everywhere: hook shims, fixtures and snapshots must be byte-identical on every OS.
+* text=auto eol=lf
+*.glb binary
+*.gltf -text
+*.bin binary
+*.ktx2 binary
+*.png binary
+*.jpg binary
+*.webp binary
+*.woff2 binary

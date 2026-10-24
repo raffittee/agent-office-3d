@@ -1,38 +1,82 @@
 // Agent Office server entry point.
 //   npm run dev    -> tsx server/index.ts --dev (Vite in middleware mode, HMR on the same server)
-//   npm start      -> node dist/server/index.js
-// Skeleton only: /api/health. Snapshot, SSE, static files and the edge guard land in P1-05.
+//   npm start      -> node dist/server/index.js (serves dist/client)
 import http from 'node:http';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 import { loadConfig } from './config';
+import { createApiHandler } from './http/app';
+import { createRequestGuard } from './http/guard';
+import { Hub } from './http/sse';
+import { createStaticHandler } from './http/static';
+import { errMsg, log } from './log';
+import { NameStore } from './model/names';
+import { Office } from './model/office';
+import { RoomAliases } from './model/room-aliases';
 
 const config = loadConfig();
 
-type Handler = (req: http.IncomingMessage, res: http.ServerResponse) => void;
+const names = new NameStore(join(config.dataDir, 'names.json'));
+names.load();
+const aliases = new RoomAliases(join(config.dataDir, 'rooms.json'));
+aliases.load();
 
-let fallback: Handler = (_req, res) => {
-  res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8', 'X-Content-Type-Options': 'nosniff' });
-  res.end('not found');
-};
+const office = new Office({
+  names,
+  roomAlias: (path) => aliases.get(path),
+  version: config.version,
+  startedAt: Date.now(),
+});
+const hub = new Hub(office);
+hub.start();
+const tick = setInterval(() => office.tick(), 250);
+tick.unref();
+
+const guard = createRequestGuard({ allowedHosts: config.allowedHosts });
+const api = createApiHandler({ office, hub, version: config.version, sources: () => [], providers: () => [] });
+
+type Handler = (req: http.IncomingMessage, res: http.ServerResponse, pathname: string) => void;
+let fallback: Handler = createStaticHandler(join(config.rootDir, 'dist', 'client'));
 
 const server = http.createServer((req, res) => {
-  if (req.method === 'GET' && req.url === '/api/health') {
-    res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });
-    res.end(JSON.stringify({ ok: true }));
+  if (guard(req, res)) return;
+  let url: URL;
+  try {
+    url = new URL(req.url ?? '/', 'http://local');
+  } catch {
+    res.writeHead(400).end();
     return;
   }
-  fallback(req, res);
+  try {
+    if (!api(req, res, url)) fallback(req, res, url.pathname);
+  } catch (err) {
+    log.error(`request failed: ${errMsg(err)}`);
+    if (!res.headersSent) res.writeHead(500).end();
+  }
 });
 
 if (config.dev) {
   const { createServer } = await import('vite');
   const vite = await createServer({
-    configFile: fileURLToPath(new URL('../vite.config.ts', import.meta.url)),
+    configFile: join(config.rootDir, 'vite.config.ts'),
     server: { middlewareMode: true, ws: { server } },
   });
   fallback = (req, res) => vite.middlewares(req, res);
 }
 
-server.listen(config.port, config.host, () => {
-  console.log(`Agent Office on http://${config.host}:${config.port}${config.dev ? ' (dev)' : ''}`);
+server.on('error', (err) => {
+  log.error(`server error: ${errMsg(err)}`);
+  process.exit(1);
 });
+server.listen(config.port, config.host, () => {
+  log.info(`Agent Office on http://${config.host}:${config.port}${config.dev ? ' (dev)' : ''}`);
+});
+
+function shutdown(): void {
+  clearInterval(tick);
+  hub.stop();
+  names.flush();
+  server.close(() => process.exit(0));
+  setTimeout(() => process.exit(0), 2_000).unref();
+}
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);

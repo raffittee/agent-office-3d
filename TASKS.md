@@ -167,7 +167,9 @@ The plan, phase by phase. [CLAUDE.md](CLAUDE.md) has the design, contracts and r
   - Disambiguate display names, and support room aliases.
   - Give agents names from an international list, persisted in the data dir.
   - **Ref:** `server/model/rooms.ts`, `room-aliases.ts`, `names.ts`, `shared/names.ts`.
-- [ ] **P1-05 HTTP + SSE** (M)
+- [x] **P1-05 HTTP + SSE** (M) — done: `server/http/{guard,sse,static,app}.ts` (ported), `server/config.ts`
+  (AGENT_OFFICE_* env), `server/index.ts` wiring (office tick, hub, guard, static or Vite); guard, route, SSE and
+  static-cache tests ported; built server smoke-tested.
   - A `node:http` app with the edge guard.
   - An SSE hub: a snapshot on connect, then `feed` and `notice` events, with a ping every 15 s.
   - Routes: `GET /api/snapshot`, `/api/agents/:id`, `/api/health`.

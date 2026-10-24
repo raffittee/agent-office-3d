@@ -253,3 +253,15 @@ Branch `phase-1`. One commit per task, each pushed. At the end of the phase ther
 - New: `/clear` keeps the same character (the session links to the old one); denied permissions don't show
   "Done"; background shells keep the agent in "waiting for the shell" until the last one ends.
 - 22 tests, one per state transition plus these flows.
+
+### P1-05 HTTP + SSE — done
+
+- The web server: `/api/snapshot`, `/api/agents/:id`, `/api/health`, and a live stream at `/api/stream` that pushes
+  changes to the browser. It serves the built page with sensible caching.
+- Security edge guard ported from Habblaud and tested:
+  - requests addressed to a foreign host name are refused (DNS-rebinding protection);
+  - state-changing requests must be JSON from a local origin (CSRF protection);
+  - no cross-origin access to the API.
+- `/api/health` deliberately doesn't expose file paths.
+- Configuration from `AGENT_OFFICE_PORT`, `_HOST`, `_DATA_DIR`, `_DEMO` and `_ALLOWED_HOSTS`. Smoke-tested the
+  built server.

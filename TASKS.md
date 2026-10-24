@@ -275,14 +275,17 @@ their status changes (working, waiting, idle, offline) appear within 2 s; the de
   - Port the SSE store: reconnect with backoff, plus a mock mode backed by the demo simulator.
   - Lay out the app: canvas plus panels.
   - **Ref:** `client/src/net/store.ts`, `client/src/app.ts`, `client/src/main.ts`.
-- [ ] **P2-02 Layout core** (L)
+- [x] **P2-02 Layout core** (L) — done: `client/src/core/layout/` (ported: reception with elevators, restrooms,
+  kitchen, lounge, corridor, seeded project rooms; floors, rugs, walls with doorways, wall items and furniture by
+  semantic kind, spots), `core/vocab.ts` (the furniture/pose/spot vocabulary from Habblaud's art API, no sprites),
+  `core/room-theme.ts`, `core/constants.ts`. Habblaud's 2D exterior (garden, street) isn't ported. 15 tests.
   - `client/src/core/layout/`: a building with core areas (entrance/reception, kitchen, lounge, restrooms) plus one
     project room per slot.
   - Output: areas, walls with doorways, furniture placements by semantic kind, and spots (desk, stool, nook,
     coffee, water, sofa, toilet, …).
   - Pure code, with tests.
   - **Ref:** `client/src/world/layout/*`, `client/src/world/constants.ts`.
-- [ ] **P2-03 Navigation** (S)
+- [x] **P2-03 Navigation** (S) — done: `client/src/core/nav/{grid,astar}.ts` and their 7 tests, ported as is.
   - Port the grid and A*, with their tests.
   - **Ref:** `client/src/world/path/*`.
 - [ ] **P2-04 Simulation core** (L)

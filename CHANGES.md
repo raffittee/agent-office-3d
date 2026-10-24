@@ -413,3 +413,19 @@ Branch `phase-1`. One commit per task, each pushed. At the end of the phase ther
   Until the real panels arrive (P2-10), the debug list sits on the right.
 - 16 store tests (ported and translated, plus mock mode).
 
+### P2-02 Layout core — done, 2026-10-25 04:25
+
+- `client/src/core/layout/` lays out the building as plain data, ported from Habblaud: a reception with two
+  elevators, restrooms, a kitchen, a lounge, the corridor, and one project room per slot (rooms vary by seed:
+  mirrored, three kinds of meeting corner, different corners). It lists floors, rugs, walls with doorways, wall items,
+  furniture by kind, and "spots" (desk, stool, coffee machine, sofa, toilet…).
+- `client/src/core/vocab.ts` is the shared vocabulary (furniture kinds and sizes, poses, held items, spot kinds).
+  This is the contract themes will use: a theme decides how a `desk` looks, never where it goes.
+- Positions use Habblaud's units (16 per tile) so the ported numbers don't change; the 3D view converts to metres.
+- Not ported: Habblaud's 2D garden and street around the building.
+- 15 tests, including 90 room seeds checked for overlaps, reachability and hidden wall items.
+
+### P2-03 Navigation — done, 2026-10-25 04:25
+
+- The walk grid and A* path finder, ported as they are, with their 7 tests.
+

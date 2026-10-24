@@ -30,7 +30,7 @@ The raw captures aren't committed: they hold machine paths, a host name and an i
 | Bytes received | **205 KB** | **1.3 MB** (logs 738 KB, traces 531 KB, metrics 33 KB) |
 | Delay (event → received) | 135–865 ms (batched) | one batch at exit |
 | Log records | 76 (45 `codex.sse_event`, 9 `codex.api_request`) | 67 (24 `gen_ai.client.inference.operation.details`, 12 + 12 api request/response) |
-| For comparison: hook path (same scenario, shim bodies from the fixtures) | 18 posts, 7.9 KB (×26 less) | 33 posts, 10.7 KB (×120 less) |
+| For comparison: hook path (same scenario, shim bodies from the fixtures) | 18 posts, 7.9 KB | 33 posts, 10.7 KB |
 
 ## What the telemetry has and lacks
 

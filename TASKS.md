@@ -529,7 +529,10 @@ Python and both examples) in the office alongside the built-in providers.
 
 ## Phase 6: Life & atmosphere
 
-- [ ] **P6-01 Idle life & social** (L)
+- [x] **P6-01 Idle life & social** (L) — done: `client/src/core/social/` (personas with our own traits, bonds;
+  gatherings: TV, ping-pong, arcade duels, kitchen chats, talks, rock-paper-scissors; a director that plans them through
+  the step queue, scores matches, cheers and sulks, and lets work call anyone away at once). Solo outings now follow
+  the persona. Habblaud's coin bets and World traits were left out.
   - Port the hangouts (TV, games, ping-pong, kitchen chats), the personalities, and gatherings onto 3D spots.
   - **Ref:** `client/src/world/social/*`.
 - [ ] **P6-02 Day/night** (M)

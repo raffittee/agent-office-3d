@@ -638,3 +638,16 @@ Branch `phase-1`. One commit per task, each pushed. At the end of the phase ther
 - **Needs your machine (optional):**
   - `npm run usage:install` for the Claude Code usage bars.
   - `npm run hooks:install -- --provider codex` if you use Codex (trust the hooks in Codex's `/hooks`).
+
+## Phase 6: Life & atmosphere (branch `phase-6`)
+
+### P6-01 Idle life & social — done, 2026-10-25 07:45
+
+- **Idle agents now hang out together:** they watch TV on the lounge sofa, play ping-pong (with spectators), have
+  arcade duels, chat over coffee in the kitchen, talk in the corridor, or settle something with rock, paper,
+  scissors. Matches keep score, the winner cheers with a trophy, the loser sulks. When work comes in, that agent heads
+  straight back to the desk.
+- **Each agent has a personality** (two or three traits like coffee lover, gamer, chatty, shy, sporty…) that decides
+  what it likes to do and who it hangs out with; some pairs are friends, a few are rivals. The same agent always has
+  the same personality.
+- Settings → "Idle agents wander" still sets how often this happens.

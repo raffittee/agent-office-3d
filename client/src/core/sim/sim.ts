@@ -16,6 +16,8 @@ import { PathFinder } from '../nav/astar';
 import { BLOCKED, FREE, SEAT } from '../nav/grid';
 import { DEFAULT_WORLD_OPTIONS, type WorldOptions } from '../options';
 import { roomTheme as defaultRoomTheme } from '../room-theme';
+import { personaFor, soloWeights } from '../social/persona';
+import { Social } from '../social/social';
 import type { LayoutTemplate } from '../../../../shared/theme';
 import type { Dir, RoomTheme } from '../vocab';
 import { canDismantle, chooseSeat, idleSitMs, isLastInRoom, isLongIdle, modeFor, pickIdleActivity, shouldRun, type IdleActivity, type Mode } from './behavior';
@@ -77,6 +79,8 @@ export class Sim {
   readonly chars = new Map<string, Character>();
   readonly rooms = new Map<string, RoomState>();
   readonly spots = new SpotRegistry();
+  /** Idle agents' gatherings (P6-01). */
+  readonly social = new Social(this);
   readonly elevators: Elevator[] = [];
   building: BuildingLayout;
   readonly finder: PathFinder;
@@ -503,6 +507,7 @@ export class Sim {
       if (ch.missingSince !== null && !ch.leaving && now - ch.missingSince >= MISSING_DEBOUNCE_MS) this.refreshMode(ch);
       this.runCharacter(ch, dt, now);
     }
+    this.social.update(now);
     for (const [id, ch] of this.chars) {
       if (ch.gone) {
         this.spots.releaseAll(id);
@@ -1065,6 +1070,7 @@ export class Sim {
 
   /** Drops the queue. */
   clearPlan(ch: Character): void {
+    this.social.calledAway(ch);
     ch.queue.length = 0;
     ch.step = null;
     ch.thinkAt = 0;
@@ -1119,6 +1125,7 @@ export class Sim {
     if (ch.mode === 'idle' && !this.longIdle(ch, now)) {
       if (!ch.nextOutingAt) ch.nextOutingAt = now + idleSitMs(ch.rng, this.options().liveliness);
       if (now >= ch.nextOutingAt) {
+        if (this.social.tryInitiate(ch, now)) return true;
         if (this.planOuting(ch)) return true;
         ch.nextOutingAt = now + idleSitMs(ch.rng, this.options().liveliness);
       }
@@ -1127,7 +1134,7 @@ export class Sim {
   }
 
   /** Stand up / leave the current place before walking. */
-  private pushLeave(ch: Character, steps: Step[]): void {
+  pushLeave(ch: Character, steps: Step[]): void {
     if (ch.atSpot) steps.push({ t: 'exit' });
   }
 
@@ -1395,7 +1402,7 @@ export class Sim {
       stretch: true,
       phone: !!this.randomFree(PHONE_SEATS, ch),
     };
-    const what = pickIdleActivity(rng, avail);
+    const what = pickIdleActivity(rng, avail, soloWeights(personaFor(ch.info.seed)));
     if (!what) return false;
     const steps: Step[] = [];
     const goUse = (s: SpotDef, held: 'none' | 'coffee' = 'none'): void => {
@@ -1608,6 +1615,7 @@ export class Sim {
   /** Jumps everything to its destination (used when coming back from a hidden tab). */
   fastForward(now: number): void {
     this.now = now;
+    this.social.reset();
     for (const room of this.rooms.values()) {
       if (room.phase === 'building') room.setPhase('ready', now - 10_000);
       if (room.phase === 'dismantling') room.setPhase('gone', now);

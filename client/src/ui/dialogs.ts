@@ -126,6 +126,11 @@ export function openSettings(root: HTMLElement, world: WorldApi): () => void {
         ['rigged', t('Robots')],
         ['capsule', t('Simple shapes')],
       ], (v) => set({ characters: v })),
+      select(t('Day and night'), o.daylight, [
+        ['auto', t('Follow the local time')],
+        ['day', t('Always day')],
+        ['night', t('Always night')],
+      ], (v) => set({ daylight: v })),
       select(t('Walls in front'), o.cutaway, [
         ['cut', t('Cut down')],
         ['hide', t('Hidden')],

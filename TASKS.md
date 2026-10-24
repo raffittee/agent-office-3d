@@ -535,7 +535,11 @@ Python and both examples) in the office alongside the built-in providers.
   the persona. Habblaud's coin bets and World traits were left out.
   - Port the hangouts (TV, games, ping-pong, kitchen chats), the personalities, and gatherings onto 3D spots.
   - **Ref:** `client/src/world/social/*`.
-- [ ] **P6-02 Day/night** (M)
+- [x] **P6-02 Day/night** (M) — done: `client/src/core/daylight.ts` (Habblaud's curves, pure, tested), `applyDaylight`
+  in `render3d/scene.ts` (fill light cools and dims, the sun warms at dawn and dusk and crosses east → west, a moon
+  at night, the background follows the sky), empty rooms darker at night and lit areas lamp-tinted
+  (`BuildingView.setAmbient`); Settings → Day and night (auto / always day / always night); `?hour=21:30`. Sunbeams
+  through windows were left out (no shadow maps in the budget).
   - Sun, sky and exposure follow local time; light through the windows; practical lights at night.
   - A setting: automatic, always day, or always night.
   - **Ref:** `client/src/world/render/{daylight,lighting}.ts`.

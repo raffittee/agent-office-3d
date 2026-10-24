@@ -11,7 +11,8 @@ import { Overlay } from './overlay';
 import { onThemesChanged, themeById, type ThemeEntry } from '../themes/registry';
 import { ModelView } from './models';
 import { loadRigModel, RigView } from './rig';
-import { applyLighting, createScene, type Quality } from './scene';
+import { ambientAt, approachAmbient, effectiveHour, parseHourParam, type Ambient, type DaylightMode } from '../core/daylight';
+import { applyDaylight, applyLighting, createScene, type Quality } from './scene';
 import { ScreenView } from './screens';
 import { mx, mz, tm } from './units';
 
@@ -23,9 +24,11 @@ export interface WorldSettings extends WorldOptions {
   characters: 'rigged' | 'capsule';
   /** The theme pack id (P4-09); '' = the server's default. */
   theme: string;
+  /** Day and night (P6-02): follow the local time, or always day / night. */
+  daylight: DaylightMode;
 }
 
-export const DEFAULT_WORLD_SETTINGS: WorldSettings = { ...DEFAULT_WORLD_OPTIONS, cutaway: 'cut', characters: 'rigged', theme: '' };
+export const DEFAULT_WORLD_SETTINGS: WorldSettings = { ...DEFAULT_WORLD_OPTIONS, cutaway: 'cut', characters: 'rigged', theme: '', daylight: 'auto' };
 
 /** Where the pipeline's character assets are served from, and the default character. */
 const CHARACTER_BASE = 'assets/characters';
@@ -75,6 +78,7 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
   const applyTheme = (next: ThemeEntry) => {
     theme = next;
     applyLighting(parts, next.look);
+    ambientAt_ = 0;
     models.setTheme(next);
     building.setLook(next.look, models.ready);
     // the sim keeps everyone where they are: rooms only get new palettes and walls
@@ -82,6 +86,19 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
   };
   applyLighting(parts, theme.look);
   models.setTheme(theme);
+  // ---- day and night: ?hour=21:30 forces an hour (screenshots, checking a theme at night)
+  const hourOverride = parseHourParam(location.search);
+  const targetAmbient = () => ambientAt(effectiveHour(options.daylight, hourOverride, new Date()));
+  let ambient: Ambient = targetAmbient();
+  let ambientAt_ = 0;
+  const updateDaylight = (t: number) => {
+    if (t - ambientAt_ < 250) return;
+    ambientAt_ = t;
+    // eases over about a second when the setting changes; the clock itself moves slowly anyway
+    ambient = approachAmbient(ambient, targetAmbient(), 0.3);
+    applyDaylight(parts, theme.look, ambient);
+    building.setAmbient(ambient.night, ambient.inside);
+  };
   const offThemes = onThemesChanged(() => applyTheme(themeById(theme.look.id)));
   const rig2d = new CameraRig();
   const overlay = new Overlay(overlayParent);
@@ -230,6 +247,7 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
       rig2d.target.copy(rig2d.targetGoal);
     }
     rig2d.update(dt);
+    updateDaylight(t);
     const tSync = performance.now();
     building.sync(sim, rig2d.yaw, options.cutaway, now);
     models.sync(sim, now);

@@ -651,3 +651,9 @@ Branch `phase-1`. One commit per task, each pushed. At the end of the phase ther
   what it likes to do and who it hangs out with; some pairs are friends, a few are rivals. The same agent always has
   the same personality.
 - Settings → "Idle agents wander" still sets how often this happens.
+
+### P6-02 Day and night — done, 2026-10-25 07:55
+
+- **The office follows your local time:** golden light at dawn and dusk, a dark blue night where lamps, screens and
+  rooms with the light on stand out, and empty rooms fade into the dark. Settings → "Day and night" can fix it to
+  always day or always night. `?hour=21:30` in the URL shows any time of day.

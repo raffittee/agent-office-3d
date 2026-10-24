@@ -2,7 +2,7 @@
 // Screenshot smoke test (P2-11): starts the built server on a free port, opens the demo office in Chromium
 // (playwright-core), waits for the scene, saves screenshots and fails on page errors or an empty scene.
 //
-//   npm run build && npm run shot [-- --out artifacts --sessions 8 --seed 7] [--themes] [--thumbs]
+//   npm run build && npm run shot [-- --out artifacts --sessions 8 --seed 7 --hour 22:30] [--themes] [--thumbs]
 //
 // --themes also switches live to every theme pack and saves theme-<id>.png (P4-02: no page errors, state kept).
 // --thumbs writes each theme's picker thumbnail to themes/<id>/thumb.png (run after changing a built-in theme).
@@ -26,6 +26,7 @@ const arg = (name, def) => {
 const out = resolve(root, arg('out', 'artifacts'));
 const sessions = Number(arg('sessions', '8'));
 const seed = Number(arg('seed', '7'));
+const hour = arg('hour', '');
 const allThemes = args.includes('--themes') || args.includes('--thumbs');
 const thumbs = args.includes('--thumbs');
 
@@ -76,7 +77,7 @@ async function main() {
     const page = await browser.newPage({ viewport: { width: 1600, height: 900 } });
     page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
     page.on('console', (m) => m.type() === 'error' && errors.push(`console: ${m.text()}`));
-    await page.goto(`http://127.0.0.1:${port}/?mock=1&seed=${seed}&sessions=${sessions}`);
+    await page.goto(`http://127.0.0.1:${port}/?mock=1&seed=${seed}&sessions=${sessions}${hour ? `&hour=${encodeURIComponent(hour)}` : ''}`);
     await page.waitForFunction(() => window.agentOffice?.world?.stats().agents > 0, null, { timeout: 30_000 });
     await page.waitForTimeout(6000);
     const overview = await page.evaluate(() => window.agentOffice.world.stats());

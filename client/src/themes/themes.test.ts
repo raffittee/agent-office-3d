@@ -48,12 +48,12 @@ describe('resolveLook', () => {
     expect(floorSurface('corridor')).toBe('corridorFloor');
     expect(floorSurface('reception')).toBe('coreFloor');
     const ind = byId('industrial');
-    expect(ind.floor('room', 'marble')).toEqual({ color: '#8a8a85', pattern: 'concrete' });
+    expect(ind.floor('room', 'marble')).toEqual({ color: '#9a9993', pattern: 'concrete' });
     expect(ind.floor('lounge', 'carpet').pattern).toBe('wood');
     // the street and the grass outside aren't themed
     expect(ind.floor('corridor', 'grass').color).toBe('#8fbf6a');
     expect(ind.wall('reception', { base: '#ffffff' }).pattern).toBe('brick');
-    expect(ind.wall('room', { base: '#ffffff', exterior: true }).color).toBe('#8a4632');
+    expect(ind.wall('room', { base: '#ffffff', exterior: true }).color).toBe('#9a5a44');
     expect(ind.roomTheme(0).wall.pattern).toBe('brick');
   });
 

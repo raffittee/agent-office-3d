@@ -299,21 +299,33 @@ their status changes (working, waiting, idle, offline) appear within 2 s; the de
   - Characters expose only neutral data (position, direction, pose, held item) instead of calling an art module.
   - **Ref:** `client/src/world/sim/*` and its tests.
   - **Done when:** the ported sim tests pass with no `three` import.
-- [ ] **P2-05 Scene & camera** (M)
+- [x] **P2-05 Scene & camera** (M) — done: `render3d/scene.ts` (WebGL2 renderer, sRGB output, lights, DPR capped by
+  quality), `render3d/camera.ts` (ortho iso rig per ADR 0003: 90° animated turns, zoom to cursor, pan, pinch, frame
+  office/room inside the panels' free area, follow; mouse, wheel, touch and keys Q/E, WASD/arrows, +/-, F, Esc),
+  `render3d/world.ts` (rAF loop paused while hidden, `sim.fastForward` on return).
   - `render3d/scene.ts`: the renderer, color management, resizing, and a capped device pixel ratio.
   - A camera rig as decided in the ADR: follow an agent, frame the whole office, rotate, zoom, pan.
   - Input: drag, mouse wheel, keyboard.
   - Suspend rendering while the tab is hidden.
   - **Ref:** `client/src/world/camera.ts`, `client/src/world/input.ts`.
-- [ ] **P2-06 Building meshes** (L)
+- [x] **P2-06 Building meshes** (L) — done: `render3d/building.ts` (floors, rugs, walls with doorways, cutaway: only
+  the far outer walls stay full height, the rest cut to 0.4 m or hidden; wall items; elevator doors; one merged
+  solid/glass/glow mesh per area, ~25 draw calls for a 3-room office; per-room build/dismantle scale and light
+  dimming) and `render3d/kit.ts` (procedural boxes for every furniture kind, tested against footprints).
   - Floors, walls with doorways, cutaway mode, doors.
   - Procedural placeholder furniture (beveled boxes) for each semantic kind, merged or instanced per room.
   - Room build and dismantle animations; lights on and off per room.
-- [ ] **P2-07 Placeholder characters** (M)
+- [x] **P2-07 Placeholder characters** (M) — done: `render3d/characters.ts` (capsule people from 8 InstancedMeshes:
+  legs, torso, head, hair, arms, provider badge, held item, blob shadow; colors from the seed; subagents smaller;
+  shrink in/out of the elevator) and `render3d/pose.ts` (pure rig per pose: walk bob, sit, typing arms, raised hand,
+  drink, popcorn, sleep…; shortest-way turning).
   - Procedural "capsule people": body and head colored by the agent's seed, plus a provider badge.
   - Procedural animation for each pose (walk bob, sit, typing arms, raised hand).
   - Smooth path following and turning.
-- [ ] **P2-08 Labels & bubbles** (M)
+- [x] **P2-08 Labels & bubbles** (M) — done: `render3d/labels.ts` (pure: name, bubble kind and priority from sim
+  state, options and zoom; greedy declutter) and `render3d/overlay.ts` (DOM labels with a provider dot, activity,
+  "needs you" alert, job timer, delivery and icons; room name tags). The options are in `WorldOptions`; their
+  toggles land in the settings panel (P2-10).
   - A DOM overlay with names, activity bubbles (icon and text), the "needs you" alert, and a shell timer.
   - Occlusion, culling and level of detail.
   - Options: names on or off; bubbles all, important only, or none.

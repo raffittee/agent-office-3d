@@ -52,6 +52,12 @@ body {
   outline: none;
 }
 
+#labels {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
 #ui {
   position: fixed;
   inset: 0;

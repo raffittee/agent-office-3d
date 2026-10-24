@@ -442,3 +442,20 @@ Branch `phase-1`. One commit per task, each pushed. At the end of the phase ther
   Habblaud's World visitor is never ported.
 - 57 tests ported from Habblaud (2 about the 2D appearance were dropped until Phase 3 brings characters).
 
+### P2-05 to P2-08: the office in 3D — done, 2026-10-25 04:43
+
+- **The page now shows the office in 3D.** An isometric diorama of the building: reception with two elevators,
+  restrooms, kitchen, lounge, the corridor and one room per project. Walls between the camera and the rooms are
+  cut down to knee height, so you can see inside; the back outer walls stay full height.
+- **Camera:** drag to pan, wheel or pinch to zoom (towards the cursor), right-drag or Q/E to turn by 90°, arrows or
+  WASD to move, F to frame the whole office, Esc to clear the selection.
+- **People:** simple "capsule people" for now (Phase 3 brings real characters). Each has its own colors from its
+  seed, a badge in its provider's color, and poses: walking, sitting and typing, raising a hand when it needs you,
+  drinking coffee, eating popcorn while a job runs, sleeping. Subagents are a bit smaller.
+- **Labels:** names, activity bubbles, an orange "needs you" bubble, a job timer and room names. Zoomed far out,
+  only what needs you stays.
+- Rooms grow when they open and shrink away when they close; dark rooms dim.
+- Rendering stops while the tab is hidden; on return everyone jumps to where they were going.
+- Cost: about 25 draw calls for a 3-room office (the budget is 300).
+- 16 new tests for the parts that don't need a GPU (camera framing, cutaway, furniture kit, poses, labels).
+

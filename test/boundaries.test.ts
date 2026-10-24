@@ -97,4 +97,10 @@ describe('folder boundaries', () => {
     const stdlib = new Set(['__future__', 'json', 'os', 're', 'threading', 'time', 'urllib', 'uuid', 'contextlib', 'typing']);
     expect(mods.filter((m) => !stdlib.has(m))).toEqual([]);
   });
+
+  it('the page never parses text as HTML (agent text is untrusted; P8-01)', () => {
+    const sinks = /\.(innerHTML|outerHTML)\s*=|insertAdjacentHTML|document\.write|new Function\(|\beval\(/;
+    const bad = files('client/src', ['.ts']).filter((f) => !f.endsWith('.test.ts') && sinks.test(readFileSync(join(root, f), 'utf8')));
+    expect(bad).toEqual([]);
+  });
 });

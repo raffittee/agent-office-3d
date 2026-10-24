@@ -74,6 +74,24 @@ export function isNotModified(req: IncomingMessage, etag: string, mtimeMs: numbe
   return false;
 }
 
+/**
+ * The pages' Content-Security-Policy (P8-01): only our own scripts, styles (inline ones: the overlay injects its
+ * stylesheet), WebAssembly (the meshopt decoder), images from data:/blob: URLs (glTF textures), connections to this
+ * server only, and no framing, plugins or base-URL tricks. Production only: Vite's dev server injects inline scripts.
+ */
+export const CSP = [
+  "default-src 'self'",
+  "script-src 'self' 'wasm-unsafe-eval'",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob:",
+  "connect-src 'self'",
+  "worker-src 'self' blob:",
+  "object-src 'none'",
+  "base-uri 'none'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+].join('; ');
+
 export function createStaticHandler(distDir: string): (req: IncomingMessage, res: ServerResponse, pathname: string) => void {
   const root = resolve(distDir);
   const index = join(root, 'index.html');
@@ -89,6 +107,7 @@ export function createStaticHandler(distDir: string): (req: IncomingMessage, res
       'X-Frame-Options': 'DENY',
       'Referrer-Policy': 'no-referrer',
     };
+    if (extname(file).toLowerCase() === '.html') headers['Content-Security-Policy'] = CSP;
     if (isNotModified(req, etag, st.mtimeMs)) {
       res.writeHead(304, headers);
       return void res.end();

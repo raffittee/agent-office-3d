@@ -8,6 +8,9 @@ import type { Office } from '../../shared/model/office';
 /** A client too slow to keep up (buffer above this) is dropped; EventSource reconnects. */
 const MAX_BUFFERED = 8 * 1024 * 1024;
 
+/** Most open streams (pages) at once. */
+export const MAX_CLIENTS = 64;
+
 export class Hub {
   private clients = new Set<ServerResponse>();
   private timer: ReturnType<typeof setTimeout> | null = null;
@@ -55,6 +58,12 @@ export class Hub {
 
   /** Connects a client: full snapshot + the last 50 feed items, then the live stream. */
   attach(req: IncomingMessage, res: ServerResponse): void {
+    // P8-01: a runaway script opening streams can't exhaust the server
+    if (this.clients.size >= MAX_CLIENTS) {
+      res.writeHead(503, { 'Content-Type': 'application/json; charset=utf-8', 'Retry-After': '5', 'X-Content-Type-Options': 'nosniff' });
+      res.end('{"error":"too many open pages"}');
+      return;
+    }
     req.socket.setTimeout(0);
     req.socket.setNoDelay(true);
     res.writeHead(200, {

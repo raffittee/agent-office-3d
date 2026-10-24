@@ -764,3 +764,13 @@ Branch `phase-1`. One commit per task, each pushed. At the end of the phase ther
      `claude plugin install agent-office-messages@agent-office`.
   4. Try it on a real session.
 
+## Phase 8: Hardening & release (branch `phase-8`)
+
+### P8-01 Security review — done, 2026-10-25 07:18
+
+- **[docs/security.md](docs/security.md)** explains what Agent Office protects, from whom, how, and the risks that
+  remain by design.
+- **Stricter page security:** the office now sends a Content-Security-Policy, so it only runs its own code. The
+  server also refuses more than 64 open pages at once, so a runaway script can't wear it out.
+- Fuzz tests throw thousands of random and hostile inputs at the parts that read outside data. Nothing broke.
+

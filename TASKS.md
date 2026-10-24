@@ -630,7 +630,10 @@ On your machine: install the permission hook and the messages plugin and try the
 
 ## Phase 8: Hardening & release
 
-- [ ] **P8-01 Security review** (M)
+- [x] **P8-01 Security review** (M) — done: threat model in [docs/security.md](docs/security.md); a seeded fuzz test
+  (`server/test/fuzz.test.ts`: events, hook bodies, decisions and transcript parsers); a Content-Security-Policy on
+  the pages; at most 64 open streams; a boundary test that the page never parses text as HTML; shims and
+  installers reviewed (nothing to fix).
   - Write a threat model in `docs/security.md`, fuzz the event validator, and review the shims and installers.
 - [ ] **P8-02 Soak & performance** (M)
   - Run the demo for 8 hours and check memory and the frame-time budget. Add a performance check to CI.

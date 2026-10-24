@@ -5,7 +5,9 @@ import { overrideYaml, planMounts } from '../../scripts/docker-up';
 describe('docker-up', () => {
   it('mounts only the read subfolders, read-only, never a whole config folder', () => {
     const plan = planMounts({ home: '/home/dev', claudeDirs: ['/home/dev/.claude', '/home/dev/.claude-work'], codexDirs: ['/home/dev/.codex'], exists: (p) => !p.includes('archived_sessions') });
-    expect(plan.mounts).toEqual([
+    // the plan uses the host's separator (backslashes on Windows CI); compare in POSIX form
+    const posix = (p: string) => p.replaceAll('\\', '/');
+    expect(plan.mounts.map(posix)).toEqual([
       '/home/dev/.claude/projects:/home/dev/.claude/projects:ro',
       '/home/dev/.claude/sessions:/home/dev/.claude/sessions:ro',
       '/home/dev/.claude-work/projects:/home/dev/.claude-work/projects:ro',
@@ -21,7 +23,7 @@ describe('docker-up', () => {
     }
     expect(plan.env).toEqual({ HOME: '/home/dev', AGENT_OFFICE_CLAUDE_DIRS: '/home/dev/.claude,/home/dev/.claude-work', AGENT_OFFICE_CODEX_DIRS: '/home/dev/.codex' });
     const yaml = overrideYaml(plan);
-    expect(yaml).toContain('      - "/home/dev/.claude/projects:/home/dev/.claude/projects:ro"');
+    expect(yaml).toContain(`      - ${JSON.stringify(plan.mounts[0])}`);
     expect(yaml).toContain('      HOME: "/home/dev"');
   });
 });

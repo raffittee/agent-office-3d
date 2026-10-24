@@ -386,6 +386,8 @@ These rules come from Habblaud's `mod/habblaud-codex/hook.mjs`.
   | `AGENT_OFFICE_HOST` | `127.0.0.1` | |
   | `AGENT_OFFICE_DATA_DIR` | `~/.agent-office` | |
   | `AGENT_OFFICE_DEMO` | off | `1` turns on simulated agents. |
+  | `AGENT_OFFICE_CLAUDE_DIRS` | discovered | Comma-separated Claude config folders to watch, replacing discovery. |
+  | `AGENT_OFFICE_IN_DOCKER` | auto | `1` skips PID checks (the agents' PIDs belong to the host). |
 
 ## Commands
 

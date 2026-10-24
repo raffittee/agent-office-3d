@@ -208,7 +208,10 @@ The plan, phase by phase. [CLAUDE.md](CLAUDE.md) has the design, contracts and r
     `server/test/hooks-install.test.ts`, `server/test/codex-hook.test.ts`.
   - **Done when:** tests run the shim as a real process against a test server, and the installer against a fake
     HOME.
-- [ ] **P1-09 Claude Code adapter** (L)
+- [x] **P1-09 Claude Code adapter** (L) — done: `server/adapters/claude-code/` (registry with a `procStart` check,
+  transcript parser emitting AgentEvent fragments, shells → `job.*`, subagents incl. the new `finished` meta flag) and
+  `server/adapters/accounts.ts`; a real subagent captured into `test/fixtures/claude-code/subagent/`; 66 tests incl.
+  fixture replays; the live session shows up in `/api/snapshot`.
   - Port the session registry, watcher, tail, transcript parser, subagents and shells into
     `server/adapters/claude-code/`, emitting `AgentEvent`s.
   - Keep Habblaud's boot behavior: read the last ~1 MB of each transcript, then the rest in the background.

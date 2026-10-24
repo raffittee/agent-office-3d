@@ -294,3 +294,30 @@ Branch `phase-1`. One commit per task, each pushed. At the end of the phase ther
     once per session; docs are corrected.
   - `gemini --version` hangs when not run in a terminal, so the installer reads the version from Gemini's
     package files instead. It already warns that your 0.15.1 is too old.
+
+### P1-09 Claude Code adapter — done
+
+- Claude Code sessions now appear in the office by themselves, with no hooks to install. Every second the server
+  reads Claude's own files:
+  - the list of open sessions decides each agent's state (working, waiting for you, idle, waiting for a shell);
+  - the conversation file supplies prompts, tools, tasks, tokens and the session title;
+  - the `subagents/` folder supplies subagents.
+- Checked live against this machine: this very session showed up as "working" in the right room, with its title, the
+  command it was running, and a background job. Your other open session (3d-snake-game) showed up as idle.
+- **Subagent transcripts are now verified against a real file.** To capture one, I ran one tiny read-only subagent
+  (it listed the ADR files). Its sanitized transcript is in `test/fixtures/claude-code/subagent/`. Two things are
+  new since Habblaud's notes:
+  - the subagent's `.meta.json` gains `finished: true` when it's done (I use it as an end signal);
+  - a subagent ends with a `SubagentHandback` tool call rather than a normal reply.
+- Privacy rules applied:
+  - the files holding full API requests and the `credential_org` record are skipped before they're even parsed;
+  - file contents in Write/Edit tool calls never leave the adapter;
+  - `.key` files are never opened.
+- A reused process ID can't keep a dead session alive. On Windows the process start time is checked once per
+  session (P0-05's `procStart`).
+- New settings:
+  - `AGENT_OFFICE_CLAUDE_DIRS` overrides which Claude folders are watched;
+  - `AGENT_OFFICE_IN_DOCKER` turns off process checks.
+- 66 new tests, ported from Habblaud's, plus replays of every real Claude fixture.
+- Not ported yet: Habblaud's GitHub-event detection (PR/merge/CI celebrations) and the "already answered question"
+  tweak. Both are cosmetic and are listed for Phase 6.

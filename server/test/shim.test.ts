@@ -114,7 +114,8 @@ describe('hooks/shim.mjs as a real process', () => {
       expect(r.stdout).toBe('');
       expect(r.ms).toBeLessThan(8_000);
     }
-  });
+    // Five real process spawns in a row: the per-run budget above is what's tested, not the suite's default 5 s.
+  }, 45_000);
 });
 
 describe('shim kit functions', () => {

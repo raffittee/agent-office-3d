@@ -14,6 +14,8 @@ export interface Config {
   dev: boolean;
   /** Start the demo simulator (AGENT_OFFICE_DEMO=1). */
   demo: boolean;
+  /** Running in a container: the agents' PIDs are the host's and can't be probed (AGENT_OFFICE_IN_DOCKER or /.dockerenv). */
+  inDocker: boolean;
   home: string;
   /** Where Agent Office keeps its own state (names, room aliases, hook config). */
   dataDir: string;
@@ -92,6 +94,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env, argv: readonly 
     port: parsePort(env.AGENT_OFFICE_PORT),
     dev: argv.includes('--dev'),
     demo: isTruthy(env.AGENT_OFFICE_DEMO) || argv.includes('--demo'),
+    inDocker: isTruthy(env.AGENT_OFFICE_IN_DOCKER) || (process.platform === 'linux' && existsSync('/.dockerenv')),
     home,
     dataDir: resolve(env.AGENT_OFFICE_DATA_DIR?.trim() || join(home, '.agent-office')),
     allowedHosts: parseAllowedHosts(env.AGENT_OFFICE_ALLOWED_HOSTS),

@@ -30,12 +30,13 @@ jobs:
 
       - run: npm ci
       - run: npm run typecheck
+      - run: npm run theme:check
       - run: npm test
       - run: npm run build
 
       # P2-11: render the demo office in Chrome (software WebGL) and keep the screenshots.
       - if: matrix.os == 'ubuntu-latest'
-        run: npm run shot -- --out artifacts
+        run: npm run shot -- --out artifacts --themes
       - if: always() && matrix.os == 'ubuntu-latest'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

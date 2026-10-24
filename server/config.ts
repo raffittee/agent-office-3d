@@ -24,10 +24,18 @@ export interface Config {
   /** Project root (where package.json is); dist/client is served from here. */
   rootDir: string;
   version: string;
+  /** The default theme pack id (AGENT_OFFICE_THEME); the browser falls back to its built-in default if unknown. */
+  theme?: string;
 }
 
 export const DEFAULT_PORT = 4848;
 export const DEFAULT_HOST = '127.0.0.1';
+
+/** A theme pack id (AGENT_OFFICE_THEME): lowercase letters, digits and dashes; anything else is ignored. */
+export function parseTheme(raw: string | undefined): string | undefined {
+  const v = raw?.trim().toLowerCase();
+  return v && /^[a-z0-9][a-z0-9-]{0,39}$/.test(v) ? v : undefined;
+}
 
 export function isTruthy(v: string | undefined): boolean {
   return !!v && /^(1|true|yes|on)$/i.test(v.trim());
@@ -100,5 +108,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env, argv: readonly 
     allowedHosts: parseAllowedHosts(env.AGENT_OFFICE_ALLOWED_HOSTS),
     rootDir,
     version: readVersion(rootDir),
+    ...(parseTheme(env.AGENT_OFFICE_THEME) ? { theme: parseTheme(env.AGENT_OFFICE_THEME) } : {}),
   };
 }

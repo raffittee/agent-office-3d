@@ -1,6 +1,7 @@
 // Ported from habblaud client/src/world/layout/corridor.ts (MIT, © 2026 Márcio Junior)
 // The corridor that runs through the building from west to east, with water coolers, benches and plants.
 import { COL_W, CORE_COLS, CORRIDOR_H, CORRIDOR_Y } from '../constants';
+import type { LayoutTemplate } from '../../../../shared/theme';
 import { AreaBuilder } from './builder';
 import type { AreaLayout } from './types';
 
@@ -11,7 +12,7 @@ const SMALL = ['fern', 'succulent', 'flower'] as const;
 /** Runner rug: one discreet grey-blue family, with a slight variation in tone. */
 const RUNNERS = ['#8b9bb0', '#8597ab', '#909fb3'] as const;
 
-export function layoutCorridor(cols: number): AreaLayout {
+export function layoutCorridor(cols: number, template: LayoutTemplate = 'corridor'): AreaLayout {
   const w = cols * COL_W;
   const b = new AreaBuilder(CORRIDOR_ID, 'corridor', { x: 0, y: CORRIDOR_Y, w, h: CORRIDOR_H });
   b.floor('concrete', 0, 0, w, CORRIDOR_H, 501);
@@ -48,8 +49,8 @@ export function layoutCorridor(cols: number): AreaLayout {
     }
     // a tall plant where room walls meet (every other column)
     if (!last && c % 2 === 1) b.furn('plant_tall', x + 15, 4, TALL[(c + 1) % TALL.length], { order: 0.5 });
-    // a narrow runner (one piece per column), centred in the corridor
-    b.rug(x + 2, 1.95, COL_W - 4, 1.1, RUNNERS[c % RUNNERS.length]!, 502 + c);
+    // a narrow runner (one piece per column), centred in the corridor; the loft's hall has none
+    if (template !== 'loft') b.rug(x + 2, 1.95, COL_W - 4, 1.1, RUNNERS[c % RUNNERS.length]!, 502 + c);
     // chat spots in the middle of the corridor
     b.spot('talk', x + 5, 2, 'right', { group: `talk:corridor:${c}`, dx: -1 });
     b.spot('talk', x + 6, 2, 'left', { group: `talk:corridor:${c}`, dx: 1 });

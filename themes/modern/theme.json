@@ -1,0 +1,18 @@
+{
+  "$schema": "../theme.schema.json",
+  "id": "modern",
+  "name": "Modern",
+  "schema": 1,
+  "description": "A bright, clean office: light floors, white walls, glass and pastel rooms. The default.",
+  "author": "Agent Office contributors",
+  "license": "CC0-1.0",
+  "layout": { "template": "corridor", "wallHeight": 2.8 },
+  "palette": { "base": "#eef1f4", "accent": "#3f7fd8", "background": "#dfe3e8" },
+  "materials": {
+    "floor": { "preset": "marble", "color": "#e8e4dc" },
+    "corridorFloor": { "preset": "concrete", "color": "#c4c2bd" },
+    "ground": { "color": "#cbc6bc" }
+  },
+  "lighting": { "ambient": "#ffffff", "ground": "#b9b2a6", "ambientIntensity": 1.9, "sun": { "color": "#fff3df", "intensity": 1.6 }, "practicals": "none" },
+  "decor": [{ "kind": "plant_wall", "on": "core", "density": 0.3 }]
+}

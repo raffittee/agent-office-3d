@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_HOST, DEFAULT_PORT, isLoopbackBind, isTruthy, loadConfig, parsePort } from './config';
+import { DEFAULT_HOST, DEFAULT_PORT, isLoopbackBind, isTruthy, loadConfig, parsePort, parseTheme } from './config';
 
 describe('config', () => {
   it('defaults to a local bind on 4848 and ~/.agent-office', () => {
@@ -32,5 +32,12 @@ describe('config', () => {
     for (const v of [undefined, '', '0', 'off', 'no']) expect(isTruthy(v)).toBe(false);
     for (const v of ['127.0.0.1', '127.5.5.5', 'localhost', '::1', '[::1]', '0:0:0:0:0:0:0:1']) expect(isLoopbackBind(v)).toBe(true);
     for (const v of ['0.0.0.0', '::', '192.168.1.10', 'my-pc.local', undefined]) expect(isLoopbackBind(v)).toBe(false);
+  });
+  it('AGENT_OFFICE_THEME: a pack id, or nothing', () => {
+    expect(parseTheme(' Industrial ')).toBe('industrial');
+    expect(parseTheme('../etc')).toBeUndefined();
+    expect(parseTheme('')).toBeUndefined();
+    expect(loadConfig({ AGENT_OFFICE_THEME: 'startup' }, []).theme).toBe('startup');
+    expect(loadConfig({}, []).theme).toBeUndefined();
   });
 });

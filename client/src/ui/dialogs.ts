@@ -1,6 +1,7 @@
-// Settings (a skeleton for now: the world options) and the help/shortcuts dialog (P2-10).
+// Settings (the theme picker, P4-09, and the world options) and the help/shortcuts dialog (P2-10).
 import { t } from '../../../shared/i18n';
 import type { WorldApi, WorldSettings } from '../render3d/world';
+import { themes, type ThemeEntry } from '../themes/registry';
 import { button, el, prefs } from './dom';
 
 export const SETTINGS_KEY = 'world';
@@ -46,6 +47,56 @@ function toggle(label: string, value: boolean, onChange: (v: boolean) => void): 
   return row;
 }
 
+/** A theme's card: its thumbnail, or a swatch drawn from its colors when the pack has none. */
+function themeCard(entry: ThemeEntry, selected: boolean, onPick: () => void): HTMLElement {
+  const look = entry.look;
+  const card = el('button', `ui-theme${selected ? ' is-selected' : ''}`);
+  card.type = 'button';
+  card.title = look.pack.description ?? look.name;
+  card.setAttribute('aria-pressed', String(selected));
+  const pic = el('span', 'ui-theme-pic');
+  if (entry.thumbnail) {
+    const img = el('img');
+    img.src = entry.thumbnail;
+    img.alt = '';
+    img.loading = 'lazy';
+    pic.append(img);
+  } else {
+    const room = look.roomTheme(0);
+    const floor = look.floor('room', 'marble').color;
+    pic.style.background = `linear-gradient(180deg, ${look.background} 0 18%, ${room.wall.base} 18% 46%, ${room.wall.trim} 46% 49%, ${floor} 49% 100%)`;
+    const dots = el('span', 'ui-theme-dots');
+    for (let s = 0; s < 4; s++) {
+      const d = el('i');
+      d.style.background = look.roomTheme(s).accent;
+      dots.append(d);
+    }
+    pic.append(dots);
+  }
+  card.append(pic, el('span', 'ui-theme-name', look.name));
+  card.addEventListener('click', onPick);
+  return card;
+}
+
+function themePicker(world: WorldApi, set: (patch: Partial<WorldSettings>) => void): HTMLElement {
+  const wrap = el('div', 'ui-themes');
+  wrap.setAttribute('role', 'group');
+  wrap.setAttribute('aria-label', t('Theme'));
+  const render = () => {
+    const current = world.theme().look.id;
+    wrap.replaceChildren(
+      ...themes().map((entry) =>
+        themeCard(entry, entry.look.id === current, () => {
+          set({ theme: entry.look.id });
+          render();
+        }),
+      ),
+    );
+  };
+  render();
+  return wrap;
+}
+
 export function openSettings(root: HTMLElement, world: WorldApi): () => void {
   const o = world.getOptions();
   const set = (patch: Partial<WorldSettings>) => {
@@ -56,6 +107,9 @@ export function openSettings(root: HTMLElement, world: WorldApi): () => void {
   const back = modal(
     t('Settings'),
     [
+      el('h3', 'ui-section', t('Theme')),
+      themePicker(world, set),
+      el('h3', 'ui-section', t('Office')),
       toggle(t('Show names'), o.showNames, (v) => set({ showNames: v })),
       select(t('Activity bubbles'), o.bubbles, [
         ['all', t('All')],
@@ -76,7 +130,7 @@ export function openSettings(root: HTMLElement, world: WorldApi): () => void {
         ['cut', t('Cut down')],
         ['hide', t('Hidden')],
       ], (v) => set({ cutaway: v })),
-      el('p', 'ui-empty', t('More settings (themes, sounds, notifications) arrive in later phases.')),
+      el('p', 'ui-empty', t('More settings (sounds, notifications) arrive in later phases.')),
     ],
     close,
   );

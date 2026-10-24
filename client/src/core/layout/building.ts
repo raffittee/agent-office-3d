@@ -1,9 +1,10 @@
 // Ported from habblaud client/src/world/layout/building.ts (MIT, © 2026 Márcio Junior)
 // Assembles the building: core + corridor + project rooms → walkability grid and spots.
-import { BUILDING_H, COL_W } from '../constants';
+import type { LayoutTemplate } from '../../../../shared/theme';
+import { BUILDING_H, COL_W, CORRIDOR_Y, ROOM_H, SOUTH_Y } from '../constants';
 import { BLOCKED, FREE, SEAT, WalkGrid } from '../nav/grid';
 import { FURNITURE } from '../vocab';
-import { furnitureBlocks, furnitureIsSeat } from './builder';
+import { AreaBuilder, furnitureBlocks, furnitureIsSeat } from './builder';
 import { layoutCafe, layoutLounge, layoutReception, layoutRestroom } from './core';
 import { layoutCorridor } from './corridor';
 import { buildingRect } from './geometry';
@@ -15,6 +16,9 @@ export interface BuildingLayout {
   core: AreaLayout[];
   corridor: AreaLayout;
   rooms: AreaLayout[];
+  /** Open templates: the building's east wall (rooms there have side openings). */
+  edge?: AreaLayout;
+  template: LayoutTemplate;
   grid: WalkGrid;
   spots: SpotDef[];
 }
@@ -47,12 +51,33 @@ export function buildWalkGrid(cols: number, areas: readonly AreaLayout[], versio
   return grid;
 }
 
-export function assembleBuilding(cols: number, rooms: readonly AreaLayout[], version = 0): BuildingLayout {
+export const EDGE_ID = 'core:edge';
+
+/**
+ * Open templates (P4-03): rooms have openings in their side walls, so the last column needs the building's east wall
+ * back. Painted last, so its blocked strip wins over the rooms' openings.
+ */
+export function layoutEdge(cols: number): AreaLayout {
+  const x = cols * COL_W;
+  const b = new AreaBuilder(EDGE_ID, 'corridor', { x: x - 1, y: 0, w: 1, h: BUILDING_H });
+  const style = { base: '#eef1f4', exterior: true };
+  // a hair thicker than a room's own side wall, so the two never z-fight
+  b.cap(0.45, 0, 0.57, ROOM_H, style);
+  b.cap(0.45, SOUTH_Y, 0.57, ROOM_H, style);
+  b.area.blocked = [
+    { x: x - 1, y: 0, w: 1, h: CORRIDOR_Y },
+    { x: x - 1, y: SOUTH_Y, w: 1, h: ROOM_H },
+  ];
+  return b.build();
+}
+
+export function assembleBuilding(cols: number, rooms: readonly AreaLayout[], version = 0, template: LayoutTemplate = 'corridor'): BuildingLayout {
   const core = coreAreas();
-  const corridor = layoutCorridor(cols);
-  const all = [...core, corridor, ...rooms];
+  const corridor = layoutCorridor(cols, template);
+  const edge = template === 'corridor' ? undefined : layoutEdge(cols);
+  const all = [...core, corridor, ...rooms, ...(edge ? [edge] : [])];
   const grid = buildWalkGrid(cols, all, version);
   const spots: SpotDef[] = [];
   for (const a of all) spots.push(...a.spots);
-  return { cols, rect: buildingRect(cols), core, corridor, rooms: [...rooms], grid, spots };
+  return { cols, rect: buildingRect(cols), core, corridor, rooms: [...rooms], ...(edge ? { edge } : {}), template, grid, spots };
 }

@@ -1,0 +1,50 @@
+{
+  "$schema": "../theme.schema.json",
+  "id": "industrial",
+  "name": "Industrial Loft",
+  "schema": 1,
+  "description": "A converted factory hall: exposed brick, concrete floors, steel beams, ducts, Edison bulbs and factory windows, with metal-and-wood furniture and pallet tables.",
+  "author": "Agent Office contributors",
+  "license": "CC0-1.0",
+  "layout": { "template": "loft", "wallHeight": 3.6 },
+  "palette": { "base": "#2b2b2b", "accent": "#d97a2b", "background": "#2a2826" },
+  "materials": {
+    "floor": { "preset": "concrete", "color": "#9a9993", "roughness": 0.9 },
+    "corridorFloor": { "preset": "concrete", "color": "#7e7d79" },
+    "coreFloor": { "preset": "concrete", "color": "#85837e" },
+    "loungeFloor": { "preset": "wood", "color": "#8a6446" },
+    "restroomFloor": { "preset": "tile", "color": "#b9b6ae" },
+    "wall": { "preset": "brick", "color": "#a8634a" },
+    "exteriorWall": { "preset": "brick", "color": "#9a5a44" },
+    "trim": { "color": "#3a3836" },
+    "ground": { "color": "#4a4744" }
+  },
+  "lighting": { "ambient": "#ffe9d0", "ground": "#8a7a68", "ambientIntensity": 2.1, "sun": { "color": "#ffe2b8", "intensity": 1.3 }, "practicals": "edison-bulbs" },
+  "kit": { "frame": "#2b2d30", "top": "#a77b4f", "body": "#6b6f75", "seat": "#5a3e2b" },
+  "furniture": {
+    "desk": { "procedural": "trestle" },
+    "desk_back": { "procedural": "trestle" },
+    "cafe_table": { "procedural": "trestle" },
+    "meeting_table": { "procedural": "pallet" },
+    "coffee_table": { "procedural": "pallet" },
+    "bookshelf": { "procedural": "pipe-shelf" },
+    "binder_shelf": { "procedural": "pipe-shelf" },
+    "sofa": { "colors": { "seat": "#7a4a2e", "body": "#6a3f27" } },
+    "armchair": { "colors": { "seat": "#7a4a2e" } },
+    "filing_cabinet": { "colors": { "body": "#5d6670" } }
+  },
+  "decor": [
+    { "kind": "pipes", "on": "everywhere", "density": 0.6 },
+    { "kind": "beams", "on": "everywhere", "density": 0.5 },
+    { "kind": "factory_windows", "on": "everywhere", "density": 0.7 },
+    { "kind": "pendant_bulbs", "on": "rooms", "density": 1 }
+  ],
+  "roomVariants": [
+    { "accent": "#d97a2b", "carpet": "#6e5a4a", "chair": "#5a3e2b" },
+    { "accent": "#3f8f8a", "carpet": "#4f5f5c", "chair": "#2f3a3a" },
+    { "accent": "#c9a227", "carpet": "#6b6248", "chair": "#4a3a22" },
+    { "accent": "#b5473a", "carpet": "#5e4744", "chair": "#3b2a26" },
+    { "accent": "#6c7fa3", "carpet": "#4d5566", "chair": "#2e3442" }
+  ],
+  "postfx": { "bloom": 0.25, "ao": true }
+}

@@ -1,0 +1,650 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-office.local/theme.schema.json",
+  "title": "Agent Office theme pack",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{0,39}$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 60
+    },
+    "schema": {
+      "const": 1
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 300
+    },
+    "author": {
+      "type": "string",
+      "maxLength": 300
+    },
+    "license": {
+      "type": "string",
+      "maxLength": 300
+    },
+    "thumbnail": {
+      "type": "string",
+      "pattern": "^(?!.*\\.\\.)(?!/)[\\w.-]+(/[\\w.-]+)*\\.(png|webp)$"
+    },
+    "layout": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "template": {
+          "enum": [
+            "corridor",
+            "open-plan",
+            "loft"
+          ]
+        },
+        "wallHeight": {
+          "type": "number",
+          "minimum": 2,
+          "maximum": 6
+        },
+        "roomSize": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 2,
+          "maxItems": 2
+        }
+      },
+      "required": [
+        "template"
+      ]
+    },
+    "palette": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "base": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        },
+        "accent": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        },
+        "background": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        },
+        "text": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        }
+      },
+      "required": [
+        "base",
+        "accent"
+      ]
+    },
+    "materials": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "floor": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "preset": {
+              "enum": [
+                "plain",
+                "wood",
+                "concrete",
+                "brick",
+                "carpet",
+                "tile",
+                "marble",
+                "metal",
+                "glass",
+                "plaster"
+              ]
+            },
+            "color": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "roughness": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          }
+        },
+        "corridorFloor": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "preset": {
+              "enum": [
+                "plain",
+                "wood",
+                "concrete",
+                "brick",
+                "carpet",
+                "tile",
+                "marble",
+                "metal",
+                "glass",
+                "plaster"
+              ]
+            },
+            "color": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "roughness": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          }
+        },
+        "coreFloor": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "preset": {
+              "enum": [
+                "plain",
+                "wood",
+                "concrete",
+                "brick",
+                "carpet",
+                "tile",
+                "marble",
+                "metal",
+                "glass",
+                "plaster"
+              ]
+            },
+            "color": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "roughness": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          }
+        },
+        "loungeFloor": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "preset": {
+              "enum": [
+                "plain",
+                "wood",
+                "concrete",
+                "brick",
+                "carpet",
+                "tile",
+                "marble",
+                "metal",
+                "glass",
+                "plaster"
+              ]
+            },
+            "color": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "roughness": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          }
+        },
+        "restroomFloor": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "preset": {
+              "enum": [
+                "plain",
+                "wood",
+                "concrete",
+                "brick",
+                "carpet",
+                "tile",
+                "marble",
+                "metal",
+                "glass",
+                "plaster"
+              ]
+            },
+            "color": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "roughness": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          }
+        },
+        "wall": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "preset": {
+              "enum": [
+                "plain",
+                "wood",
+                "concrete",
+                "brick",
+                "carpet",
+                "tile",
+                "marble",
+                "metal",
+                "glass",
+                "plaster"
+              ]
+            },
+            "color": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "roughness": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          }
+        },
+        "exteriorWall": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "preset": {
+              "enum": [
+                "plain",
+                "wood",
+                "concrete",
+                "brick",
+                "carpet",
+                "tile",
+                "marble",
+                "metal",
+                "glass",
+                "plaster"
+              ]
+            },
+            "color": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "roughness": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          }
+        },
+        "trim": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "preset": {
+              "enum": [
+                "plain",
+                "wood",
+                "concrete",
+                "brick",
+                "carpet",
+                "tile",
+                "marble",
+                "metal",
+                "glass",
+                "plaster"
+              ]
+            },
+            "color": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "roughness": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          }
+        },
+        "ground": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "preset": {
+              "enum": [
+                "plain",
+                "wood",
+                "concrete",
+                "brick",
+                "carpet",
+                "tile",
+                "marble",
+                "metal",
+                "glass",
+                "plaster"
+              ]
+            },
+            "color": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "roughness": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          }
+        },
+        "rug": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "preset": {
+              "enum": [
+                "plain",
+                "wood",
+                "concrete",
+                "brick",
+                "carpet",
+                "tile",
+                "marble",
+                "metal",
+                "glass",
+                "plaster"
+              ]
+            },
+            "color": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "roughness": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          }
+        }
+      }
+    },
+    "lighting": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "ambient": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        },
+        "ambientIntensity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 5
+        },
+        "ground": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        },
+        "sun": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "color": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "intensity": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 5
+            }
+          }
+        },
+        "practicals": {
+          "enum": [
+            "none",
+            "edison-bulbs",
+            "fluorescent",
+            "neon",
+            "warm"
+          ]
+        }
+      }
+    },
+    "kit": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "body": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        },
+        "top": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        },
+        "frame": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        },
+        "seat": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        },
+        "accent": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        },
+        "foliage": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        },
+        "pot": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        },
+        "screen": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        }
+      }
+    },
+    "furniture": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "model": {
+            "type": "string",
+            "pattern": "^(?!.*\\.\\.)(?!/)[\\w.-]+(/[\\w.-]+)*\\.(glb)$"
+          },
+          "scale": {
+            "type": "number",
+            "minimum": 0.01,
+            "maximum": 100
+          },
+          "yaw": {
+            "type": "number",
+            "minimum": -360,
+            "maximum": 360
+          },
+          "variants": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "procedural": {
+            "enum": [
+              "default",
+              "stool",
+              "trestle",
+              "cubicle",
+              "pallet",
+              "pipe-shelf",
+              "tufted"
+            ]
+          },
+          "params": {
+            "type": "object"
+          },
+          "colors": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "body": {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$"
+              },
+              "top": {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$"
+              },
+              "frame": {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$"
+              },
+              "seat": {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$"
+              },
+              "accent": {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$"
+              },
+              "foliage": {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$"
+              },
+              "pot": {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$"
+              },
+              "screen": {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$"
+              }
+            }
+          }
+        }
+      }
+    },
+    "decor": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "enum": [
+              "pipes",
+              "beams",
+              "pendant_bulbs",
+              "plant_wall",
+              "neon",
+              "certificates",
+              "factory_windows",
+              "string_lights",
+              "fluorescent",
+              "wainscot"
+            ]
+          },
+          "on": {
+            "enum": [
+              "rooms",
+              "core",
+              "everywhere"
+            ]
+          },
+          "density": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "color": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$"
+          }
+        },
+        "required": [
+          "kind",
+          "on"
+        ]
+      }
+    },
+    "roomVariants": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "accent": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$"
+          },
+          "carpet": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$"
+          },
+          "wall": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$"
+          },
+          "desk": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$"
+          },
+          "chair": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$"
+          }
+        },
+        "required": [
+          "accent"
+        ]
+      }
+    },
+    "postfx": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "bloom": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 2
+        },
+        "ao": {
+          "type": "boolean"
+        }
+      }
+    }
+  },
+  "required": [
+    "id",
+    "name",
+    "schema",
+    "layout",
+    "palette"
+  ]
+}

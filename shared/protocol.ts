@@ -405,6 +405,8 @@ export interface OfficeSnapshot {
     version: string;
     /** Build id of the client the server serves; a page with another build reloads. Absent in dev. */
     build?: string;
+    /** The default theme pack id (AGENT_OFFICE_THEME); a theme picked in the browser wins. */
+    theme?: string;
   };
 }
 

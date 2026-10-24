@@ -2,7 +2,10 @@
 // Screenshot smoke test (P2-11): starts the built server on a free port, opens the demo office in Chromium
 // (playwright-core), waits for the scene, saves screenshots and fails on page errors or an empty scene.
 //
-//   npm run build && npm run shot [-- --out artifacts --sessions 8 --seed 7]
+//   npm run build && npm run shot [-- --out artifacts --sessions 8 --seed 7] [--themes] [--thumbs]
+//
+// --themes also switches live to every theme pack and saves theme-<id>.png (P4-02: no page errors, state kept).
+// --thumbs writes each theme's picker thumbnail to themes/<id>/thumb.png (run after changing a built-in theme).
 //
 // Browser: $CHROME_PATH if set, else the installed Chrome ("chrome" channel), else Playwright's own Chromium.
 // Software WebGL (SwiftShader) is fine: this checks that the office renders, not how fast.
@@ -23,6 +26,8 @@ const arg = (name, def) => {
 const out = resolve(root, arg('out', 'artifacts'));
 const sessions = Number(arg('sessions', '8'));
 const seed = Number(arg('seed', '7'));
+const allThemes = args.includes('--themes') || args.includes('--thumbs');
+const thumbs = args.includes('--thumbs');
 
 const freePort = () =>
   new Promise((ok, fail) => {
@@ -81,7 +86,28 @@ async function main() {
     await page.waitForTimeout(2500);
     await page.screenshot({ path: join(out, 'selected.png') });
     const drawer = await page.isVisible('.ui-drawer');
-    const result = { overview, drawer, errors };
+    const themes = {};
+    if (allThemes) {
+      await page.keyboard.press('Escape');
+      await page.evaluate(() => window.agentOffice.world.overview());
+      const ids = await page.evaluate(() => window.agentOffice.themes().map((t) => t.look.id));
+      for (const id of ids) {
+        const agents = await page.evaluate(() => window.agentOffice.world.stats().agents);
+        await page.evaluate((theme) => window.agentOffice.world.setOptions({ theme }), id);
+        await page.waitForTimeout(3500);
+        const stats = await page.evaluate(() => window.agentOffice.world.stats());
+        themes[id] = { calls: stats.calls, triangles: stats.triangles, agents: stats.agents, keptAgents: stats.agents >= agents };
+        await page.screenshot({ path: join(out, `theme-${id}.png`) });
+        if (thumbs) {
+          await page.evaluate(() => document.getElementById('ui').style.setProperty('visibility', 'hidden'));
+          await page.evaluate(() => document.getElementById('labels').style.setProperty('visibility', 'hidden'));
+          await page.screenshot({ path: join(root, 'themes', id, 'thumb.png'), clip: { x: 400, y: 170, width: 800, height: 500 }, scale: 'css' });
+          await page.evaluate(() => document.getElementById('ui').style.removeProperty('visibility'));
+          await page.evaluate(() => document.getElementById('labels').style.removeProperty('visibility'));
+        }
+      }
+    }
+    const result = { overview, drawer, themes, errors };
     writeFileSync(join(out, 'shot.json'), `${JSON.stringify(result, null, 2)}\n`);
     console.log(JSON.stringify(result));
     const problems = [];
@@ -89,6 +115,10 @@ async function main() {
     if (!overview.agents || !overview.rooms) problems.push('empty scene');
     if (overview.calls > 300) problems.push(`${overview.calls} draw calls (budget 300)`);
     if (!drawer) problems.push('the details drawer did not open');
+    for (const [id, t] of Object.entries(themes)) {
+      if (t.calls > 300) problems.push(`${id}: ${t.calls} draw calls (budget 300)`);
+      if (!t.keptAgents) problems.push(`${id}: agents lost on the theme switch`);
+    }
     if (problems.length) throw new Error(problems.join(', '));
     console.log(`screenshots in ${out}`);
   } finally {

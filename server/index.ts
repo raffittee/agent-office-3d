@@ -41,6 +41,7 @@ const office = new Office({
   sources: () => adapters.sources(),
   providers,
   demo: config.demo,
+  ...(config.theme ? { theme: config.theme } : {}),
 });
 await adapters.start(office);
 const hub = new Hub(office);

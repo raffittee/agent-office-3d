@@ -1,5 +1,6 @@
 // The renderer and the scene (P2-05): color management, lights, resizing with a capped device pixel ratio.
 import * as THREE from 'three';
+import type { Look } from '../themes/look';
 
 export type Quality = 'low' | 'medium' | 'high';
 
@@ -58,4 +59,15 @@ export function createScene(canvas: HTMLCanvasElement, quality: Quality = 'mediu
       renderer.dispose();
     },
   };
+}
+
+/** Applies a theme's lighting rig and background (P4-02). */
+export function applyLighting(parts: SceneParts, look: Look): void {
+  const l = look.lighting;
+  parts.hemi.color.set(l.sky);
+  parts.hemi.groundColor.set(l.ground);
+  parts.hemi.intensity = l.intensity;
+  parts.sun.color.set(l.sun);
+  parts.sun.intensity = l.sunIntensity;
+  parts.renderer.setClearColor(look.background);
 }

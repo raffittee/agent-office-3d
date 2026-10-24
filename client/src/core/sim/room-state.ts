@@ -14,6 +14,21 @@ import { lightLevel } from './behavior';
  */
 export type RoomPhase = 'building' | 'ready' | 'dismantling' | 'gone';
 
+/** A room effect on the local clock. */
+export interface RoomFx {
+  kind: 'party' | 'alarm';
+  text: string;
+  /** Server start (identity). */
+  at: number;
+  start: number;
+  end: number;
+}
+
+/** Fade in over 300 ms and out over 600 ms: 0..1. */
+export function fxFade(fx: Pick<RoomFx, 'start' | 'end'>, now: number): number {
+  return Math.max(0, Math.min(1, (now - fx.start) / 300, (fx.end - now) / 600));
+}
+
 export class RoomState {
   info: RoomInfo;
   /** The seed the palette and layout were made from (fixed at creation, even if info.seed changes). */
@@ -43,6 +58,8 @@ export class RoomState {
    * dismantled. Nobody belongs to it and it isn't in the snapshot.
    */
   ghost = false;
+  /** The room's party or alarm (P6-04) on the local clock, or null. */
+  fx: RoomFx | null = null;
 
   constructor(info: RoomInfo, theme: RoomTheme, layout: AreaLayout, phase: RoomPhase, now: number, lit: boolean, slot: number) {
     this.info = info;
@@ -54,6 +71,19 @@ export class RoomState {
     this.phaseAt = now;
     this.lightOn = lit;
     if (lit) this.lightAt = now - 10_000;
+  }
+
+  /** Takes the snapshot's effect, moved from the server's clock to the local one. */
+  syncEffect(serverTime: number, now: number): void {
+    const e = this.info.effect;
+    if (!e) {
+      this.fx = null;
+      return;
+    }
+    const start = now - Math.max(0, serverTime - e.at);
+    // the same effect (same `at`) keeps its start, so the fade-in doesn't restart on every snapshot
+    if (this.fx && this.fx.at === e.at) this.fx.end = now + (e.until - serverTime);
+    else this.fx = { kind: e.kind, text: e.text, at: e.at, start, end: now + (e.until - serverTime) };
   }
 
   get id(): string {

@@ -529,30 +529,53 @@ Python and both examples) in the office alongside the built-in providers.
 
 ## Phase 6: Life & atmosphere
 
-- [ ] **P6-01 Idle life & social** (L)
+- [x] **P6-01 Idle life & social** (L) — done: `client/src/core/social/` (personas with our own traits, bonds;
+  gatherings: TV, ping-pong, arcade duels, kitchen chats, talks, rock-paper-scissors; a director that plans them through
+  the step queue, scores matches, cheers and sulks, and lets work call anyone away at once). Solo outings now follow
+  the persona. Habblaud's coin bets and World traits were left out.
   - Port the hangouts (TV, games, ping-pong, kitchen chats), the personalities, and gatherings onto 3D spots.
   - **Ref:** `client/src/world/social/*`.
-- [ ] **P6-02 Day/night** (M)
+- [x] **P6-02 Day/night** (M) — done: `client/src/core/daylight.ts` (Habblaud's curves, pure, tested), `applyDaylight`
+  in `render3d/scene.ts` (fill light cools and dims, the sun warms at dawn and dusk and crosses east → west, a moon
+  at night, the background follows the sky), empty rooms darker at night and lit areas lamp-tinted
+  (`BuildingView.setAmbient`); Settings → Day and night (auto / always day / always night); `?hour=21:30`. Sunbeams
+  through windows were left out (no shadow maps in the budget).
   - Sun, sky and exposure follow local time; light through the windows; practical lights at night.
   - A setting: automatic, always day, or always night.
   - **Ref:** `client/src/world/render/{daylight,lighting}.ts`.
-- [ ] **P6-03 Shell-wait gags** (S)
+- [x] **P6-03 Shell-wait gags** (S) — done: the escalation (hourglass, popcorn, crossed arms and chair spins, yawns,
+  cobweb, nap) already ran in the sim since P2-04; `render3d/effects.ts` adds the 3D side: a confetti burst on success,
+  a rain cloud with drops on failure, and a cobweb by the chair that doubles after 20 minutes (three instanced meshes).
   - Hourglass, popcorn, crossed arms, cobwebs, dozing off. Celebrate when the command succeeds; a rain cloud when
     it fails.
   - **Ref:** `client/src/world/sim/shell.ts`.
-- [ ] **P6-04 Room effects** (M)
+- [x] **P6-04 Room effects** (M) — done: `shared/room-effects.ts` turns `gh` commands and GitHub MCP tools into party
+  or alarm signals; the reducer sets `RoomInfo.effect` (party 12 s, alarm until green CI or 10 min) and notices;
+  `render3d/effects.ts` rains confetti and spins red beacons, `overlay.ts` adds the banner; the demo shows it.
   - GitHub party and alarm events (PR merged, CI red), generalized into a provider-neutral `RoomEffect`.
   - **Ref:** `server/sources/github.ts`, `shared/github.ts`, `client/src/world/render/github-fx.ts`.
-- [ ] **P6-05 Sounds** (M)
+- [x] **P6-05 Sounds** (M) — done: `client/src/audio/` (scheduler, synth, board; ported with tests),
+  `core/sound-cues.ts` (keys, elevator, games, pure), `WorldApi.onSound`, settings section; off by default.
   - Synthesized WebAudio cues: keys, the elevator ding, a bell when someone needs you, a click for a finished task.
   - Per-category volumes; off by default.
   - **Ref:** `client/src/audio/*`, `client/src/ui/sound.ts`.
-- [ ] **P6-06 Notifications** (S)
+- [x] **P6-06 Notifications** (S) — done: `client/src/ui/alerts.ts`: browser notification on `alert` notices with
+  the tab hidden (opt-in, asks permission), bell/click sounds per notice, "(n) Agent Office" tab title; toasts existed.
   - A browser notification and a toast when an agent needs you.
   - **Ref:** `client/src/ui/notify.ts`.
-- [ ] **P6-07 Seasonal overlays** (S)
+- [x] **P6-07 Seasonal overlays** (S) — done: `client/src/themes/seasonal.ts` (calendar rule, `seasonalLook` /
+  `seasonalEntry` on top of any theme: wall, rug and lamp tints; the pack's plant models set aside) and
+  `render3d/kit.ts` `seasonalParts` (jack-o'-lanterns, ghosts, decorated trees, gifts in the plants' footprints);
+  setting "Seasonal decorations" and `?season=`.
   - Halloween and holiday overlay packs that can be applied on top of any theme.
   - **Ref:** `client/src/world/render/seasonal.ts`.
+
+**Exit:** the office feels alive (subjective review).
+
+**Exit status (2026-10-25):** ready for your review. Idle agents socialize, the light follows the clock, rooms
+celebrate merges and sound the alarm on red CI, waits grow cobwebs, sounds and notifications are opt-in, and the
+seasonal decorations follow the calendar. Screenshots were checked in the cloud environment; the feel (and the sounds)
+need a look on your machine.
 
 ---
 

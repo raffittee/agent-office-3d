@@ -36,6 +36,7 @@ export function cutKey(yawDeg: number): string {
 type Bucket = Record<PartMaterial, THREE.BufferGeometry[]>;
 
 const tmpColor = new THREE.Color();
+const WHITE = new THREE.Color(1, 1, 1);
 
 function colored(g: THREE.BufferGeometry, color: string): THREE.BufferGeometry {
   tmpColor.set(color).convertSRGBToLinear();
@@ -312,6 +313,14 @@ export class BuildingView {
   private look: Look;
   private lookRev = 0;
   private modelled: ReadonlySet<FurnitureKind> = new Set();
+  /** Day and night (P6-02): 0 = day, 1 = night; `inside` tints lit common areas (lamp light at night). */
+  private night = 0;
+  private inside = new THREE.Color(1, 1, 1);
+
+  setAmbient(night: number, inside: readonly [number, number, number]): void {
+    this.night = night;
+    this.inside.setRGB(inside[0] / 255, inside[1] / 255, inside[2] / 255, THREE.SRGBColorSpace);
+  }
 
   constructor(look: Look) {
     this.root.name = 'building';
@@ -356,10 +365,15 @@ export class BuildingView {
       const g = cur.view.group;
       if (room) {
         g.scale.y = buildScale(room.phase, room.progress(now));
-        const k = roomBrightness(room.light(now));
-        cur.view.solid.color.setScalar(k);
+        const light = Math.max(0, Math.min(1, room.light(now)));
+        // a dark room is darker at night; a lit one glows with lamp light
+        const k = roomBrightness(light) * (1 - 0.45 * this.night * (1 - light));
+        cur.view.solid.color.copy(this.inside).lerp(WHITE, 1 - light).multiplyScalar(k);
         cur.view.glass.color.setScalar(k);
-        cur.view.glow.color.setScalar(0.15 + 0.85 * Math.max(0, Math.min(1, room.light(now))));
+        cur.view.glow.color.setScalar(0.15 + 0.85 * light);
+      } else {
+        cur.view.solid.color.copy(this.inside);
+        cur.view.glass.color.copy(this.inside);
       }
     }
     for (const [id, cur] of this.views) {

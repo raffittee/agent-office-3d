@@ -479,6 +479,16 @@
   color: var(--text);
   font: inherit;
 }
+.ui-field input[type='range'] {
+  width: 140px;
+  accent-color: var(--accent, #3b7bd8);
+}
+.ui-subfields {
+  padding-left: 14px;
+}
+.ui-subfields[hidden] {
+  display: none;
+}
 .ui-keys {
   display: grid;
   grid-template-columns: auto 1fr;

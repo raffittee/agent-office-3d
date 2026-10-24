@@ -534,7 +534,7 @@ Branch `phase-1`. One commit per task, each pushed. At the end of the phase ther
 
 ## Phase 4: Theme system (branch `phase-4`)
 
-### P4-01 to P4-09: themes — done, 2026-10-25 05:45
+### P4-01 to P4-09: themes — done, 2026-10-25 05:44
 
 - **Four built-in themes that switch live** (Settings → Theme): **Modern** (the look so far, now the default),
   **Industrial Loft** (brick, concrete, steel beams, ducts, factory windows, Edison bulbs, pallet tables), **Traditional
@@ -557,7 +557,7 @@ Branch `phase-1`. One commit per task, each pushed. At the end of the phase ther
     budget on integrated GPUs.
 - Clean-up: removed leftover profiling counters from the Phase 3 performance pass.
 
-### P4-10 Authoring kit — done, 2026-10-25 06:00
+### P4-10 Authoring kit — done, 2026-10-25 05:50
 
 - **Make your own theme without code:** `npm run theme:new -- harbour --name "Harbour Office"` creates a pack with
   every setting filled in (`--from industrial` starts from another theme). `docs/themes.md` walks through it step by
@@ -569,7 +569,7 @@ Branch `phase-1`. One commit per task, each pushed. At the end of the phase ther
 - The theme picker now shows a real thumbnail of each theme (`npm run shot -- --thumbs` re-renders them).
 - CI now screenshots every theme and the preview page (artifact `office-screenshots`).
 
-### Phase 4 closed — 2026-10-25 06:00
+### Phase 4 closed — 2026-10-25 05:52
 
 - All 10 tasks are ticked. Pull request `phase-4` → `main`.
 - **Try it:** Settings (gear icon) → Theme. Or `AGENT_OFFICE_THEME=industrial npm start` to change the default.
@@ -578,7 +578,7 @@ Branch `phase-1`. One commit per task, each pushed. At the end of the phase ther
 
 ## Phase 5: More providers & generic ingest (branch `phase-5`)
 
-### P5-01 Codex adapter — done, 2026-10-25 06:25
+### P5-01 Codex adapter — done, 2026-10-25 06:06
 
 - **Codex sessions now appear in the office**, with their subagents, background commands and token counts. It works
   without any setup (the office reads Codex's own files), and `npm run hooks:install -- --provider codex` adds faster
@@ -595,7 +595,7 @@ Branch `phase-1`. One commit per task, each pushed. At the end of the phase ther
   in `/hooks`, and check that a permission prompt shows the raised hand (that one case can't be produced without a
   real model).
 
-### P5-02 SDK emitters — done, 2026-10-25 06:45
+### P5-02 SDK emitters — done, 2026-10-25 06:10
 
 - **Any agent can now show up in the office.** Two one-file SDKs without dependencies: TypeScript
   (`sdk/ts/agent-office.ts`) and Python (`sdk/python/agent_office.py`). A few calls (`session_start`, `turn_start`,
@@ -605,12 +605,12 @@ Branch `phase-1`. One commit per task, each pushed. At the end of the phase ther
   default (TypeScript). Both were tested here against fake model servers; with a real key (or Ollama) they run as-is.
 - Reporting never crashes or slows the agent: if the office isn't running, events are simply dropped.
 
-### P5-03 "Add a provider" guide — done, 2026-10-25 06:50
+### P5-03 "Add a provider" guide — done, 2026-10-25 06:11
 
 - `docs/providers/adding-a-provider.md`: the checklist for teaching the office a new coding CLI, from recording what
   the real tool writes to the tests, with the Codex work as the example. (For your own agent, the SDK is enough.)
 
-### P5-04 Accounts & usage — done, 2026-10-25 07:10
+### P5-04 Accounts & usage — done, 2026-10-25 06:17
 
 - **Plan usage in the top bar:** each account shows its 5-hour and weekly bars (green, then amber above 70%, red above
   90%), with the reset times in the tooltip. Codex numbers come from its own files automatically.
@@ -623,14 +623,14 @@ Branch `phase-1`. One commit per task, each pushed. At the end of the phase ther
 - **Needs your machine:** after `npm run usage:install`, open a Claude Code session and check the bars appear (the
   statusline format came from Habblaud's notes; I couldn't capture it here without a signed-in session).
 
-### P5-05 Spike: OTLP receiver — done, 2026-10-25 07:25
+### P5-05 Spike: OTLP receiver — done, 2026-10-25 06:20
 
 - **Decision (ADR 0006): the office won't accept OpenTelemetry for now.** I captured the real telemetry Codex and
   Gemini CLI send. It doesn't say when a turn or session ends or which folder an agent works in, it includes command
   output and system instructions, and it's 26 to 120 times larger than what the hooks send. The hooks and file
   readers stay the way tools report. Numbers in `docs/spikes/otlp.md`.
 
-### Phase 5 closed — 2026-10-25 07:25
+### Phase 5 closed — 2026-10-25 06:29
 
 - All 5 tasks are ticked. Pull request `phase-5` → `main`.
 - **New since Phase 4:** Codex in the office (with or without hooks), SDKs for your own agents, plan usage in the
@@ -638,3 +638,68 @@ Branch `phase-1`. One commit per task, each pushed. At the end of the phase ther
 - **Needs your machine (optional):**
   - `npm run usage:install` for the Claude Code usage bars.
   - `npm run hooks:install -- --provider codex` if you use Codex (trust the hooks in Codex's `/hooks`).
+
+## Phase 6: Life & atmosphere (branch `phase-6`)
+
+### P6-01 Idle life & social — done, 2026-10-25 06:26
+
+- **Idle agents now hang out together:** they watch TV on the lounge sofa, play ping-pong (with spectators), have
+  arcade duels, chat over coffee in the kitchen, talk in the corridor, or settle something with rock, paper,
+  scissors. Matches keep score, the winner cheers with a trophy, the loser sulks. When work comes in, that agent heads
+  straight back to the desk.
+- **Each agent has a personality** (two or three traits like coffee lover, gamer, chatty, shy, sporty…) that decides
+  what it likes to do and who it hangs out with; some pairs are friends, a few are rivals. The same agent always has
+  the same personality.
+- Settings → "Idle agents wander" still sets how often this happens.
+
+### P6-02 Day and night — done, 2026-10-25 06:28
+
+- **The office follows your local time:** golden light at dawn and dusk, a dark blue night where lamps, screens and
+  rooms with the light on stand out, and empty rooms fade into the dark. Settings → "Day and night" can fix it to
+  always day or always night. `?hour=21:30` in the URL shows any time of day.
+
+### P6-03 Waiting-for-a-command gags — done, 2026-10-25 06:30
+
+- When a long command finishes, the agent now gets **real confetti** in 3D; when it fails, **a little rain cloud**
+  rains on its head. A very long wait grows **a cobweb** by its chair (bigger after 20 minutes) before it dozes off.
+
+### P6-04 Room effects — done, 2026-10-25 06:37
+
+- **A room throws a party** (confetti raining from the ceiling, a yellow banner on the room's name) when its agent
+  opens or merges a pull request or publishes a release. **Red CI raises an alarm:** two red beacons sweep the
+  room and the floor pulses red until a green CI ends it (with a short party) or 10 minutes pass. A notice tells you
+  either way.
+- Works the same for every provider: it's read from the commands an agent runs (`gh pr create`, `gh pr merge`,
+  `gh release create`, `gh pr checks --watch`, `gh run watch --exit-status`) and from GitHub MCP tools. Only
+  successful steps celebrate; auto-merges, drafts and text inside commit messages don't count. No GitHub token or
+  network access is needed.
+- With "reduce motion" turned on in your system, nothing spins, pulses or rains. `npm run demo` shows it now and then.
+- Fix: the Phase 4–6 timestamps above were ahead of the clock; they now match the commits.
+
+### P6-05 Sounds and P6-06 Notifications — done, 2026-10-25 06:40
+
+- **Sounds (off by default):** turn them on in Settings → "Sounds and notifications". You hear soft keystrokes from
+  agents typing on screen, a "ding" when the elevator opens, ping-pong and arcade games, a bell when an agent needs
+  you and a click when something finishes. The master volume and each kind (alerts, typing, elevator, games) can be set
+  separately. Everything is synthesized in the browser, with no audio files. While the tab is hidden, only the bell
+  plays.
+- **Notifications (off by default):** a browser notification when an agent needs you while the tab is in the
+  background (the browser asks for permission once; clicking it brings you to the agent). The tab title shows how many
+  agents are waiting for you, e.g. "(2) Agent Office". Toasts for every notice were already there.
+
+### P6-07 Seasonal decorations — done, 2026-10-25 06:44
+
+- **Halloween and the holidays, on top of any theme:** in October the plants become jack-o'-lanterns and ghosts and the
+  walls take a purple tint; in December (through January 1) they become decorated trees and gifts with green trim and
+  warmer lamps. Settings → "Seasonal decorations" follows the calendar by default, or can be turned off or fixed to
+  one. `?season=holiday` in the URL previews one. The layout and the agents' paths never change.
+- Since today is in October, you'll see the Halloween look right away; turn it off in Settings if you prefer.
+
+### Phase 6 closed — 2026-10-25 06:44
+
+- All 7 tasks are ticked. Pull request `phase-6` → `main`.
+- **New since Phase 5:** idle agents hang out and play, day and night follow your clock, rooms party on merges and
+  sound the alarm on red CI, long waits get gags, optional sounds and browser notifications, seasonal decorations.
+- **Needs your machine:** the exit check is subjective ("the office feels alive"): run `npm run demo`, turn on sounds
+  in Settings, and tell me what feels off.
+

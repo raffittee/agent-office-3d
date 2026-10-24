@@ -9,9 +9,14 @@ import { attachInput, CameraRig, type ViewInsets } from './camera';
 import { CharacterView } from './characters';
 import { Overlay } from './overlay';
 import { onThemesChanged, themeById, type ThemeEntry } from '../themes/registry';
+import { seasonalEntry, seasonFor, type Season, type SeasonMode } from '../themes/seasonal';
+import type { SoundCue } from '../audio/scheduler';
+import { SoundCues, type SoundView } from '../core/sound-cues';
+import { EffectsView } from './effects';
 import { ModelView } from './models';
 import { loadRigModel, RigView } from './rig';
-import { applyLighting, createScene, type Quality } from './scene';
+import { ambientAt, approachAmbient, effectiveHour, parseHourParam, type Ambient, type DaylightMode } from '../core/daylight';
+import { applyDaylight, applyLighting, createScene, type Quality } from './scene';
 import { ScreenView } from './screens';
 import { mx, mz, tm } from './units';
 
@@ -23,9 +28,13 @@ export interface WorldSettings extends WorldOptions {
   characters: 'rigged' | 'capsule';
   /** The theme pack id (P4-09); '' = the server's default. */
   theme: string;
+  /** Day and night (P6-02): follow the local time, or always day / night. */
+  daylight: DaylightMode;
+  /** Seasonal decorations (P6-07): follow the calendar, off, or a fixed one. */
+  season: SeasonMode;
 }
 
-export const DEFAULT_WORLD_SETTINGS: WorldSettings = { ...DEFAULT_WORLD_OPTIONS, cutaway: 'cut', characters: 'rigged', theme: '' };
+export const DEFAULT_WORLD_SETTINGS: WorldSettings = { ...DEFAULT_WORLD_OPTIONS, cutaway: 'cut', characters: 'rigged', theme: '', daylight: 'auto', season: 'auto' };
 
 /** Where the pipeline's character assets are served from, and the default character. */
 const CHARACTER_BASE = 'assets/characters';
@@ -51,6 +60,8 @@ export interface WorldApi {
   theme(): ThemeEntry;
   /** Frame stats for the debug readout and the smoke test. */
   stats(): { fps: number; cpuMs: number; phases: { sim: number; sync: number; render: number; labels: number }; calls: number; triangles: number; agents: number; rooms: number };
+  /** Ambient sound cues (P6-05): keys, elevator dings, games. The UI decides whether they play. */
+  onSound(cb: (cue: SoundCue) => void): () => void;
   readonly sim: Sim;
   destroy(): void;
 }
@@ -65,16 +76,41 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
   // world matrices are updated once per frame in the loop (before attachments), not again inside render()
   scene.matrixWorldAutoUpdate = false;
   // ---- theme: the pack picked in settings, else the server's default (AGENT_OFFICE_THEME), else the built-in default
-  let theme = themeById(options.theme || store.snapshot?.meta.theme);
+  // ---- seasonal overlay (P6-07) on top of the theme: ?season=halloween|holiday|none forces one (screenshots)
+  const seasonParam = new URLSearchParams(location.search).get('season');
+  const seasonOverride = seasonParam === 'halloween' || seasonParam === 'holiday' || seasonParam === 'none' ? seasonParam : null;
+  const season = (): Season => seasonFor(seasonOverride ?? options.season, new Date());
+  let shownSeason = season();
+  const themeFor = (id: string | undefined): ThemeEntry => seasonalEntry(themeById(id), (shownSeason = season()));
+  let theme = themeFor(options.theme || store.snapshot?.meta.theme);
   const sim = new Sim({ options: () => options, roomTheme: (seed) => theme.look.roomTheme(seed), template: theme.look.template });
   const building = new BuildingView(theme.look);
   const models = new ModelView((ready) => building.setLook(theme.look, ready));
   const chars = new CharacterView();
+  const cues = new SoundCues(sim);
+  const soundCbs = new Set<(c: SoundCue) => void>();
+  const soundPt = { x: 0, y: 0 };
+  const soundV = new THREE.Vector3();
+  const soundView: SoundView = {
+    visible(x, y) {
+      rig2d.project(soundV.set(mx(x), 0.8, mz(y)), soundPt);
+      return soundPt.x > -40 && soundPt.y > -40 && soundPt.x < canvas.clientWidth + 40 && soundPt.y < canvas.clientHeight + 40;
+    },
+    pan(x, y) {
+      rig2d.project(soundV.set(mx(x), 0.8, mz(y)), soundPt);
+      const half = Math.max(1, canvas.clientWidth / 2);
+      return Math.max(-0.7, Math.min(0.7, ((soundPt.x - half) / half) * 0.7));
+    },
+    // closer zoom, louder: ~40 px per metre is the overview, ~160 a close-up
+    near: () => Math.max(0.45, Math.min(1, 0.3 + rig2d.pxPerMetre / 230)),
+  };
   const screens = new ScreenView();
-  scene.add(building.root, models.root, chars.root, screens.mesh);
+  const effects = new EffectsView();
+  scene.add(building.root, models.root, chars.root, screens.mesh, effects.root);
   const applyTheme = (next: ThemeEntry) => {
     theme = next;
     applyLighting(parts, next.look);
+    ambientAt_ = 0;
     models.setTheme(next);
     building.setLook(next.look, models.ready);
     // the sim keeps everyone where they are: rooms only get new palettes and walls
@@ -82,7 +118,26 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
   };
   applyLighting(parts, theme.look);
   models.setTheme(theme);
-  const offThemes = onThemesChanged(() => applyTheme(themeById(theme.look.id)));
+  // ---- day and night: ?hour=21:30 forces an hour (screenshots, checking a theme at night)
+  const hourOverride = parseHourParam(location.search);
+  const targetAmbient = () => ambientAt(effectiveHour(options.daylight, hourOverride, new Date()));
+  let ambient: Ambient = targetAmbient();
+  let ambientAt_ = 0;
+  let seasonCheckAt = 0;
+  const updateDaylight = (t: number) => {
+    if (t - ambientAt_ < 250) return;
+    ambientAt_ = t;
+    // the calendar moves on (a tab left open over midnight on November 1st)
+    if (t - seasonCheckAt > 60_000) {
+      seasonCheckAt = t;
+      if (season() !== shownSeason) applyTheme(themeFor(theme.look.id));
+    }
+    // eases over about a second when the setting changes; the clock itself moves slowly anyway
+    ambient = approachAmbient(ambient, targetAmbient(), 0.3);
+    applyDaylight(parts, theme.look, ambient);
+    building.setAmbient(ambient.night, ambient.inside);
+  };
+  const offThemes = onThemesChanged(() => applyTheme(themeFor(theme.look.id)));
   const rig2d = new CameraRig();
   const overlay = new Overlay(overlayParent);
   canvas.tabIndex = 0;
@@ -123,7 +178,7 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
     if (!snap) return;
     // no theme picked here: follow the server's default
     if (!options.theme && snap.meta.theme && snap.meta.theme !== theme.look.id) {
-      const next = themeById(snap.meta.theme);
+      const next = themeFor(snap.meta.theme);
       if (next.look.id !== theme.look.id) applyTheme(next);
     }
     sim.applySnapshot(snap, Date.now());
@@ -230,6 +285,7 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
       rig2d.target.copy(rig2d.targetGoal);
     }
     rig2d.update(dt);
+    updateDaylight(t);
     const tSync = performance.now();
     building.sync(sim, rig2d.yaw, options.cutaway, now);
     models.sync(sim, now);
@@ -251,7 +307,9 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
       chars.root.visible = true;
       chars.sync(sim.chars.values(), dt);
     }
+    effects.sync(sim, view(), now, dt);
     sim.effects.length = 0;
+    if (soundCbs.size && sim.initialized) cues.update(now, soundView, (c) => soundCbs.forEach((cb) => cb(c)));
     if (!useRig()) scene.updateMatrixWorld();
     const tRender = performance.now();
     ema('sync', tRender - tSync);
@@ -324,9 +382,9 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
       const themeChanged = o.theme !== undefined && o.theme !== options.theme;
       options = { ...options, ...o };
       if (themeChanged) {
-        const next = themeById(options.theme || store.snapshot?.meta.theme);
+        const next = themeFor(options.theme || store.snapshot?.meta.theme);
         if (next.look.id !== theme.look.id) applyTheme(next);
-      }
+      } else if (o.season !== undefined && season() !== shownSeason) applyTheme(themeFor(theme.look.id));
       if (o.followSelected === false) rig2d.follow = null;
       if (o.followSelected && selection?.type === 'agent') followAgent(selection.id);
     },
@@ -342,6 +400,10 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
       rig2d.insets = { ...rig2d.insets, ...insets };
     },
     theme: () => theme,
+    onSound(cb) {
+      soundCbs.add(cb);
+      return () => soundCbs.delete(cb);
+    },
     stats: () => ({ fps: Math.round(fps), cpuMs: +cpuMs.toFixed(2), phases: { sim: +phases.sim.toFixed(2), sync: +phases.sync.toFixed(2), render: +phases.render.toFixed(2), labels: +phases.labels.toFixed(2) }, calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, agents: sim.chars.size, rooms: [...sim.rooms.values()].filter((r) => !r.ghost).length }),
     destroy() {
       stop();
@@ -352,6 +414,7 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
       overlay.dispose();
       building.dispose();
       models.dispose();
+      effects.dispose();
       screens.dispose();
       chars.dispose();
       parts.dispose();

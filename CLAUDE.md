@@ -1,6 +1,6 @@
 # Agent Office — guide for AI agents
 
-> **Status: Phases 0–5 done (pending on the user's machine: a live Gemini CLI check, the frame-rate checks and the Claude usage tap); Phase 6 next.** The phased plan lives in [TASKS.md](TASKS.md).
+> **Status: Phases 0–6 done (pending on the user's machine: a live Gemini CLI check, the frame-rate checks, the Claude usage tap and a look and listen at Phase 6); Phase 7 next.** The phased plan lives in [TASKS.md](TASKS.md).
 > Provider facts: [docs/providers/](docs/providers/). Decisions: [docs/adr/](docs/adr/). Spike results:
 > [docs/spikes/](docs/spikes/).
 

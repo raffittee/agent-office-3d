@@ -31,7 +31,11 @@ const CSS = `
   background: rgba(255,255,255,.82); color: #2a2d33; font-weight: 600; font-size: 12px; white-space: nowrap;
   box-shadow: 0 1px 4px rgba(0,0,0,.12); }
 @media (prefers-color-scheme: dark) { .ao-room { background: rgba(28,31,37,.85); color: #e6e8ec; } }
+.ao-room.party { background: #ffe066; color: #3a2c00; }
+.ao-room.alarm { background: #e5383b; color: #fff; animation: ao-glow 1.1s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .ao-bubble.alert, .ao-room.alarm { animation: none; } }
 @keyframes ao-pulse { 50% { transform: scale(1.06); } }
+@keyframes ao-glow { 50% { box-shadow: 0 0 14px 4px rgba(229,56,59,.7); } }
 `;
 
 interface Entry {
@@ -101,7 +105,7 @@ export class Overlay {
       placed.push({ id: c.id, rect: { x: pt.x - w / 2, y: pt.y - h, w, h }, priority: label.priority, label, x: pt.x, y: pt.y });
     }
     // room name tags compete too: above plain names, below bubbles and alerts
-    const roomTags = this.placeRooms(rooms, rig, zoomPx);
+    const roomTags = this.placeRooms(rooms, rig, zoomPx, now);
     const keep = declutter([...placed, ...roomTags]);
     for (const r of roomTags) {
       const el = this.rooms.get(r.roomId)!;
@@ -144,7 +148,7 @@ export class Overlay {
   }
 
   /** Room name tags to place (created on demand); tags of rooms that are gone are removed. */
-  private placeRooms(rooms: Iterable<RoomState>, rig: CameraRig, zoomPx: number): { id: string; roomId: string; rect: { x: number; y: number; w: number; h: number }; priority: number; x: number; y: number }[] {
+  private placeRooms(rooms: Iterable<RoomState>, rig: CameraRig, zoomPx: number, now: number): { id: string; roomId: string; rect: { x: number; y: number; w: number; h: number }; priority: number; x: number; y: number }[] {
     const seen = new Set<string>();
     const out: { id: string; roomId: string; rect: { x: number; y: number; w: number; h: number }; priority: number; x: number; y: number }[] = [];
     for (const r of rooms) {
@@ -157,7 +161,12 @@ export class Overlay {
         this.el.append(el);
         this.rooms.set(r.id, el);
       }
-      if (el.textContent !== r.info.name) el.textContent = r.info.name;
+      // a party or an alarm shows its banner next to the name (P6-04)
+      const fx = r.fx && now < r.fx.end ? r.fx : null;
+      const label = fx ? `${r.info.name} · ${fx.text}` : r.info.name;
+      if (el.textContent !== label) el.textContent = label;
+      const cls = fx ? `ao-room ${fx.kind}` : 'ao-room';
+      if (el.className !== cls) el.className = cls;
       const rect = r.layout.rect;
       // over the room's back wall, centred
       tmp.set(tm(rect.x + rect.w / 2), WALL_H * 0.15, tm(rect.y + 1));
@@ -166,7 +175,7 @@ export class Overlay {
         el.hidden = true;
         continue;
       }
-      const w = r.info.name.length * 7.5 + 24;
+      const w = label.length * 7.5 + 24;
       out.push({ id: `room:${r.id}`, roomId: r.id, rect: { x: pt.x - w / 2, y: pt.y - 11, w, h: 22 }, priority: 8, x: pt.x, y: pt.y });
     }
     for (const [id, el] of this.rooms) {

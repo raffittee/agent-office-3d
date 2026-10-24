@@ -142,6 +142,8 @@ const SHELL_CHANCE = 0.35;
 const FOREGROUND_CHANCE = 0.07;
 const SHELL_FAIL_CHANCE = 0.15;
 const DENY_CHANCE = 0.2;
+/** A turn ends with a GitHub step (PR, merge, CI) this often. */
+const GITHUB_CHANCE = 0.12;
 /** Agents without a PID are checked by heartbeat: the demo sends one this often. */
 const HEARTBEAT_MS = 30_000;
 
@@ -397,6 +399,7 @@ export class DemoSimulator {
             this.startBackgroundShells(a, now, false);
             break;
           }
+          if (a.rng() < GITHUB_CHANCE) this.github(a, now);
           this.advanceTask(a, 'completed', now);
           this.emit(a, 'turn.end', now);
           a.phase = 'idle';
@@ -477,6 +480,17 @@ export class DemoSimulator {
     this.emit(a, 'tool.end', now, { tool: ok ? { id, name: call.name, ok } : { id, name: call.name, ok, error: 'error' } });
     this.emit(a, 'usage', now, { tokens: { in: 200 + Math.floor(a.rng() * 2_000), cached: Math.floor(a.rng() * 20_000), out: 50 + Math.floor(a.rng() * 600) } });
     a.nextActionAt = now + this.ms(1_800, 5_500);
+  }
+
+  /** A GitHub step at the end of a turn (room effects, P6-04): open or merge a PR, or watch CI (red now and then). */
+  private github(a: SimAgent, now: number): void {
+    const pr = 10 + Math.floor(a.rng() * 290);
+    const r = a.rng();
+    const command = r < 0.35 ? 'gh pr create --fill' : r < 0.7 ? `gh pr merge ${pr} --squash` : `gh pr checks ${pr} --watch`;
+    const ok = r < 0.7 || a.rng() >= 0.4;
+    const call = toolFor(a.provider, 'shell', command, { command });
+    const id = this.toolStart(a, call.name, call.input, now);
+    this.emit(a, 'tool.end', now, { tool: ok ? { id, name: call.name, ok } : { id, name: call.name, ok, error: 'exit 1' } });
   }
 
   private startForeground(a: SimAgent, now: number): void {

@@ -13,6 +13,8 @@ export interface KitStyle {
   color(kind: FurnitureKind, role: KitRole): string | undefined;
   /** A procedural alternative look for a kind. */
   procedural(kind: FurnitureKind): Procedural | undefined;
+  /** A seasonal overlay (P6-07, themes/seasonal.ts) redraws plants as seasonal props. */
+  season?: 'none' | 'halloween' | 'holiday';
 }
 
 /** A box in metres: x/z relative to the footprint's top-left corner (+z = south), y up from the floor. */
@@ -93,6 +95,74 @@ function plant(w: number, d: number, tall: boolean, variant: string | undefined)
   const parts = [b(cx - r, cz - r, cx + r, cz + r, 0, potH, POT, undefined, 'pot')];
   if (tall) parts.push(b(cx - 0.2, cz - 0.2, cx + 0.2, cz + 0.2, potH, 1.25, leaf, undefined, 'foliage'), b(cx - 0.13, cz - 0.13, cx + 0.13, cz + 0.13, 1.25, 1.65, leaf, undefined, 'foliage'));
   else parts.push(b(cx - 0.15, cz - 0.15, cx + 0.15, cz + 0.15, potH, 0.48, leaf, undefined, 'foliage'));
+  return parts;
+}
+
+/** A small hash of a variant name, to vary the props. */
+function pickOf(variant: string | undefined, n: number): number {
+  let h = 7;
+  for (const ch of variant ?? '') h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return h % n;
+}
+
+/** A jack-o'-lantern: a ribbed orange pumpkin with a stem and two glowing eyes facing south. */
+function pumpkin(cx: number, cz: number, r: number, y0 = 0): Part[] {
+  const h = r * 1.3;
+  const o = '#e8792b';
+  return [
+    b(cx - r, cz - r * 0.8, cx + r, cz + r * 0.8, y0, y0 + h, o),
+    b(cx - r * 0.8, cz - r, cx + r * 0.8, cz + r, y0 + h * 0.08, y0 + h * 0.92, '#d9661f'),
+    b(cx - r * 0.12, cz - r * 0.12, cx + r * 0.12, cz + r * 0.12, y0 + h, y0 + h + r * 0.4, '#4f6b2a'),
+    b(cx - r * 0.55, cz + r - 0.005, cx - r * 0.2, cz + r + 0.005, y0 + h * 0.55, y0 + h * 0.75, '#ffd25e', 'glow'),
+    b(cx + r * 0.2, cz + r - 0.005, cx + r * 0.55, cz + r + 0.005, y0 + h * 0.55, y0 + h * 0.75, '#ffd25e', 'glow'),
+    b(cx - r * 0.5, cz + r - 0.005, cx + r * 0.5, cz + r + 0.005, y0 + h * 0.22, y0 + h * 0.36, '#ffd25e', 'glow'),
+  ];
+}
+
+/** Seasonal props for plants (P6-07): same footprint, so nothing about paths or spots changes. */
+export function seasonalParts(season: 'halloween' | 'holiday', kind: FurnitureKind, variant: string | undefined, w: number, d: number): Part[] | null {
+  if (kind !== 'plant_tall' && kind !== 'plant_small') return null;
+  const cx = w / 2;
+  const cz = d / 2;
+  if (season === 'halloween') {
+    if (kind === 'plant_small') return pumpkin(cx, cz, 0.13);
+    if (pickOf(variant, 2) === 0) return [...pumpkin(cx, cz, 0.2), ...pumpkin(cx + 0.02, cz, 0.12, 0.26)];
+    // a ghost: a white sheet that narrows upwards, with dark eyes
+    const g = '#f4f2f8';
+    return [
+      b(cx - 0.2, cz - 0.18, cx + 0.2, cz + 0.18, 0, 0.7, g),
+      b(cx - 0.16, cz - 0.15, cx + 0.16, cz + 0.15, 0.7, 1.05, g),
+      b(cx - 0.11, cz - 0.11, cx + 0.11, cz + 0.11, 1.05, 1.2, g),
+      b(cx - 0.1, cz + 0.145, cx - 0.04, cz + 0.155, 0.85, 0.95, '#2a2433'),
+      b(cx + 0.04, cz + 0.145, cx + 0.1, cz + 0.155, 0.85, 0.95, '#2a2433'),
+    ];
+  }
+  if (kind === 'plant_small') {
+    // a gift: a box with a ribbon both ways and a bow
+    const box = ['#c0392b', '#2e86c1', '#27ae60', '#8e44ad'][pickOf(variant, 4)]!;
+    return [
+      b(cx - 0.15, cz - 0.15, cx + 0.15, cz + 0.15, 0, 0.26, box),
+      b(cx - 0.03, cz - 0.155, cx + 0.03, cz + 0.155, 0, 0.27, '#f1c40f'),
+      b(cx - 0.155, cz - 0.03, cx + 0.155, cz + 0.03, 0, 0.27, '#f1c40f'),
+      b(cx - 0.07, cz - 0.03, cx + 0.07, cz + 0.03, 0.27, 0.33, '#f1c40f'),
+    ];
+  }
+  // a tree: a trunk, three tiers, a few lights and a star
+  const green = '#2f6f3e';
+  const parts = [
+    b(cx - 0.05, cz - 0.05, cx + 0.05, cz + 0.05, 0, 0.2, '#6b4a2b'),
+    b(cx - 0.23, cz - 0.23, cx + 0.23, cz + 0.23, 0.2, 0.65, green),
+    b(cx - 0.17, cz - 0.17, cx + 0.17, cz + 0.17, 0.65, 1.05, '#357a45'),
+    b(cx - 0.1, cz - 0.1, cx + 0.1, cz + 0.1, 1.05, 1.4, '#3b8a4c'),
+    b(cx - 0.06, cz - 0.06, cx + 0.06, cz + 0.06, 1.4, 1.52, '#ffd84a', 'glow'),
+  ];
+  const lights = ['#ff5d5d', '#ffd84a', '#4aa3ff', '#ff8fc7'];
+  [[-0.2, 0.4], [0.2, 0.5], [-0.14, 0.85], [0.14, 0.8], [-0.07, 1.2], [0.07, 1.25]].forEach(([dx, y], i) => {
+    for (const s of [-1, 1]) {
+      const z = cz + s * (Math.abs(dx!) + 0.025);
+      parts.push(b(cx + dx! - 0.025, z - 0.02, cx + dx! + 0.025, z + 0.02, y!, y! + 0.05, lights[(i + (s > 0 ? 1 : 0)) % 4]!, 'glow'));
+    }
+  });
   return parts;
 }
 
@@ -193,6 +263,8 @@ export function furnitureParts(kind: FurnitureKind, variant?: string, style?: Ki
   const fp = FURNITURE[kind].footprint;
   const w = fp.w * TILE_M;
   const d = Math.max(1, fp.h) * TILE_M;
+  const seasonal = style?.season && style.season !== 'none' ? seasonalParts(style.season, kind, variant, w, d) : null;
+  if (seasonal) return seasonal;
   const look = style?.procedural(kind);
   const parts = (look && alternative(look, kind, variant, w, d)) || defaultParts(kind, variant, w, d);
   if (style)

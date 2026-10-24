@@ -6,6 +6,7 @@
   "description": "A bright, clean office: light floors, white walls, glass and pastel rooms. The default.",
   "author": "Agent Office contributors",
   "license": "CC0-1.0",
+  "thumbnail": "thumb.png",
   "layout": { "template": "corridor", "wallHeight": 2.8 },
   "palette": { "base": "#eef1f4", "accent": "#3f7fd8", "background": "#dfe3e8" },
   "materials": {

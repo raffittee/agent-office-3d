@@ -122,7 +122,7 @@ export interface AreaView {
   dispose(): void;
 }
 
-interface BuildCtx {
+export interface BuildCtx {
   cols: number;
   far: ReturnType<typeof farSides>;
   cutaway: Cutaway;

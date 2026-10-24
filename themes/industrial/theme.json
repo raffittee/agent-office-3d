@@ -6,6 +6,7 @@
   "description": "A converted factory hall: exposed brick, concrete floors, steel beams, ducts, Edison bulbs and factory windows, with metal-and-wood furniture and pallet tables.",
   "author": "Agent Office contributors",
   "license": "CC0-1.0",
+  "thumbnail": "thumb.png",
   "layout": { "template": "loft", "wallHeight": 3.6 },
   "palette": { "base": "#2b2b2b", "accent": "#d97a2b", "background": "#2a2826" },
   "materials": {

@@ -107,7 +107,20 @@ async function main() {
         }
       }
     }
-    const result = { overview, drawer, themes, errors };
+    // the theme preview page (P4-10): every kind of the example pack, its models included
+    let preview = null;
+    if (allThemes) {
+      const pv = await browser.newPage({ viewport: { width: 1600, height: 900 } });
+      pv.on('pageerror', (e) => errors.push(`preview pageerror: ${e.message}`));
+      pv.on('console', (m) => m.type() === 'error' && errors.push(`preview console: ${m.text()}`));
+      await pv.goto(`http://127.0.0.1:${port}/preview.html?theme=cabin`);
+      await pv.waitForFunction(() => document.querySelectorAll('.pv-label.is-model').length > 0, null, { timeout: 30_000 }).catch(() => errors.push('preview: the example models did not load'));
+      await pv.waitForTimeout(1000);
+      preview = await pv.evaluate(() => ({ labels: document.querySelectorAll('.pv-label').length, models: document.querySelectorAll('.pv-label.is-model').length }));
+      await pv.screenshot({ path: join(out, 'preview.png') });
+      await pv.close();
+    }
+    const result = { overview, drawer, themes, preview, errors };
     writeFileSync(join(out, 'shot.json'), `${JSON.stringify(result, null, 2)}\n`);
     console.log(JSON.stringify(result));
     const problems = [];

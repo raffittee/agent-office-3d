@@ -6,6 +6,7 @@
   "description": "Carpet tiles, cubicles, fluorescent strip lights, wooden desks, filing cabinets, a water cooler and framed certificates on the walls.",
   "author": "Agent Office contributors",
   "license": "CC0-1.0",
+  "thumbnail": "thumb.png",
   "layout": { "template": "corridor", "wallHeight": 2.7 },
   "palette": { "base": "#e9e2d0", "accent": "#2f5d50", "background": "#d9d4c7" },
   "materials": {

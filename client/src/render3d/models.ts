@@ -5,6 +5,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
+import type { AreaLayout } from '../core/layout/types';
 import type { RoomState } from '../core/sim/room-state';
 import type { Sim } from '../core/sim/sim';
 import type { FurnitureKind } from '../core/vocab';
@@ -74,6 +75,11 @@ function mergeAll(geos: THREE.BufferGeometry[]): THREE.BufferGeometry {
   return out;
 }
 
+export interface ModelArea {
+  layout: AreaLayout;
+  room: RoomState | null;
+}
+
 interface Placement {
   kind: FurnitureKind;
   room: RoomState | null;
@@ -137,10 +143,21 @@ export class ModelView {
   /** Collects placements when the layout changes, then updates room light and growth. */
   sync(sim: Sim, now: number): void {
     if (!this.models.size || !this.entry) return;
-    const key = `${sim.layoutVersion}|${[...sim.rooms.values()].map((r) => r.version).join(',')}|${this.models.size}`;
-    if (key !== this.key) {
-      this.key = key;
-      this.collect(sim);
+    const key = `${sim.layoutVersion}|${[...sim.rooms.values()].map((r) => r.version).join(',')}`;
+    this.syncAreas(() => {
+      const areas: ModelArea[] = [...sim.building.core.map((layout) => ({ layout, room: null })), { layout: sim.building.corridor, room: null }];
+      for (const room of sim.rooms.values()) if (room.present) areas.push({ layout: room.layout, room });
+      return areas;
+    }, key, now);
+  }
+
+  /** The same for any set of areas (the preview page); `key` changes when they do. */
+  syncAreas(areas: () => ModelArea[], key: string, now: number): void {
+    if (!this.models.size || !this.entry) return;
+    const k = `${key}|${this.models.size}`;
+    if (k !== this.key) {
+      this.key = k;
+      this.collect(areas());
     }
     for (const [kind, list] of this.placements) {
       for (const mesh of this.meshes.get(kind) ?? []) {
@@ -156,13 +173,8 @@ export class ModelView {
     }
   }
 
-  private collect(sim: Sim): void {
+  private collect(areas: ModelArea[]): void {
     const furniture = this.entry!.look.pack.furniture ?? {};
-    const areas: { layout: (typeof sim.building.core)[number]; room: RoomState | null }[] = [
-      ...sim.building.core.map((layout) => ({ layout, room: null })),
-      { layout: sim.building.corridor, room: null },
-    ];
-    for (const room of sim.rooms.values()) if (room.present) areas.push({ layout: room.layout, room });
     this.placements.clear();
     for (const { layout, room } of areas) {
       for (const f of layout.furniture) {

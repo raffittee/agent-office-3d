@@ -556,3 +556,22 @@ Branch `phase-1`. One commit per task, each pushed. At the end of the phase ther
   - Theme `postfx` (bloom, ambient occlusion) is accepted in packs but not drawn yet, to stay within the performance
     budget on integrated GPUs.
 - Clean-up: removed leftover profiling counters from the Phase 3 performance pass.
+
+### P4-10 Authoring kit — done, 2026-10-25 06:00
+
+- **Make your own theme without code:** `npm run theme:new -- harbour --name "Harbour Office"` creates a pack with
+  every setting filled in (`--from industrial` starts from another theme). `docs/themes.md` walks through it step by
+  step: colors, patterns, lighting, furniture looks, room colors, decor, models, checking and thumbnails.
+- **Preview page:** http://127.0.0.1:4848/preview.html?theme=cabin shows every piece of furniture of a theme side by
+  side, labelled, and reloads as you edit the theme's file under `npm run dev`.
+- **Example theme "Cozy Cabin"** (`themes/cabin/`): wood walls, warm bulbs, plaid seats, and two models of its own (a
+  potted cactus and a round side table), made from code so they're our own work (CC0).
+- The theme picker now shows a real thumbnail of each theme (`npm run shot -- --thumbs` re-renders them).
+- CI now screenshots every theme and the preview page (artifact `office-screenshots`).
+
+### Phase 4 closed — 2026-10-25 06:00
+
+- All 10 tasks are ticked. Pull request `phase-4` → `main`.
+- **Try it:** Settings (gear icon) → Theme. Or `AGENT_OFFICE_THEME=industrial npm start` to change the default.
+- **Needs your machine:** the frame-rate check, now per theme (the industrial and traditional themes draw the most
+  detail): http://127.0.0.1:4848/?mock=1&sessions=30&stats=1&theme=traditional.

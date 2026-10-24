@@ -230,3 +230,22 @@ describe('live restyle (P4-02)', () => {
     }
   });
 });
+
+describe('preview showroom (P4-10)', () => {
+  it('shows every kind once, without overlapping footprints', async () => {
+    const { showroom, SHOWROOM_W } = await import('./preview-layout');
+    const { layout, items } = showroom();
+    const kinds = new Set(items.map((i) => i.kind));
+    for (const k of FURNITURE_KINDS) if (k !== 'door_frame') expect(kinds.has(k), k).toBe(true);
+    const taken = new Set<string>();
+    for (const f of layout.furniture) {
+      const { w, h } = FURNITURE[f.kind].footprint;
+      for (let y = f.ty; y < f.ty + Math.max(1, h); y++)
+        for (let x = f.tx; x < f.tx + w; x++) {
+          expect(taken.has(`${x},${y}`), f.kind).toBe(false);
+          expect(x).toBeLessThan(SHOWROOM_W);
+          taken.add(`${x},${y}`);
+        }
+    }
+  });
+});

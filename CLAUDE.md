@@ -1,6 +1,6 @@
 # Agent Office — guide for AI agents
 
-> **Status: Phases 0–3 done (pending on the user's machine: a live Gemini CLI check and the frame-rate checks); Phase 4 next.** The phased plan lives in [TASKS.md](TASKS.md).
+> **Status: Phases 0–4 done (pending on the user's machine: a live Gemini CLI check and the frame-rate checks); Phase 5 next.** The phased plan lives in [TASKS.md](TASKS.md).
 > Provider facts: [docs/providers/](docs/providers/). Decisions: [docs/adr/](docs/adr/). Spike results:
 > [docs/spikes/](docs/spikes/).
 
@@ -192,7 +192,8 @@ export interface ProviderAdapter {
 
 ### Theme packs
 
-`themes/<id>/theme.json` is validated against `themes/theme.schema.json`:
+Source of truth: [`shared/theme.ts`](shared/theme.ts) (P4-01; types, validator, and the generator of
+`themes/theme.schema.json`). Authoring guide: [docs/themes.md](docs/themes.md). `themes/<id>/theme.json` looks like:
 
 ```jsonc
 {
@@ -206,12 +207,13 @@ export interface ProviderAdapter {
     "wall": { "preset": "brick" }
   },
   "lighting": { "ambient": "#3a3530", "sun": { "color": "#ffe2b8", "intensity": 1.2 }, "practicals": "edison-bulbs" },
+  "kit": { "frame": "#2b2d30", "top": "#a77b4f" }, // part-role colors for the procedural kit
   "furniture": {
-    "desk": { "model": "models/steel-desk.glb", "variants": ["a", "b"] },
-    "office_chair": { "procedural": "stool", "params": { "metal": true } },
-    "coffee_machine": { "model": "models/espresso.glb" }
+    "desk": { "procedural": "trestle" },
+    "plant_tall": { "model": "models/cactus.glb", "scale": 1, "yaw": 0 },
+    "sofa": { "colors": { "seat": "#7a4a2e" } }
   },
-  "decor": [{ "kind": "pipes", "on": "ceiling", "density": 0.4 }, { "kind": "plant_tall", "on": "corners" }],
+  "decor": [{ "kind": "pipes", "on": "everywhere", "density": 0.4 }, { "kind": "pendant_bulbs", "on": "rooms" }],
   "roomVariants": [{ "accent": "#c0392b" }, { "accent": "#2980b9" }],
   "postfx": { "bloom": 0.25, "ao": true }
 }
@@ -222,8 +224,10 @@ export interface ProviderAdapter {
   `light_switch`, `elevator` and so on.
 - The sim places spots by kind; the theme decides only how each kind looks. A missing kind falls back to the
   procedural default.
-- Themes never change paths, spots or behaviors. Layout templates differ in arrangement, but each one must produce
-  the same spot kinds.
+- Themes never change paths, spots or behaviors. Layout templates differ in arrangement (walls and partitions), but
+  each one must produce the same spots (`client/src/core/layout/templates.test.ts`). A live theme switch calls
+  `Sim.restyle()`, which keeps every agent's desk and errand.
+- `postfx` is validated but not drawn in v1 (performance budget).
 
 ## Provider notes
 
@@ -388,6 +392,7 @@ These rules come from Habblaud's `mod/habblaud-codex/hook.mjs`.
   | `AGENT_OFFICE_DEMO` | off | `1` turns on simulated agents. |
   | `AGENT_OFFICE_CLAUDE_DIRS` | discovered | Comma-separated Claude config folders to watch, replacing discovery. |
   | `AGENT_OFFICE_IN_DOCKER` | auto | `1` skips PID checks (the agents' PIDs belong to the host). |
+  | `AGENT_OFFICE_THEME` | `modern` | Default theme pack id for browsers that haven't picked one. |
 
 ## Commands
 
@@ -403,7 +408,9 @@ Update this table as commands land. *(planned)* marks the ones that don't exist 
 | `npm run hooks:install -- --provider gemini-cli` | Install a provider's hooks (`--profile light` or `full`; also `hooks:status`, `hooks:uninstall`) |
 | `npm run assets:fetch` · `npm run assets:build` | Download pinned asset sources into `assets-src/`, then build the committed GLBs and profiles |
 | `npm run shot` | After `npm run build`: screenshot the demo office in Chrome (`--sessions 30`, `--out <dir>`); CI runs it |
-| `npm run theme:check` · `npm run theme:new -- <id>` *(planned)* | Validate theme packs and scaffold a new one |
+| `npm run theme:check` · `npm run theme:new -- <id>` | Validate theme packs (`-- --write-schema` regenerates the schema) and scaffold a new one |
+| `/preview.html?theme=<id>` | Every furniture kind of a theme side by side (hot-reloads under `npm run dev`) |
+| `npm run shot -- --themes` · `-- --thumbs` | Screenshot every theme (CI) · rewrite the theme picker thumbnails |
 
 ## How to work in this repo
 

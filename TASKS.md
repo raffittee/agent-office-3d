@@ -459,7 +459,10 @@ Gemini sessions appear, and clicking an agent opens its drawer.
   `localStorage`; `?theme=<id>` in the URL; `AGENT_OFFICE_THEME` → `meta.theme` (additive protocol field).
   - In settings: thumbnails of each theme. The choice is saved in `localStorage`; `AGENT_OFFICE_THEME` sets the
     server default.
-- [ ] **P4-10 Authoring kit** (M)
+- [x] **P4-10 Authoring kit** (M) — done: `npm run theme:new -- <id> [--from <theme>]` (`scripts/themes/new.ts`),
+  `docs/themes.md`, the example pack `themes/cabin/` with two own-work models (`scripts/themes/example-models.ts`), and
+  `/preview.html` (`client/src/preview.ts`, `themes/preview-layout.ts`: every kind side by side, models marked).
+  `npm run shot -- --thumbs` renders the picker thumbnails; `--themes` (in CI) screenshots every theme and the preview.
   - `npm run theme:new -- <id>` scaffolds a pack.
   - `docs/themes.md`: a step-by-step guide.
   - An example custom theme, and a preview page that shows every kind side by side.
@@ -467,6 +470,10 @@ Gemini sessions appear, and clicking an agent opens its drawer.
 
 **Exit:** the four built-in themes switch live, and a fifth theme can be built by following `docs/themes.md`
 without touching code.
+
+**Exit status (2026-10-25):** met. CI's `npm run shot -- --themes` switches live through all five packs (state kept,
+no page errors, 37–52 draw calls) and renders the preview page; `themes/cabin/` is the fifth theme, built from
+`docs/themes.md` with data and models only. `theme.json` hot reload was checked under `npm run dev`.
 
 ---
 

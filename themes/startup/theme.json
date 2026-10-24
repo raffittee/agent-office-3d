@@ -6,6 +6,7 @@
   "description": "An open-plan space with light wood floors, bean bags, ping-pong, neon signs, plant walls, string lights and loud colors.",
   "author": "Agent Office contributors",
   "license": "CC0-1.0",
+  "thumbnail": "thumb.png",
   "layout": { "template": "open-plan", "wallHeight": 3.0 },
   "palette": { "base": "#fafafa", "accent": "#ff4f8b", "background": "#e8ecf3" },
   "materials": {

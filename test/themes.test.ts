@@ -25,3 +25,28 @@ describe('theme packs', () => {
     for (const k of REQUIRED_KINDS) expect(FURNITURE_KINDS).toContain(k);
   });
 });
+
+describe('theme:new', () => {
+  it('scaffolds a valid pack, from the starter or from another theme, and refuses bad ids and existing folders', async () => {
+    const { mkdtempSync, rmSync, cpSync, readFileSync: read } = await import('node:fs');
+    const { join } = await import('node:path');
+    const { tmpdir } = await import('node:os');
+    const { scaffold } = await import('../scripts/themes/new');
+    const { checkPack } = await import('../scripts/themes/check');
+    const root = mkdtempSync(join(tmpdir(), 'themes-'));
+    try {
+      cpSync('themes/cabin', join(root, 'cabin'), { recursive: true });
+      const a = scaffold(root, 'my-theme', 'My Theme');
+      expect(checkPack(a).problems).toEqual([]);
+      const b = scaffold(root, 'my-cabin', 'My Cabin', 'cabin');
+      expect(checkPack(b).problems).toEqual([]);
+      const pack = JSON.parse(read(join(b, 'theme.json'), 'utf8'));
+      expect(pack.id).toBe('my-cabin');
+      expect(JSON.stringify(pack)).not.toContain('.glb');
+      expect(() => scaffold(root, 'my-theme', 'Again')).toThrow(/exists/);
+      expect(() => scaffold(root, '../evil', 'Evil')).toThrow(/valid id/);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});

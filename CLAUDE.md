@@ -85,7 +85,7 @@ idea for Claude Code and Codex. Use it as the reference for behavior, data sourc
  Codex         hooks + rollout files ──────────────────────────┤ │  normalize everything into AgentEvent
  Custom agent  POST /api/events (sdk/) ────────────────────────┘ │
                                                                  ▼
-                     Office reducer (server/model) ── OfficeSnapshot ──▶ SSE /api/stream
+                     Office reducer (shared/model) ── OfficeSnapshot ──▶ SSE /api/stream
                                                                                │
  browser: net/store ─▶ core/ (pure: layout, nav, sim, behaviors) ─▶ render3d/ (Three.js) + ui/ (DOM)
                                               ▲
@@ -399,7 +399,7 @@ Update this table as commands land. *(planned)* marks the ones that don't exist 
 | `npm test` · `npm run typecheck` · `npm run build` | Checks to run before a task is done |
 | `npm start` | Runs the built server (`dist/server/index.js`) |
 | `node spikes/renderer/measure.mjs` · `node spikes/assets/measure.mjs <dir>` | Re-run the Phase 0 measurements |
-| `npm run demo` *(planned)* | Dev mode with simulated agents from several providers |
+| `npm run demo` | Dev mode with simulated agents from several providers (`AGENT_OFFICE_DEMO=1` or `--demo` on any run) |
 | `npm run hooks:install -- --provider gemini-cli` | Install a provider's hooks (`--profile light` or `full`; also `hooks:status`, `hooks:uninstall`) |
 | `npm run theme:check` · `npm run theme:new -- <id>` *(planned)* | Validate theme packs and scaffold a new one |
 

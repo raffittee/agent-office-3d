@@ -240,7 +240,13 @@ The plan, phase by phase. [CLAUDE.md](CLAUDE.md) has the design, contracts and r
   - Liveness comes from the `pid` (the agent, resolved by the shim through the shell wrapper).
   - **Done when:** P0-04's fixtures replay into the expected status sequence (including allow, deny, cancel,
     `/clear` and resume), and a real Gemini session appears.
-- [ ] **P1-11 Demo simulator** (M)
+- [x] **P1-11 Demo simulator** (M) — done: `shared/demo/simulator.ts` (ported, pure, seeded; mixes `claude-code`,
+  `gemini-cli`, `codex` and `custom:demo` with each provider's own tool names), `server/adapters/demo.ts` (runs it
+  beside the real adapters on `AGENT_OFFICE_DEMO=1` / `--demo` / `npm run demo`, adds badges for providers only the
+  demo simulates) and `shared/demo/mock.ts` (simulator + the real reducer in memory, for `?mock=1`; the browser
+  wiring lands with the store in P2-01). The reducer and rooms moved to `shared/model/` so the browser can run them;
+  `shared/names.ts` gained `NameSource` and `MemoryNames`. Also fixed the Gemini replay tests on Linux (Windows
+  transcript paths).
   - Port `shared/demo/simulator.ts`, mixing providers (`claude-code`, `gemini-cli`, `codex`, `custom:demo`).
   - The same seed always produces the same office.
   - Turned on with `AGENT_OFFICE_DEMO=1` on the server, or `?mock=1` in the browser.

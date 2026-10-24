@@ -139,7 +139,7 @@ describe('codex queue runner', () => {
       'Error: failed to queue session message: no rollout found for thread id x (code -32603)',
     )
     expect(errorLine('just this')).toBe('just this');
-    expect(findCodexBin({ PATH: ['/a', '/b'].join(process.platform === 'win32' ? ';' : ':') }, (p) => p.startsWith('/b'))).toMatch(/^[\\/]b[\\/]codex/);
+    expect(findCodexBin({ PATH: ['/a', '/b'].join(process.platform === 'win32' ? ';' : ':') }, (p) => /^[\\/]b[\\/]/.test(p))).toMatch(/^[\\/]b[\\/]codex/);
   });
 
   it.skipIf(process.platform === 'win32')('runs the binary with CODEX_HOME and reports stderr’s first line', async () => {

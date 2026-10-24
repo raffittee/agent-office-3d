@@ -138,7 +138,10 @@ The plan, phase by phase. [CLAUDE.md](CLAUDE.md) has the design, contracts and r
     `account` ids. Then update the sketch in CLAUDE.md and mark ADR 0002 accepted.
   - **Ref:** `shared/types.ts`.
   - **Done when:** tests cover valid and invalid events.
-- [ ] **P1-02 Activity layer** (M)
+- [x] **P1-02 Activity layer** (M) — done: `shared/activity.ts` (masking, truncate, shell parsing with a
+  PowerShell mode, `describeCommand`, jobs, specials; English via `shared/i18n.ts`), tool tables in
+  `shared/tools/` (claude-code incl. PowerShell, gemini-cli from P0-04, generic for custom agents); Habblaud's
+  masking tests ported; every tool in both providers' fixtures maps to its expected kind.
   - In `shared/activity.ts`, port `maskSecrets`, `truncate`, `basename`, `shellWords`, `splitShell` and
     `describeCommand`.
   - Add one tool table per provider: `claude-code` from Habblaud's `describeTool`; `gemini-cli` from P0-04.

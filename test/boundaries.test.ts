@@ -72,8 +72,8 @@ describe('folder boundaries', () => {
     expect(bad).toEqual([]);
   });
 
-  it('shared/ imports nothing but relative paths', () => {
-    expect(violations('shared', ['.ts'], (s, f) => isRelative(s) || (isTest(f) && s === 'vitest'))).toEqual([]);
+  it('shared/ imports nothing but relative paths (tests may also use vitest and node:*)', () => {
+    expect(violations('shared', ['.ts'], (s, f) => isRelative(s) || (isTest(f) && (s === 'vitest' || s.startsWith('node:'))))).toEqual([]);
   });
 
   it('client/src/core/ never imports three, the DOM layers or node:*', () => {

@@ -223,3 +223,13 @@ Branch `phase-1`. One commit per task, each pushed. At the end of the phase ther
   but returns only the known ones. `shared/agent-event.schema.json` is the schema for SDK authors. Tests keep the
   schema and the constants in sync.
 - Renamed Habblaud's `shells` to `jobs` in `AgentInfo`.
+
+### P1-02 Activity layer — done
+
+- Ported Habblaud's activity text generator, translated to English. That's what turns "`npm test`" into the
+  "Running tests" bubble. Secrets are masked before anything is shown.
+- Tool tables per provider: Claude Code (Habblaud's list, plus the Windows `PowerShell` tool), Gemini CLI (from the
+  tool names captured in P0-04), and a generic one for custom agents that guesses from tool names.
+- PowerShell commands are now understood too (`Get-Content x`, Windows paths with `\`).
+- All of Habblaud's secret-masking tests pass in English, and every tool seen in the real fixtures maps to the
+  right kind of activity.

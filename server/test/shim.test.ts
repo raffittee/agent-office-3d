@@ -17,7 +17,7 @@ interface ShimModule {
   fitBody(v: unknown): unknown;
   isShellName(name: string): boolean;
   agentPid(ppid: number, info: (pid: number) => [number, string] | undefined): number;
-  processInfo(pid: number): [number, string] | undefined;
+  processInfo(pid: number, platform?: string, timeoutMs?: number): [number, string] | undefined;
 }
 const shim = (await import(pathToFileURL(SHIM).href)) as ShimModule;
 
@@ -167,7 +167,8 @@ describe('shim kit functions', () => {
   });
 
   it('processInfo finds this process’s parent', () => {
-    const info = shim.processInfo(process.pid);
+    // Correctness, not speed: a cold PowerShell on a CI runner (no wmic) can take longer than the shims' 3 s cap.
+    const info = shim.processInfo(process.pid, process.platform, 12_000);
     expect(info?.[0]).toBe(process.ppid);
   }, 15_000);
 });

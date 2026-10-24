@@ -112,14 +112,14 @@ export async function post(port, path, body, timeoutMs = POST_TIMEOUT_MS) {
 }
 
 /** [parentPid, name] of a process, or undefined. Platform-specific and best-effort. */
-export function processInfo(pid, platform = process.platform) {
+export function processInfo(pid, platform = process.platform, timeoutMs = 3_000) {
   try {
     if (platform === 'linux') {
       const stat = readFileSync(`/proc/${pid}/stat`, 'utf8');
       const m = /^\d+ \((.*)\) \S (\d+)/s.exec(stat);
       return m ? [Number(m[2]), m[1]] : undefined;
     }
-    if (platform === 'win32') return windowsProcessInfo(Number(pid));
+    if (platform === 'win32') return windowsProcessInfo(Number(pid), timeoutMs);
     const out = execFileSync('ps', ['-o', 'ppid=,comm=', '-p', String(pid)], { encoding: 'utf8', timeout: 1_000 }).trim();
     const m = /^(\d+)\s+(.+)$/.exec(out);
     return m ? [Number(m[1]), m[2]] : undefined;
@@ -130,10 +130,11 @@ export function processInfo(pid, platform = process.platform) {
 
 /**
  * Windows has no fast built-in way: `wmic` (deprecated, ~1 s) first, then a CIM query through PowerShell (~2-3 s).
- * Measured on Windows 11 in P1-08; shims only ask on session start.
+ * Measured on Windows 11 in P1-08; shims only ask on session start. Each step is capped (3 s by default) so a slow
+ * machine can't stall the agent; the shim then falls back to its parent PID.
  */
-function windowsProcessInfo(pid) {
-  const opts = { encoding: 'utf8', timeout: 3_000, windowsHide: true };
+function windowsProcessInfo(pid, timeoutMs) {
+  const opts = { encoding: 'utf8', timeout: timeoutMs, windowsHide: true };
   try {
     const csv = execFileSync('wmic', ['process', 'where', `processid=${pid}`, 'get', 'parentprocessid,name', '/format:csv'], opts);
     // Node,Name,ParentProcessId / HOST,node.exe,32152

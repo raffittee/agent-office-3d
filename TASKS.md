@@ -157,7 +157,9 @@ The plan, phase by phase. [CLAUDE.md](CLAUDE.md) has the design, contracts and r
   - Add `rev` and `commit()`.
   - **Ref:** `server/model/office.ts`, `server/model/model.test.ts`.
   - **Done when:** there's a test for every status transition.
-- [ ] **P1-04 Rooms & names** (M)
+- [x] **P1-04 Rooms & names** (M) — done (before P1-03, which needs it): `server/model/rooms.ts` (slots,
+  display names, case-insensitive Windows keys), `room-aliases.ts`, `names.ts` (persisted per session),
+  `shared/names.ts` (120 international names), `shared/hash.ts`, `server/log.ts`; ported tests.
   - Key rooms by normalized `cwd`, with stable slots and a cooldown before a slot is reused.
   - Disambiguate display names, and support room aliases.
   - Give agents names from an international list, persisted in the data dir.

@@ -233,3 +233,12 @@ Branch `phase-1`. One commit per task, each pushed. At the end of the phase ther
 - PowerShell commands are now understood too (`Get-Content x`, Windows paths with `\`).
 - All of Habblaud's secret-masking tests pass in English, and every tool seen in the real fixtures maps to the
   right kind of activity.
+
+### P1-04 Rooms & names — done (ahead of P1-03)
+
+- Done before P1-03 because the office model needs it.
+- Rooms are keyed by project folder. On Windows the key ignores case and slash direction, so a session started
+  from VS Code (`c:\…`) and one from the desktop app (`C:\…`) share a room. Folders with the same name get their
+  parent folder added ("company/app" vs "other/app"). Rooms can be renamed, and the names persist.
+- Agents get names from a new list of 120 international names. Each session keeps its name across restarts.
+- Habblaud's "pick your character per project" editor isn't ported yet; it's in the backlog.

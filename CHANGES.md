@@ -736,3 +736,12 @@ Branch `phase-1`. One commit per task, each pushed. At the end of the phase ther
   - **Gemini CLI:** can't receive messages.
 - Also needs `AGENT_OFFICE_INTERACTIVE=1`, like approvals.
 
+### P7-05 Read-only conversation view — done, 2026-10-25 07:13
+
+- **💬 Conversation** in an agent's details shows what you and the agent said: its thinking, every tool call with
+  its result (failures in red), and compactions and interruptions. It updates live while open. Works for Claude
+  Code, Codex and Gemini CLI.
+- **🕘 Session history** in the top bar lists recent sessions, including ended ones, and opens their conversations.
+- Read-only, masked, and only with `AGENT_OFFICE_INTERACTIVE=1` (local only). Conversations can contain anything
+  the agents read, so see [docs/interactive.md](docs/interactive.md).
+

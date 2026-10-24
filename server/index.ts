@@ -21,6 +21,7 @@ import { Office } from '../shared/model/office';
 import type { AgentInfo } from '../shared/protocol';
 import { RoomAliases } from './model/room-aliases';
 import { createCodexQueueRunner, findCodexBin } from './messages/codex';
+import { createConversationRoutes } from './conversation/http';
 import { createMessageRoutes } from './messages/http';
 import { MessageRegistry } from './messages/registry';
 import { createPermissionRoutes } from './permissions/http';
@@ -113,7 +114,18 @@ const api = createApiHandler({
   providers,
   ingest,
   ...(permissions && messages
-    ? { actions: { '/api/permissions': createPermissionRoutes(permissions), '/api/messages': createMessageRoutes(messages), '/api/inbox': createMessageRoutes(messages) } }
+    ? (() => {
+        const conversation = createConversationRoutes(office, adapters);
+        return {
+          actions: {
+            '/api/permissions': createPermissionRoutes(permissions),
+            '/api/messages': createMessageRoutes(messages),
+            '/api/inbox': createMessageRoutes(messages),
+            '/api/conversation': conversation,
+            '/api/sessions': conversation,
+          },
+        };
+      })()
     : {}),
 });
 

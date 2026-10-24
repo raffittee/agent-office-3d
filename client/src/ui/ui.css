@@ -834,3 +834,124 @@
   font-size: 12px;
   color: var(--muted);
 }
+
+/* The read-only conversation view and the session history (P7-05) */
+.ui-modal.wide {
+  width: min(820px, calc(100vw - 32px));
+}
+.ui-conv-btn {
+  margin-top: 8px;
+}
+.ui-conv {
+  max-height: calc(100vh - 170px);
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+}
+.ui-conv pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font: inherit;
+}
+.ui-conv-note {
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.ui-conv-note:empty {
+  display: none;
+}
+.ui-conv-user {
+  display: flex;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent, #3b7bd8) 12%, transparent);
+  font-weight: 600;
+}
+.ui-conv-who {
+  color: var(--accent, #3b7bd8);
+}
+.ui-conv-assistant {
+  padding: 0 4px;
+}
+.ui-conv-thinking {
+  color: var(--muted);
+  font-style: italic;
+}
+.ui-conv-thinking summary,
+.ui-conv-tool summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 12px;
+}
+.ui-conv-tool {
+  padding: 6px 10px;
+  border-left: 3px solid var(--border);
+}
+.ui-conv-title {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  word-break: break-all;
+}
+.ui-conv-tool pre,
+.ui-conv-result pre {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11.5px;
+}
+.ui-conv-result {
+  margin-top: 4px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+  max-height: 260px;
+  overflow: auto;
+}
+.ui-conv-result.err {
+  background: color-mix(in srgb, #e5383b 12%, transparent);
+}
+.ui-conv-system {
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+}
+.ui-conv-system.warn {
+  color: #b7791f;
+}
+.ui-conv-system.error {
+  color: #e5383b;
+}
+.ui-history {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.ui-history li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.ui-history-open {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  color: var(--accent, #3b7bd8);
+  cursor: pointer;
+  text-align: left;
+}
+.ui-history-meta {
+  flex: 1;
+  color: var(--muted);
+}
+.ui-history time {
+  color: var(--muted);
+  font-size: 12px;
+}

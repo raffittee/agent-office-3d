@@ -486,6 +486,43 @@ export interface InboxMessage {
   text: string;
 }
 
+// ---------------------------------------------------------------- read-only conversation view (P7-05)
+
+/**
+ * One entry of an agent's conversation, rebuilt from its provider's transcript (GET /api/conversation/:agentId).
+ * Every text is masked and cut before it leaves the server. A tool's result comes as a later 'result' entry that
+ * points at the 'tool' entry by `toolId`.
+ */
+export type ConversationEntry =
+  | { kind: 'user'; id: string; at: number; text: string }
+  | { kind: 'assistant'; id: string; at: number; text: string }
+  | { kind: 'thinking'; id: string; at: number; text?: string }
+  | { kind: 'tool'; id: string; at: number; tool: string; title: string; input?: string }
+  | { kind: 'result'; id: string; at: number; toolId: string; text: string; error?: boolean }
+  | { kind: 'system'; id: string; at: number; text: string; level?: 'info' | 'warn' | 'error' };
+
+/** The latest part of a conversation (oldest first); `truncated` = older parts weren't read. */
+export interface ConversationPage {
+  provider: ProviderId;
+  entries: ConversationEntry[];
+  truncated: boolean;
+}
+
+/** A recent session in the history (open or ended), whose conversation GET /api/sessions/:key/conversation returns. */
+export interface RecentSession {
+  /** Opaque key for the conversation route. */
+  key: string;
+  provider: ProviderId;
+  account: string;
+  sessionId: string;
+  /** Project folder name (never a full path). */
+  project?: string;
+  title?: string;
+  lastAt: number;
+  /** In the office right now. */
+  open: boolean;
+}
+
 /** Body of POST /api/permissions/:id/decision. `terminal` = hand the request back to the terminal. */
 export type PermissionDecision =
   | { behavior: 'allow'; suggestion?: number }

@@ -3,6 +3,7 @@
 import type { OfficeStore } from '../net/store';
 import type { WorldApi, WorldSettings } from '../render3d/world';
 import { Alerts } from './alerts';
+import { openHistory } from './conversation';
 import { openHelp, openSettings, SETTINGS_KEY } from './dialogs';
 import { prefs } from './dom';
 import { createDrawer } from './drawer';
@@ -30,9 +31,10 @@ export function createUI(root: HTMLElement, store: OfficeStore, world: WorldApi)
   const topbar = createTopbar(store, world, {
     settings: () => dialog(() => openSettings(root, world, alerts)),
     help: () => dialog(() => openHelp(root)),
+    history: () => dialog(() => openHistory(root)),
   });
   const sidebar = createSidebar(store, world);
-  const drawer = createDrawer(store, world);
+  const drawer = createDrawer(store, world, (open) => dialog(open));
   root.append(topbar, sidebar.el, createFeed(store, world), drawer.el, createRequests(store, world), createToasts(store, world), createHoverTip(store, world));
 
   const insets = () => {

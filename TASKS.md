@@ -603,7 +603,11 @@ need a look on your machine.
   2.1.310, installed from the marketplace), SDK `inbox()`/`ack()`, the drawer's message box (`client/src/ui/compose.ts`).
   - Claude through a plugin inbox, Codex through `codex queue`, and custom agents through an SDK inbox.
   - **Ref:** `server/messages/*`, `mod/habblaud-mensagens/*`.
-- [ ] **P7-05 Read-only conversation view** (L)
+- [x] **P7-05 Read-only conversation view** (L) — done: one provider-neutral `ConversationEntry` format; parsers in
+  `server/adapters/{claude-code,codex,gemini-cli}/conversation.ts` (condensed from Habblaud's terminal parser, Gemini's
+  built from the `chats/` format with rewrites, `$rewindTo` and `$patch`); `ProviderAdapter.transcriptOf/recentSessions`;
+  `server/conversation/` (tail reader, routes behind the interactive gate); the viewer and the session history in
+  `client/src/ui/conversation.ts`. Polling instead of Habblaud's SSE stream.
   - Turn each provider's transcript into terminal entries: port the Claude and Codex parsers; build Gemini's from
     the `chats/` format.
   - Mask everything, and add a session history.

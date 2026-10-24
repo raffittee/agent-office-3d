@@ -13,11 +13,13 @@ import { existsSync, readdirSync, readFileSync, statSync, watch, type FSWatcher 
 import { join } from 'node:path';
 import type { JobOutcome } from '../../../shared/activity';
 import { t as tr } from '../../../shared/i18n';
-import type { AgentEvent, AgentEventType, EventTask, ProviderCapabilities, SourceInfo } from '../../../shared/protocol';
+import type { AgentEvent, AgentEventType, AgentInfo, EventTask, ProviderCapabilities, SourceInfo } from '../../../shared/protocol';
 import { describeClaudeTool } from '../../../shared/tools/claude-code';
 import { errMsg, log } from '../../log';
 import { discoverClaudeAccounts, type ClaudeAccount } from '../accounts';
-import { pidAlive, type AdapterContext, type ProviderAdapter } from '../adapter';
+import { pidAlive, type AdapterContext, type ProviderAdapter, type SessionFile } from '../adapter';
+import { cwdFromHead, dirsIn, filesIn, folderName, readHeadLines, stem } from '../../conversation/files';
+import { parseClaudeConversation } from './conversation';
 import type { LivenessTarget } from '../../../shared/model/office';
 import { FileTail } from '../tail';
 import { compareVersions, ProcStartChecker, registryStatus, RegistryReader, SHELL_STATUS_VERSION, type RegistryEntry, type RegistryStatus } from './registry';
@@ -165,7 +167,7 @@ export class ClaudeCodeAdapter implements ProviderAdapter {
   readonly id = 'claude-code' as const;
   readonly label = 'Claude Code';
   readonly color = '#d97757';
-  readonly capabilities: ProviderCapabilities = { transcript: false, approve: false, message: false, usage: false, subagents: true };
+  readonly capabilities: ProviderCapabilities = { transcript: true, approve: true, message: true, usage: false, subagents: true };
 
   private ctx: AdapterContext | null = null;
   private accountList: ClaudeAccount[] = [];
@@ -198,6 +200,31 @@ export class ClaudeCodeAdapter implements ProviderAdapter {
   }
 
   describeTool = describeClaudeTool;
+  parseConversation = parseClaudeConversation;
+
+  /** The transcript of a main agent or of a subagent (subagents/agent-<id>.jsonl). */
+  transcriptOf(agent: AgentInfo): string | undefined {
+    for (const t of this.sessions.values()) {
+      if (t.sessionId !== agent.sessionId || t.account !== agent.account) continue;
+      if (agent.kind === 'main') return t.transcriptPath;
+      return t.subs.get(agent.id.slice(`${this.id}:${t.account}:${t.sessionId}:`.length))?.file.path;
+    }
+    return undefined;
+  }
+
+  /** The newest transcripts of every account: <config>/projects/<encoded cwd>/<sessionId>.jsonl. */
+  recentSessions(limit: number): SessionFile[] {
+    const found: { account: string; file: string; mtime: number }[] = [];
+    for (const a of this.currentAccounts()) {
+      const projects = join(a.dir, 'projects');
+      for (const d of dirsIn(projects)) for (const f of filesIn(join(projects, d), /^[\w-]+\.jsonl$/)) found.push({ account: a.slug, ...f });
+    }
+    found.sort((x, y) => y.mtime - x.mtime);
+    return found.slice(0, limit).map((f) => {
+      const project = folderName(cwdFromHead(readHeadLines(f.file)));
+      return { provider: this.id, account: f.account, sessionId: stem(f.file), file: f.file, lastAt: f.mtime, ...(project ? { project } : {}) };
+    });
+  }
 
   /** Boot (synchronous, between beginBoot/endBoot) + periodic polling. */
   start(ctx: AdapterContext): void {

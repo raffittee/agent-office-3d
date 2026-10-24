@@ -1,7 +1,7 @@
 # Interacting from the office
 
-Phase 7 adds features that act on your agents' sessions: approving permission requests, answering questions and
-sending messages from the office. They are **off by default**. This page explains how to turn them on, what they can do, and what
+Phase 7 adds features that act on your agents' sessions: approving permission requests, answering questions,
+sending messages and reading conversations from the office. They are **off by default**. This page explains how to turn them on, what they can do, and what
 the risks are.
 
 ## Turning them on
@@ -59,6 +59,29 @@ masked.
 
 **Message risk:** a message is a prompt in your name. Anything on this computer that can reach the office can send
 one to an agent that has messaging set up.
+
+## Reading conversations (P7-05)
+
+- **💬 Conversation** in an agent's details opens a read-only view of its conversation, refreshed every 2.5 s while
+  open. It shows:
+  - your prompts and slash commands;
+  - the agent's answers and thinking;
+  - each tool call (CLI-style title, folded arguments) with its result underneath.
+- **🕘** in the top bar lists the 40 most recent sessions of every provider, open or ended, and opens their
+  conversations.
+
+How it works:
+
+- The server reads only the last 4 MB of a transcript and shows the latest 400 entries. Each provider has its own
+  parser: Claude Code's `projects/**/*.jsonl`, Codex's rollouts, Gemini CLI's `chats/` files.
+- **Masked:** every text is masked and cut before it leaves the server.
+- **Never shown:**
+  - system reminders, developer instructions and environment context;
+  - Claude Code's `api-request*` and `credential_org` records (dropped before parsing);
+  - paths: history items carry an opaque key.
+
+**Conversation risk:** conversations can contain anything the agents read: code, logs, and possibly secrets the
+masking doesn't recognize. They're behind the same local-only gate as the other interactive routes.
 
 ## How it works
 

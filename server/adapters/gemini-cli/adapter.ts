@@ -9,15 +9,17 @@
 //   tool hooks carry the parent's session id, so they're ignored: its chat file reports them.
 //
 // Background commands report a PID and no hook fires when they end: the PID is probed instead.
+import { dirsIn, filesIn, readHeadLines } from '../../conversation/files';
+import { parseGeminiConversation } from './conversation';
 import { readdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { t } from '../../../shared/i18n';
-import type { AgentEvent, AgentEventType, EventTool, ProviderCapabilities, SourceInfo } from '../../../shared/protocol';
+import type { AgentEvent, AgentEventType, AgentInfo, EventTool, ProviderCapabilities, SourceInfo } from '../../../shared/protocol';
 import { describeGeminiTool } from '../../../shared/tools/gemini-cli';
 import { errMsg, log } from '../../log';
 import { accountSlug } from '../accounts';
-import { pidAlive, type AdapterContext, type ProviderAdapter } from '../adapter';
+import { pidAlive, type AdapterContext, type ProviderAdapter, type SessionFile } from '../adapter';
 import { FileTail } from '../tail';
 import { createChatState, endedTool, parseChatLine, type ChatItem, type ChatState, type ChatToolCall } from './chat';
 import { geminiHomeOf, HOOK_EVENTS, parseHookBody, type GeminiHook } from './hook';
@@ -79,9 +81,39 @@ export class GeminiCliAdapter implements ProviderAdapter {
   readonly id = 'gemini-cli' as const;
   readonly label = 'Gemini CLI';
   readonly color = '#4285f4';
-  readonly capabilities: ProviderCapabilities = { transcript: false, approve: false, message: false, usage: false, subagents: true };
+  readonly capabilities: ProviderCapabilities = { transcript: true, approve: false, message: false, usage: false, subagents: true };
 
   describeTool = describeGeminiTool;
+  parseConversation = parseGeminiConversation;
+
+  /** A session's chat file, or a subagent's (chats/<sessionId>/<subagentId>.jsonl). */
+  transcriptOf(agent: AgentInfo): string | undefined {
+    const s = this.sessions.get(agent.sessionId);
+    if (!s?.transcriptPath) return undefined;
+    if (agent.kind === 'main') return s.transcriptPath;
+    const sub = agent.id.slice(`${this.id}:${agent.account}:${agent.sessionId}:`.length);
+    return s.subs.has(sub) ? join(dirname(s.transcriptPath), s.sessionId, `${sub}.jsonl`) : undefined;
+  }
+
+  /** The newest chat files: <home>/.gemini/tmp/<project>/chats/session-*.jsonl (homes: GEMINI_CLI_HOME or ~, and any seen). */
+  recentSessions(limit: number): SessionFile[] {
+    const homes = new Set<string>([process.env.GEMINI_CLI_HOME?.trim() || this.home]);
+    for (const s of this.sessions.values()) {
+      const h = s.transcriptPath ? geminiHomeOf(s.transcriptPath) : undefined;
+      if (h) homes.add(h);
+    }
+    const found: SessionFile[] = [];
+    for (const home of homes) {
+      const tmp = join(home, '.gemini', 'tmp');
+      for (const project of dirsIn(tmp))
+        for (const f of filesIn(join(tmp, project, 'chats'), /^session-.*\.jsonl$/)) {
+          const first = readHeadLines(f.file, 4 * 1024)[0] ?? '';
+          const id = /"sessionId"\s*:\s*"([\w-]+)"/.exec(first)?.[1];
+          if (id) found.push({ provider: this.id, account: accountSlug(home, this.home), sessionId: id, file: f.file, lastAt: f.mtime, project });
+        }
+    }
+    return found.sort((a, b) => b.lastAt - a.lastAt).slice(0, limit);
+  }
 
   private ctx: AdapterContext | null = null;
   private sessions = new Map<string, Session>();

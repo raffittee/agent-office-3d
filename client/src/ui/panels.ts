@@ -7,13 +7,17 @@ import { button, el } from './dom';
 import { ago, countByStatus, STATUS_COLORS, statusLabel } from './model';
 import { createUsage } from './usage';
 
-export function createTopbar(store: OfficeStore, world: WorldApi, actions: { settings(): void; help(): void }): HTMLElement {
+export function createTopbar(store: OfficeStore, world: WorldApi, actions: { settings(): void; help(): void; history(): void }): HTMLElement {
   const root = el('header', 'ui-topbar');
   const brand = el('div', 'ui-brand', t('Agent Office'));
   const counters = el('div', 'ui-counters');
   counters.setAttribute('aria-live', 'polite');
   const conn = el('div', 'ui-conn');
   const shown: AgentStatus[] = ['waiting', 'working', 'shell', 'idle'];
+  // session history (P7-05): only with the interactive features on
+  const history = button('🕘', t('Session history'), actions.history);
+  history.hidden = true;
+  store.on('snapshot', (snap) => (history.hidden = !snap.meta.interactive));
   root.append(
     brand,
     counters,
@@ -23,6 +27,7 @@ export function createTopbar(store: OfficeStore, world: WorldApi, actions: { set
     button('⤢', t('Frame the office (F)'), () => world.overview()),
     button('⟲', t('Turn left (Q)'), () => world.rotate(1)),
     button('⟳', t('Turn right (E)'), () => world.rotate(-1)),
+    history,
     button('⚙', t('Settings (,)'), actions.settings),
     button('?', t('Help (?)'), actions.help),
   );

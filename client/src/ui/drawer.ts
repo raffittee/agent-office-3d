@@ -5,6 +5,7 @@ import type { Activity, AgentInfo, OfficeSnapshot } from '../../../shared/protoc
 import type { OfficeStore } from '../net/store';
 import type { Selection, WorldApi } from '../render3d/world';
 import { createCompose } from './compose';
+import { openConversation } from './conversation';
 import { badge, button, el } from './dom';
 import { ago, compact, providerMeta, STATUS_COLORS, statusLabel } from './model';
 
@@ -26,7 +27,7 @@ function agentRow(a: AgentInfo, onClick: () => void): HTMLLIElement {
   return li;
 }
 
-export function createDrawer(store: OfficeStore, world: WorldApi): Drawer {
+export function createDrawer(store: OfficeStore, world: WorldApi, dialog: (open: () => () => void) => void = (open) => void open()): Drawer {
   const root = el('aside', 'ui-drawer');
   root.hidden = true;
   root.setAttribute('aria-label', t('Details'));
@@ -48,6 +49,11 @@ export function createDrawer(store: OfficeStore, world: WorldApi): Drawer {
     if (a.model) m.append(el('span', '', a.model));
     parts.push(m);
     if (a.title) parts.push(el('div', 'meta', a.title));
+    // the read-only conversation (P7-05), live while open
+    if (snap.meta.interactive && meta.capabilities?.transcript) {
+      const host = root.parentElement ?? document.body;
+      parts.push(button(t('💬 Conversation'), t('Read this agent’s conversation (read-only)'), () => dialog(() => openConversation(host, `${a.name} · ${meta.label}`, `/api/conversation/${encodeURIComponent(a.id)}`, true)), 'ui-btn ui-conv-btn'));
+    }
     const room = store.room(a.roomId);
     if (room) {
       const r = el('div', 'meta');

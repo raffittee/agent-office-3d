@@ -488,7 +488,11 @@ no page errors, 37–52 draw calls) and renders the preview page; `themes/cabin/
     slice into `test/fixtures/codex/`, and rewrite `docs/providers/codex.md` from the real files.
   - Port the locks, rollouts, hook shim and installer into `server/adapters/codex/` and `hooks/codex.mjs`.
   - **Ref:** `server/sources/codex/*`, `mod/habblaud-codex/hook.mjs`, `scripts/codex-install.ts` and their tests.
-- [ ] **P5-02 SDK emitters** (M)
+- [x] **P5-02 SDK emitters** (M) — done: `sdk/ts/agent-office.ts` (no imports; batching, heartbeat, PID, `tool()`
+  wrapper, subagents, jobs) and `sdk/python/agent_office.py` (standard library; background thread); examples
+  `sdk/python/examples/gemini_agent.py` (Gemini API) and `sdk/ts/examples/openai-agent.ts` (OpenAI-compatible,
+  Ollama by default); `sdk/README.md`; `test/sdk.test.ts` runs all four against the real ingest endpoint and stub
+  model servers.
   - `sdk/ts`, a zero-dependency `fetch` helper, and `sdk/python`, using only the standard library (`urllib`).
   - Helpers for session, turn, tool and waiting events, with an automatic heartbeat.
   - Examples: a minimal agent loop on the Gemini API, and one on an OpenAI-compatible or Ollama endpoint, both

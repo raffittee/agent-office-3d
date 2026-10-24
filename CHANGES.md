@@ -594,3 +594,13 @@ Branch `phase-1`. One commit per task, each pushed. At the end of the phase ther
 - **Needs your machine (optional):** if you use Codex, run `npm run hooks:install -- --provider codex`, trust the hooks
   in `/hooks`, and check that a permission prompt shows the raised hand (that one case can't be produced without a
   real model).
+
+### P5-02 SDK emitters — done, 2026-10-25 06:45
+
+- **Any agent can now show up in the office.** Two one-file SDKs without dependencies: TypeScript
+  (`sdk/ts/agent-office.ts`) and Python (`sdk/python/agent_office.py`). A few calls (`session_start`, `turn_start`,
+  `with office.tool(...)`, `subagent(...)`, `waiting(...)`, `close()`) and the agent sits, types, raises its hand and
+  leaves like the others. How-to: `sdk/README.md`.
+- **Two working example agents:** one on the Gemini API (Python) and one on any OpenAI-compatible endpoint, Ollama by
+  default (TypeScript). Both were tested here against fake model servers; with a real key (or Ollama) they run as-is.
+- Reporting never crashes or slows the agent: if the office isn't running, events are simply dropped.

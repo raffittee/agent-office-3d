@@ -250,7 +250,11 @@ The plan, phase by phase. [CLAUDE.md](CLAUDE.md) has the design, contracts and r
   - Port `shared/demo/simulator.ts`, mixing providers (`claude-code`, `gemini-cli`, `codex`, `custom:demo`).
   - The same seed always produces the same office.
   - Turned on with `AGENT_OFFICE_DEMO=1` on the server, or `?mock=1` in the browser.
-- [ ] **P1-12 Debug page** (S)
+- [x] **P1-12 Debug page** (S) — done: `client/src/debug/` (`model.ts` groups a snapshot into rooms → agents with
+  subagents under their parent, tested; `page.ts` renders provider badge, status, jobs and activity live over
+  `/api/stream`, or from the in-browser demo office with `?mock=1`), shown by `client/src/main.ts`. Checked in
+  Chromium against the built server (demo agents and a real Claude Code session side by side); status changes posted
+  to `/api/events` reach the stream in ~200 ms.
   - A temporary page listing rooms → agents, each with a provider badge, status and current activity, live over
     SSE.
   - It's deleted in P2-10.

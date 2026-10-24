@@ -11,6 +11,7 @@ import { tm, WALL_H } from './units';
 
 const CSS = `
 .ao-overlay { position: absolute; inset: 0; pointer-events: none; overflow: hidden; font: 12px/1.25 system-ui, sans-serif; }
+.ao-overlay [hidden] { display: none !important; }
 .ao-label { position: absolute; left: 0; top: 0; display: flex; flex-direction: column; align-items: center; gap: 2px;
   transform: translate(-50%, -100%); white-space: nowrap; will-change: transform; }
 .ao-bubble { max-width: 220px; overflow: hidden; text-overflow: ellipsis; padding: 3px 8px; border-radius: 10px;
@@ -96,7 +97,14 @@ export class Overlay {
       const h = (label.name ? 18 : 0) + (label.bubble ? 22 : 0) + (label.icon ? 18 : 0);
       placed.push({ id: c.id, rect: { x: pt.x - w / 2, y: pt.y - h, w, h }, priority: label.priority, label, x: pt.x, y: pt.y });
     }
-    const keep = declutter(placed);
+    // room name tags compete too: above plain names, below bubbles and alerts
+    const roomTags = this.placeRooms(rooms, rig, zoomPx);
+    const keep = declutter([...placed, ...roomTags]);
+    for (const r of roomTags) {
+      const el = this.rooms.get(r.roomId)!;
+      el.hidden = !keep.has(r.id);
+      el.style.transform = `translate(${Math.round(r.x)}px, ${Math.round(r.y)}px) translate(-50%, -50%)`;
+    }
     for (const p of placed) {
       // a label that loses the overlap still shows its alert bubble, just without the name
       const kept = keep.has(p.id);
@@ -130,11 +138,12 @@ export class Overlay {
         this.entries.delete(id);
       }
     }
-    this.updateRooms(rooms, rig, zoomPx);
   }
 
-  private updateRooms(rooms: Iterable<RoomState>, rig: CameraRig, zoomPx: number): void {
+  /** Room name tags to place (created on demand); tags of rooms that are gone are removed. */
+  private placeRooms(rooms: Iterable<RoomState>, rig: CameraRig, zoomPx: number): { id: string; roomId: string; rect: { x: number; y: number; w: number; h: number }; priority: number; x: number; y: number }[] {
     const seen = new Set<string>();
+    const out: { id: string; roomId: string; rect: { x: number; y: number; w: number; h: number }; priority: number; x: number; y: number }[] = [];
     for (const r of rooms) {
       if (!r.present || r.ghost || r.phase !== 'ready') continue;
       seen.add(r.id);
@@ -150,14 +159,19 @@ export class Overlay {
       // over the room's back wall, centred
       tmp.set(tm(rect.x + rect.w / 2), WALL_H * 0.15, tm(rect.y + 1));
       rig.project(tmp, pt);
-      el.hidden = zoomPx < 5;
-      el.style.transform = `translate(${Math.round(pt.x)}px, ${Math.round(pt.y)}px) translate(-50%, -50%)`;
+      if (zoomPx < 5) {
+        el.hidden = true;
+        continue;
+      }
+      const w = r.info.name.length * 7.5 + 24;
+      out.push({ id: `room:${r.id}`, roomId: r.id, rect: { x: pt.x - w / 2, y: pt.y - 11, w, h: 22 }, priority: 8, x: pt.x, y: pt.y });
     }
     for (const [id, el] of this.rooms) {
       if (seen.has(id)) continue;
       el.remove();
       this.rooms.delete(id);
     }
+    return out;
   }
 
   dispose(): void {

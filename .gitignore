@@ -11,3 +11,4 @@ Thumbs.db
 scratch/
 .claude/settings.local.json
 spikes/*/out/
+artifacts/

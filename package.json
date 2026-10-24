@@ -20,7 +20,8 @@
     "test": "vitest run",
     "hooks:install": "tsx scripts/hooks-install.ts install",
     "hooks:uninstall": "tsx scripts/hooks-install.ts uninstall",
-    "hooks:status": "tsx scripts/hooks-install.ts status"
+    "hooks:status": "tsx scripts/hooks-install.ts status",
+    "shot": "node scripts/shot.mjs"
   },
   "devDependencies": {
     "@types/node": "22.20.5",

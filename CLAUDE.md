@@ -401,6 +401,7 @@ Update this table as commands land. *(planned)* marks the ones that don't exist 
 | `node spikes/renderer/measure.mjs` · `node spikes/assets/measure.mjs <dir>` | Re-run the Phase 0 measurements |
 | `npm run demo` | Dev mode with simulated agents from several providers (`AGENT_OFFICE_DEMO=1` or `--demo` on any run) |
 | `npm run hooks:install -- --provider gemini-cli` | Install a provider's hooks (`--profile light` or `full`; also `hooks:status`, `hooks:uninstall`) |
+| `npm run shot` | After `npm run build`: screenshot the demo office in Chrome (`--sessions 30`, `--out <dir>`); CI runs it |
 | `npm run theme:check` · `npm run theme:new -- <id>` *(planned)* | Validate theme packs and scaffold a new one |
 
 ## How to work in this repo

@@ -330,16 +330,23 @@ their status changes (working, waiting, idle, offline) appear within 2 s; the de
   - Occlusion, culling and level of detail.
   - Options: names on or off; bubbles all, important only, or none.
   - **Ref:** `client/src/world/render/overlay.ts`, `client/src/world/api.ts` (`WorldOptions`).
-- [ ] **P2-09 Selection & details drawer** (M)
+- [x] **P2-09 Selection & details drawer** (M) — done: screen-space picking of characters (head and body) and rooms
+  (ground ray) in `render3d/world.ts`, a hover tooltip, and `ui/drawer.ts` (status, provider, model, branch, room,
+  current activity or what it waits for, jobs, tasks, parent/subagents, stats, a timeline from `/api/agents/:id`).
   - Raycast picking and a hover tooltip.
   - A details drawer with the current activity, tasks, subagents, timeline, stats, model and provider.
   - **Ref:** `client/src/ui/drawer.ts`, `client/src/ui/hovertip.ts`.
-- [ ] **P2-10 Panels** (M)
+- [x] **P2-10 Panels** (M) — done: `client/src/ui/` (sidebar with search and provider chips, top bar counters and
+  connection state, activity feed, toasts for notices and new builds, settings skeleton saved in localStorage,
+  help, shortcuts `/ ? , N B Esc` plus the camera keys; panels set the camera's free area; narrow-screen layout).
+  The P1-12 debug page is deleted. `ui/model.ts` holds the tested logic.
   - Sidebar: rooms → agents, search, provider filter.
   - Top bar counters, activity feed, toasts, a settings skeleton, keyboard shortcuts, help.
   - Delete the P1-12 debug page.
   - **Ref:** `client/src/ui/{sidebar,topbar,feed,toasts,settings,help}.ts`.
-- [ ] **P2-11 Screenshot smoke test** (S)
+- [x] **P2-11 Screenshot smoke test** (S) — done: `scripts/shot.mjs` (`npm run shot`: built server + `?mock=1` in Chrome
+  with software WebGL; fails on page errors, an empty scene, >300 draw calls or a drawer that won't open) and a CI
+  step that uploads `artifacts/` (office and selected-agent screenshots + stats). 30 demo agents: 38 draw calls.
   - A Playwright script that captures the demo scene and uploads it as a CI artifact.
   - **Ref:** `scripts/shot.mjs`.
 

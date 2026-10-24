@@ -459,3 +459,22 @@ Branch `phase-1`. One commit per task, each pushed. At the end of the phase ther
 - Cost: about 25 draw calls for a 3-room office (the budget is 300).
 - 16 new tests for the parts that don't need a GPU (camera framing, cutaway, furniture kit, poses, labels).
 
+### P2-09 to P2-11: panels, details and the screenshot test — done, 2026-10-25 04:51
+
+- **Panels around the office:**
+  - a top bar with counters (an orange "N need you" chip appears when someone waits for you) and the connection
+    state, with "Retry now" when disconnected;
+  - a sidebar listing rooms and their agents, with search (`/`) and a filter per provider;
+  - an activity feed;
+  - pop-up notices (click one to jump to the agent);
+  - a tooltip when hovering an agent.
+- **Click an agent** (in the office or the list) to open its details: what it's doing or waiting for, background
+  jobs, tasks, subagents or parent, stats, model, branch and a timeline. Click a room to see who's in it.
+- **Settings** (`,`): names, bubbles, how often idle agents wander, camera follow, and walls cut down or hidden.
+  They're remembered in this browser. **Help** (`?`) lists the shortcuts.
+- The temporary debug page from Phase 1 is gone.
+- **`npm run shot`** takes screenshots of the demo office in Chrome. CI now runs it and keeps the pictures (GitHub →
+  Actions → a run → "office-screenshots"). It fails if the page errors, the scene is empty, the draw calls pass
+  300, or the details panel won't open.
+- With 30 demo agents in 6 rooms: 38 draw calls.
+

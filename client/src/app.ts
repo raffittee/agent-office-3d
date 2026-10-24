@@ -1,8 +1,8 @@
 // Ported from habblaud client/src/app.ts (MIT, © 2026 Márcio Junior)
 // The client app: store (data) → world (canvas) → UI (panels).
-import { startDebugPage } from './debug/page';
 import { OfficeStore } from './net/store';
-import { createWorld } from './render3d/world';
+import { createWorld, DEFAULT_WORLD_SETTINGS } from './render3d/world';
+import { createUI, savedSettings } from './ui';
 
 export function start(): void {
   const params = new URLSearchParams(location.search);
@@ -10,14 +10,8 @@ export function start(): void {
   const canvas = document.getElementById('world') as HTMLCanvasElement;
   const labels = document.getElementById('labels') as HTMLElement;
   const uiRoot = document.getElementById('ui') as HTMLElement;
-  const world = createWorld(canvas, labels, store);
-
-  // Until P2-10 brings the panels, the debug list is the UI.
-  const debug = document.createElement('div');
-  uiRoot.append(debug);
-  startDebugPage(debug, store);
-  world.setViewInsets({ right: Math.min(480, innerWidth) });
-
+  const world = createWorld(canvas, labels, store, savedSettings(DEFAULT_WORLD_SETTINGS));
+  createUI(uiRoot, store, world);
   store.connect();
 
   // Handy for debugging from the browser console.

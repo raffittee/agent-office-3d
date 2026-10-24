@@ -217,3 +217,25 @@ Payloads carry conversation content: `prompt`, `prompt_response`, full `tool_inp
 4. The shim computes `ok` before dropping `tool_response`, and resolves the agent PID (the grandparent through the
    shell) on `SessionStart` only.
 5. Support Gemini CLI ≥ 0.65.0 to start with.
+
+## How the adapter uses this (P1-10)
+
+- **Shim** (`hooks/gemini-cli.mjs`): it slims the payload before posting. `tool_response` becomes
+  `tool_result: {ok, error_type, exit_code, background_pid}`, and the file-content keys of `tool_input` are dropped.
+  The agent PID is resolved on `SessionStart` only.
+- **Server** (`server/adapters/gemini-cli/`):
+  - **Pairing.** Hook tool calls pair by name, oldest first, under generated ids, so parallel calls pair correctly.
+  - **Subagents.** Tool hooks between `BeforeTool(invoke_agent)` and its `AfterTool` belong to a subagent and are
+    ignored there; the subagent's chat file reports them instead. The parent's chat entry for `invoke_agent` carries
+    **`agentId` = the subagent's chat session id**, so subagents match exactly. A subagent ends on `complete_task`,
+    on the parent's finished `invoke_agent`, or after 120 s of silence.
+  - **Chat files.** Paths come from hook payloads, so only `<home>/.gemini/tmp/<slug>/chats/session-*.jsonl` and
+    `chats/<id>/<id>.jsonl` are opened. The account is `default`, or a hash of the `<home>` holding `.gemini`.
+  - **Light profile and ACP.** Tool calls come from the chat file once they finish. If they're read after
+    `AfterAgent`, a `turn.end` follows so the agent doesn't stay busy.
+  - **Background jobs** end when their PID stops answering a probe.
+  - **`/clear`.** `SessionEnd(clear)` waits up to 10 s for the `SessionStart(clear)` from the same PID, which then
+    carries `continues`. Without one, the old session ends.
+  - **Ignored events.** Events we don't register (`PreCompress`, …) are accepted and ignored.
+- **Not covered yet:** sessions that were already running when the office started appear on their next hook. Gemini
+  has no session registry to read at boot.

@@ -30,10 +30,10 @@ beforeEach(() => {
 });
 afterEach(() => tmp.cleanup());
 
-function runShim(args: string[], stdin: string, env: NodeJS.ProcessEnv = {}): Promise<{ code: number | null; stdout: string; ms: number }> {
+function runShim(args: string[], stdin: string, env: NodeJS.ProcessEnv = {}, script = SHIM): Promise<{ code: number | null; stdout: string; ms: number }> {
   return new Promise((ok, fail) => {
     const t0 = Date.now();
-    const child = spawn(process.execPath, [SHIM, ...args], { env: { PATH: process.env.PATH, HOME: home, USERPROFILE: home, SystemRoot: process.env.SystemRoot, ...env }, stdio: ['pipe', 'pipe', 'pipe'] });
+    const child = spawn(process.execPath, [script, ...args], { env: { PATH: process.env.PATH, HOME: home, USERPROFILE: home, SystemRoot: process.env.SystemRoot, ...env }, stdio: ['pipe', 'pipe', 'pipe'] });
     let stdout = '';
     child.stdout.setEncoding('utf8').on('data', (c: string) => (stdout += c));
     child.stderr.resume();
@@ -85,6 +85,26 @@ describe('hooks/shim.mjs as a real process', () => {
       const body = srv.requests[0]!.body as { session_id: string; prompt: string };
       expect(body.session_id).toBe('s1');
       expect(body.prompt).toHaveLength(8 * 1024);
+    } finally {
+      await srv.close();
+    }
+  });
+
+  it('hooks/gemini-cli.mjs posts the slimmed body: no file contents, nothing on stdout', async () => {
+    const srv = await capture();
+    try {
+      const input = {
+        session_id: 's1',
+        hook_event_name: 'AfterTool',
+        tool_name: 'write_file',
+        tool_input: { file_path: 'config.env', content: 'API_KEY=hunter2' },
+        tool_response: { llmContent: 'Successfully wrote config.env: API_KEY=hunter2', returnDisplay: '' },
+      };
+      const r = await runShim([], JSON.stringify(input), { AGENT_OFFICE_PORT: String(srv.port) }, resolve(__dirname, '../../hooks/gemini-cli.mjs'));
+      expect(r.code).toBe(0);
+      expect(r.stdout).toBe('');
+      expect(srv.requests.map((q) => q.path)).toEqual(['/api/hooks/gemini-cli']);
+      expect(srv.requests[0]!.body).toEqual({ hook_event_name: 'AfterTool', session_id: 's1', tool_name: 'write_file', tool_input: { file_path: 'config.env' }, tool_result: { ok: true } });
     } finally {
       await srv.close();
     }

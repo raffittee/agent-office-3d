@@ -321,3 +321,32 @@ Branch `phase-1`. One commit per task, each pushed. At the end of the phase ther
 - 66 new tests, ported from Habblaud's, plus replays of every real Claude fixture.
 - Not ported yet: Habblaud's GitHub-event detection (PR/merge/CI celebrations) and the "already answered question"
   tweak. Both are cosmetic and are listed for Phase 6.
+
+### P1-10 Gemini CLI adapter — done (one live check left for you)
+
+- `hooks/gemini-cli.mjs` is the script Gemini runs on each event. It strips private content before anything leaves
+  Gemini: file contents, command output and the model's replies stay behind. Only the tool name, its inputs
+  (without file bodies), success or failure, the exit code and a background process ID are sent.
+- The server combines Gemini's hooks with its chat file, which is needed for three things:
+  - **denying or cancelling a permission fires no hook**; only the chat file shows it, so the agent stops waiting
+    instead of being stuck;
+  - model and token counts appear only there;
+  - with the `light` profile (Windows default, since each hook costs ~0.4 s), tool activity is read from the chat
+    file instead of from slow per-tool hooks.
+- Subagents are matched exactly. Gemini's `invoke_agent` call names the subagent's own chat file, so there's no
+  guessing.
+- Background commands become jobs. Gemini says nothing when they end, so the server checks whether their process
+  still exists.
+- `/clear` keeps the same character (the old session ends, and the new one starts in the same process).
+- Safety: the server only reads files that look like Gemini chat files (`.gemini/tmp/<project>/chats/…`). Another
+  program on your computer can't make it read anything else.
+- Tested by replaying all 7 real Gemini captures from Phase 0 through the actual hook script, the server and the
+  office: allow, deny, Esc-cancel, `/clear`, resume, failures, subagent, background job and editor (ACP) mode. Also
+  checked live: the hook script, run as a real process, posted to a running server, and the agent showed
+  "waiting: Confirm Write: allowed.txt".
+- **Needs you (for the Phase 1 exit check):** a real Gemini session.
+  1. `npm i -g @google/gemini-cli@latest` (you have 0.15.1; hooks need ≥ 0.65).
+  2. Sign in by running `gemini` once.
+  3. `npm run hooks:install -- --provider gemini-cli`.
+  4. Start `npm run dev` and use Gemini in any folder.
+  I didn't touch your `~/.gemini` settings.

@@ -5,6 +5,7 @@ import http from 'node:http';
 import { join } from 'node:path';
 import { AdapterSet } from './adapters/adapter';
 import { ClaudeCodeAdapter } from './adapters/claude-code/adapter';
+import { GeminiCliAdapter } from './adapters/gemini-cli/adapter';
 import { loadConfig } from './config';
 import { createApiHandler } from './http/app';
 import { createRequestGuard } from './http/guard';
@@ -26,7 +27,7 @@ names.load();
 const aliases = new RoomAliases(join(config.dataDir, 'rooms.json'));
 aliases.load();
 
-const adapters = new AdapterSet([new ClaudeCodeAdapter({ inDocker: config.inDocker })]);
+const adapters = new AdapterSet([new ClaudeCodeAdapter({ inDocker: config.inDocker }), new GeminiCliAdapter({ home: config.home })]);
 
 const office = new Office({
   names,

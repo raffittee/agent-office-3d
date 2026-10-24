@@ -221,7 +221,11 @@ The plan, phase by phase. [CLAUDE.md](CLAUDE.md) has the design, contracts and r
     `test/fixtures/claude-code/` (none existed in P0-05).
   - **Ref:** `server/sources/{registry,watcher,tail,transcript,subagents,shells}.ts` and their tests.
   - **Done when:** the fixture tests pass, and a real session appears.
-- [ ] **P1-10 Gemini CLI adapter** (L)
+- [x] **P1-10 Gemini CLI adapter** (L) — done: `hooks/gemini-cli.mjs` (slims payloads in the shim) and
+  `server/adapters/gemini-cli/` (hooks → events, FIFO tool pairing, chat-file tailing for denials/cancels, tokens,
+  light-profile tools and subagents matched by `invoke_agent.agentId`, background PIDs probed as jobs, `/clear`
+  pairing); every P0-04 capture replays into the expected statuses through the real shim transform, and the live
+  shim → server path was checked. **Real Gemini session still to check:** needs Gemini ≥ 0.65 and a sign-in.
   - Write `hooks/gemini-cli.mjs` and an installer that targets `~/.gemini/settings.json` (or
     `$GEMINI_CLI_HOME/.gemini/settings.json`), using matcher `"*"` for every event. The installer checks
     `gemini --version` ≥ 0.65.0 and warns otherwise.

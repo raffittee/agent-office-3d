@@ -5,6 +5,7 @@ import http from 'node:http';
 import { join } from 'node:path';
 import { AdapterSet } from './adapters/adapter';
 import { ClaudeCodeAdapter } from './adapters/claude-code/adapter';
+import { CodexAdapter } from './adapters/codex/adapter';
 import { DemoAdapter } from './adapters/demo';
 import { GeminiCliAdapter } from './adapters/gemini-cli/adapter';
 import { loadConfig } from './config';
@@ -29,7 +30,7 @@ const aliases = new RoomAliases(join(config.dataDir, 'rooms.json'));
 aliases.load();
 
 const demo = config.demo ? new DemoAdapter() : undefined;
-const adapters = new AdapterSet([new ClaudeCodeAdapter({ inDocker: config.inDocker }), new GeminiCliAdapter({ home: config.home }), ...(demo ? [demo] : [])]);
+const adapters = new AdapterSet([new ClaudeCodeAdapter({ inDocker: config.inDocker }), new GeminiCliAdapter({ home: config.home }), new CodexAdapter({ home: config.home }), ...(demo ? [demo] : [])]);
 /** Provider badges: the running adapters, plus the ones only the demo simulates (Codex). */
 const providers = () => (demo ? [...adapters.providers(), ...demo.extraProviders(adapters.providers())] : adapters.providers());
 

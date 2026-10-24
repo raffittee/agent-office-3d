@@ -186,3 +186,53 @@ describe('hooks-install (files, fake home)', () => {
     expect(await exec('install', { profile: 'heavy' })).toBe(1);
   });
 });
+
+describe('hooks-install: Codex', () => {
+  let tmp: ReturnType<typeof tempDir>;
+  let home: string;
+  let out: string[];
+  const codexHome = () => join(home, '.codex');
+  const file = () => join(codexHome(), 'hooks.json');
+  const theirs = { hooks: { Stop: [{ hooks: [{ type: 'command', command: 'orca-notify' }] }] } };
+
+  beforeEach(() => {
+    tmp = tempDir();
+    home = join(tmp.dir, 'home');
+    out = [];
+    mkdirSync(join(codexHome(), 'sessions', '2026'), { recursive: true });
+    writeFileSync(file(), `${JSON.stringify(theirs, null, 2)}\n`);
+  });
+  afterEach(() => tmp.cleanup());
+
+  const exec = (command: RunOptions['command'], env: NodeJS.ProcessEnv = {}) =>
+    run({ command, provider: 'codex', port: 4848, dryRun: false }, { env, home, now: new Date(2026, 9, 25, 9, 30, 0), platform: 'linux', out: (l) => out.push(l), health: async () => undefined, skipVersionCheck: true });
+  const read = () => JSON.parse(readFileSync(file(), 'utf8')) as { hooks: Record<string, Array<{ matcher?: string; hooks: Array<Record<string, unknown>> }>> };
+
+  it('appends one group per event after the others, async where Codex allows it, and says how to trust them', async () => {
+    expect(await exec('install')).toBe(0);
+    const hooks = read().hooks;
+    expect(Object.keys(hooks).sort()).toEqual([...TARGETS.codex!.allEvents].sort());
+    // other apps' groups keep their place (Codex trusts hooks by position)
+    expect(hooks.Stop![0]).toEqual(theirs.hooks.Stop[0]);
+    expect(hooks.Stop![1]!.matcher).toBeUndefined();
+    expect(hooks.PreToolUse![0]!.hooks[0]).toMatchObject({ type: 'command', async: true, timeout: 5 });
+    expect(hooks.SessionEnd![0]!.hooks[0]).toEqual({ type: 'command', command: expect.stringContaining('codex.mjs'), timeout: 1 });
+    expect(hooks.PermissionRequest![0]!.hooks[0]!.async).toBeUndefined();
+    // the command carries no options: Codex's trust hash survives a port change
+    expect(String(hooks.PreToolUse![0]!.hooks[0]!.command)).toMatch(/^node "[^"]+codex\.mjs"$/);
+    expect(out.join('\n')).toContain('/hooks');
+    out = [];
+    expect(await exec('install')).toBe(0);
+    expect(out.join('\n')).toContain('already installed');
+    expect(await exec('uninstall')).toBe(0);
+    expect(read()).toEqual(theirs);
+  });
+
+  it('every Codex home gets its hooks (AGENT_OFFICE_CODEX_DIRS overrides discovery)', async () => {
+    const other = join(tmp.dir, 'work-codex');
+    mkdirSync(join(other, 'thread-writer-locks'), { recursive: true });
+    expect(await exec('install', { AGENT_OFFICE_CODEX_DIRS: other })).toBe(0);
+    expect(existsSync(join(other, 'hooks.json'))).toBe(true);
+    expect(read()).toEqual(theirs);
+  });
+});

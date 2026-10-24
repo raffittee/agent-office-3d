@@ -158,9 +158,10 @@ function toolFor(provider: ProviderId, kind: ToolKind, arg: string, extra: Recor
       read: ['read_file', 'file_path'], edit: ['replace', 'file_path'], write: ['write_file', 'file_path'], grep: ['grep_search', 'pattern'], glob: ['glob', 'pattern'],
       shell: ['run_shell_command', 'command'], search: ['google_web_search', 'query'], fetch: ['web_fetch', 'prompt'], plan: ['update_topic', 'topic'], delegate: ['invoke_agent', 'prompt'], ask: ['ask_user', 'question'],
     },
+    // Codex 0.164 reads and searches through its shell tool (docs/providers/codex.md)
     codex: {
-      read: ['read_file', 'path'], edit: ['apply_patch', 'path'], write: ['apply_patch', 'path'], grep: ['grep_files', 'pattern'], glob: ['list_dir', 'path'],
-      shell: ['shell', 'command'], search: ['web_search', 'query'], fetch: ['web_search', 'query'], plan: ['update_plan', 'plan'], delegate: ['spawn_agent', 'task'], ask: ['request_user_input', 'question'],
+      read: ['exec_command', 'cmd'], edit: ['apply_patch', 'command'], write: ['apply_patch', 'command'], grep: ['exec_command', 'cmd'], glob: ['exec_command', 'cmd'],
+      shell: ['exec_command', 'cmd'], search: ['web_search', 'query'], fetch: ['web_search', 'query'], plan: ['update_goal', 'objective'], delegate: ['spawn_agent', 'message'], ask: ['request_user_input', 'question'],
     },
     'custom:demo': {
       read: ['read_file', 'path'], edit: ['edit_file', 'path'], write: ['write_file', 'path'], grep: ['search_code', 'query'], glob: ['find_files', 'pattern'],
@@ -168,6 +169,20 @@ function toolFor(provider: ProviderId, kind: ToolKind, arg: string, extra: Recor
     },
   };
   const [name, key] = (table[provider] ?? table['custom:demo']!)[kind];
+  if (provider === 'codex') {
+    const wrap: Partial<Record<ToolKind, (a: string) => string>> = {
+      read: (a) => `sed -n '1,200p' ${a}`,
+      grep: (a) => `rg -n "${a}"`,
+      glob: (a) => `rg --files -g '${a}'`,
+      edit: (a) => `*** Begin Patch\n*** Update File: ${a}\n*** End Patch`,
+      write: (a) => `*** Begin Patch\n*** Add File: ${a}\n*** End Patch`,
+    };
+    const value = wrap[kind]?.(arg) ?? arg;
+    const input: Record<string, unknown> = { [key]: value, ...extra };
+    // the demo's own fields (command for shells) map to Codex's
+    if (kind === 'shell' && typeof extra.command === 'string') input.cmd = extra.command;
+    return { name, input };
+  }
   return { name, input: { [key]: arg, ...extra } };
 }
 

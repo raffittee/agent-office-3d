@@ -575,3 +575,22 @@ Branch `phase-1`. One commit per task, each pushed. At the end of the phase ther
 - **Try it:** Settings (gear icon) → Theme. Or `AGENT_OFFICE_THEME=industrial npm start` to change the default.
 - **Needs your machine:** the frame-rate check, now per theme (the industrial and traditional themes draw the most
   detail): http://127.0.0.1:4848/?mock=1&sessions=30&stats=1&theme=traditional.
+
+## Phase 5: More providers & generic ingest (branch `phase-5`)
+
+### P5-01 Codex adapter — done, 2026-10-25 06:25
+
+- **Codex sessions now appear in the office**, with their subagents, background commands and token counts. It works
+  without any setup (the office reads Codex's own files), and `npm run hooks:install -- --provider codex` adds faster
+  updates and the "needs you" state for permission prompts. After installing, open Codex, type `/hooks` and trust the
+  Agent Office hooks: Codex asks once.
+- **Verified for real, not from notes:** Codex isn't on your machine, but it installs from npm, so I ran Codex 0.164.0
+  here against a fake local model (no OpenAI account, nothing sent anywhere) and captured what it actually writes.
+  Several things had changed since Habblaud's notes (tool names, how background commands and subagents are recorded),
+  and the adapter follows the real files. Details: `docs/providers/codex.md`.
+- **Privacy:** file contents from edits, command output and the model's replies never leave Codex's process; only file
+  names, exit codes and ids do.
+- Also watched: extra Codex homes via `CODEX_HOME`, `~/.codex*`, or `AGENT_OFFICE_CODEX_DIRS`.
+- **Needs your machine (optional):** if you use Codex, run `npm run hooks:install -- --provider codex`, trust the hooks
+  in `/hooks`, and check that a permission prompt shows the raised hand (that one case can't be produced without a
+  real model).

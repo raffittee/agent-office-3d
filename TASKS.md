@@ -479,7 +479,11 @@ no page errors, 37–52 draw calls) and renders the preview page; `themes/cabin/
 
 ## Phase 5: More providers & generic ingest
 
-- [ ] **P5-01 Codex adapter** (L)
+- [x] **P5-01 Codex adapter** (L) — done: Codex 0.164.0 installed from npm and driven offline against a stub model
+  (`docs/spikes/codex-probe/`); fixtures in `test/fixtures/codex/`; `docs/providers/codex.md` rewritten from them.
+  `server/adapters/codex/{adapter,rollout,hook}.ts` (locks for open sessions and liveness, rollouts tailed, hooks;
+  each fact once), `hooks/codex.mjs`, `shared/tools/codex.ts`, `hooks:install -- --provider codex`. Checked live:
+  the installed shim reaches the server and the session, its subagent and job appear.
   - First, the check moved here from P0-05: install Codex, run a session, capture a sanitized lock file and rollout
     slice into `test/fixtures/codex/`, and rewrite `docs/providers/codex.md` from the real files.
   - Port the locks, rollouts, hook shim and installer into `server/adapters/codex/` and `hooks/codex.mjs`.

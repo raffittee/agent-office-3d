@@ -4,6 +4,7 @@
 //   npm run hooks:install -- --provider gemini-cli [--profile light|full] [--port <n>] [--dry-run]
 //   npm run hooks:uninstall -- --provider gemini-cli
 //   npm run hooks:status -- --provider gemini-cli
+//   npm run hooks:install -- --provider codex
 //
 // Settings with the `hooks: { <Event>: [{ matcher, hooks: [{ type: "command", command, ... }] }] }` shape (Gemini
 // CLI, Claude Code) are merged idempotently: only Agent Office's entries change; everything else stays. A backup
@@ -13,6 +14,7 @@ import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, statSync, u
 import { homedir } from 'node:os';
 import { delimiter, dirname, join, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { discoverCodexHomes } from '../server/adapters/accounts';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 export const DEFAULT_PORT = 4848;
@@ -40,11 +42,17 @@ export interface Target {
   events(profile: string): string[];
   /** Every event this target may own (stale ones are removed when the profile changes). */
   allEvents: readonly string[];
-  matcher: string;
-  entry(command: string): Rec;
+  /** The group's matcher; undefined = a group without one (Codex). */
+  matcher?: string;
+  entry(command: string, event?: string): Rec;
   /** A warning about the installed CLI version, or undefined. */
   versionWarning?(): string | undefined;
+  /** Printed after a successful install (e.g. how to trust the hooks). */
+  afterInstall?: string;
 }
+
+/** Codex hooks (docs/providers/codex.md): everything the office uses. */
+export const CODEX_EVENTS = ['SessionStart', 'SessionEnd', 'UserPromptSubmit', 'PreToolUse', 'PostToolUse', 'Stop', 'SubagentStart', 'SubagentStop', 'PermissionRequest'] as const;
 
 const GEMINI_LIGHT = ['SessionStart', 'SessionEnd', 'BeforeAgent', 'AfterAgent', 'Notification'];
 const GEMINI_FULL = [...GEMINI_LIGHT, 'BeforeTool', 'AfterTool'];
@@ -98,6 +106,26 @@ export const TARGETS: Record<string, Target> = {
       if (!v) return 'Gemini CLI not found on PATH (the hooks are written anyway).';
       return compareVersions(v, GEMINI_MIN_VERSION) < 0 ? `Gemini CLI ${v} is older than ${GEMINI_MIN_VERSION}: hooks are off by default there. Upgrade with npm i -g @google/gemini-cli@latest.` : undefined;
     },
+  },
+  codex: {
+    id: 'codex',
+    label: 'Codex',
+    script: join(ROOT, 'hooks', 'codex.mjs'),
+    // one hooks.json per Codex home (CODEX_HOME, ~/.codex*); ~/.codex when none exists yet
+    settingsFiles: (env, home) => {
+      const homes = discoverCodexHomes(env, home);
+      return (homes.length ? homes.map((h) => h.dir) : [join(home, '.codex')]).map((d) => join(d, 'hooks.json'));
+    },
+    profiles: ['default'],
+    defaultProfile: () => 'default',
+    events: () => [...CODEX_EVENTS],
+    allEvents: CODEX_EVENTS,
+    // Codex groups need no matcher; observe-only events run in the background (Codex doesn't wait for them).
+    // SessionEnd always runs in the foreground (at most 3 s); PermissionRequest waits for the shim, which answers
+    // nothing, so the usual prompt follows (approving from the office is Phase 7).
+    entry: (command, event) =>
+      event === 'SessionEnd' ? { type: 'command', command, timeout: 1 } : event === 'PermissionRequest' ? { type: 'command', command, timeout: 5 } : { type: 'command', command, async: true, timeout: 5 },
+    afterInstall: 'Codex runs a new or changed hook only after you trust it: open Codex, type /hooks and trust the Agent Office hooks (the command has no options, so changing the port later needs no new approval).',
   },
 };
 
@@ -179,12 +207,13 @@ export function installedEvents(settings: Settings, target: Target): Map<string,
 }
 
 /** Install plan for one settings file (writes nothing). */
-export function planInstall(settings: Settings, target: Target, events: readonly string[], entry: Rec): PlanAction {
+export function planInstall(settings: Settings, target: Target, events: readonly string[], entryFor: Rec | ((event: string) => Rec)): PlanAction {
+  const entryOf = (ev: string) => (typeof entryFor === 'function' ? entryFor(ev) : entryFor);
   const hooks = hooksOf(settings, target.allEvents);
   if (typeof hooks === 'string') return { action: 'skip', message: hooks };
   const current = installedEvents(settings, target);
   const sameSet = current.size === events.length && events.every((ev) => current.has(ev));
-  const sameEntry = [...current.values()].every((h) => JSON.stringify(h) === JSON.stringify(entry));
+  const sameEntry = [...current].every(([ev, h]) => JSON.stringify(h) === JSON.stringify(entryOf(ev)));
   const groupsOk = () =>
     events.every((ev) => {
       const groups = ((hooks[ev] as unknown[] | undefined) ?? []).filter((g) => (rec(g)?.hooks as unknown[] | undefined)?.some((h) => isOurHook(h, target)));
@@ -198,7 +227,7 @@ export function planInstall(settings: Settings, target: Target, events: readonly
     if (list.length) next[ev] = list;
     else delete next[ev];
   }
-  for (const ev of events) next[ev] = [...((next[ev] as unknown[] | undefined) ?? []), { matcher: target.matcher, hooks: [entry] }];
+  for (const ev of events) next[ev] = [...((next[ev] as unknown[] | undefined) ?? []), target.matcher === undefined ? { hooks: [entryOf(ev)] } : { matcher: target.matcher, hooks: [entryOf(ev)] }];
   return { action: 'install', settings: { ...settings, hooks: next }, message: current.size ? 'updated (new path, events or options)' : 'installed' };
 }
 
@@ -390,7 +419,8 @@ export async function run(opts: RunOptions, ctx: RunContext): Promise<number> {
     return 1;
   }
   const events = target.events(profile);
-  const entry = target.entry(hookCommand(target.script, opts.nodeCmd, ctx.platform));
+  const command = hookCommand(target.script, opts.nodeCmd, ctx.platform);
+  const entry = (event: string) => target.entry(command, event);
   let failures = 0;
   let changed = 0;
   for (const file of target.settingsFiles(env, home)) {
@@ -439,7 +469,10 @@ export async function run(opts: RunOptions, ctx: RunContext): Promise<number> {
     const health = await (ctx.health ?? fetchHealth)(opts.port);
     out(health ? `Agent Office at http://127.0.0.1:${opts.port}: running.` : `Agent Office at http://127.0.0.1:${opts.port}: not running (the hooks then exit right away; ${target.label} is unaffected).`);
   }
-  if (opts.command === 'install' && changed) out(`Done. Restart open ${target.label} sessions so they load the hooks. To undo: npm run hooks:uninstall -- --provider ${target.id}`);
+  if (opts.command === 'install' && changed) {
+    out(`Done. Restart open ${target.label} sessions so they load the hooks. To undo: npm run hooks:uninstall -- --provider ${target.id}`);
+    if (target.afterInstall) out(`! ${target.afterInstall}`);
+  }
   return failures ? 1 : 0;
 }
 

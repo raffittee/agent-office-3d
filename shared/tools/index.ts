@@ -3,6 +3,7 @@ import { basename, describeCommand, humanize, make, str, truncate, type Activity
 import { t } from '../i18n';
 import type { ProviderId } from '../protocol';
 import { describeClaudeTool } from './claude-code';
+import { describeCodexTool } from './codex';
 import { describeGeminiTool } from './gemini-cli';
 
 /**
@@ -39,6 +40,8 @@ export function describeToolFor(provider: ProviderId, name: string, input: unkno
       return describeClaudeTool(name, input);
     case 'gemini-cli':
       return describeGeminiTool(name, input);
+    case 'codex':
+      return describeCodexTool(name, input);
     default:
       return describeGenericTool(name, input);
   }

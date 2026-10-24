@@ -404,6 +404,7 @@ These rules come from Habblaud's `mod/habblaud-codex/hook.mjs`.
   | `AGENT_OFFICE_IN_DOCKER` | auto | `1` skips PID checks (the agents' PIDs belong to the host). |
   | `AGENT_OFFICE_INTERACTIVE` | off | `1` (or `--interactive`) turns on approving and answering from the office; loopback bind only. See [docs/interactive.md](docs/interactive.md). |
   | `AGENT_OFFICE_PERMISSION_TIMEOUT` | `300` | Seconds the Claude Code permission hook waits for the office before the terminal decides. |
+  | `AGENT_OFFICE_CODEX_BIN` | `codex` on PATH | The Codex binary used for `codex queue` (messages to Codex sessions, P7-04). |
   | `AGENT_OFFICE_THEME` | `modern` | Default theme pack id for browsers that haven't picked one. |
 
 ## Commands

@@ -725,3 +725,14 @@ Branch `phase-1`. One commit per task, each pushed. At the end of the phase ther
   pausing every tool call, so it wasn't built. Gemini still asks in its terminal, and the office shows the raised hand
   as before. Details: [docs/spikes/gemini-approvals.md](docs/spikes/gemini-approvals.md).
 
+### P7-04 Send messages — done, 2026-10-25 07:06
+
+- **Message an agent from the office:** select it and type in the **Message** box under its details. The text
+  enters the session as if you had typed it in the terminal, and the box shows whether it got through.
+  - **Claude Code:** install the `agent-office-messages` plugin (`claude plugin marketplace add <this folder>`, then
+    `claude plugin install agent-office-messages@agent-office`).
+  - **Codex:** works when `codex` is on your PATH; it uses `codex queue`.
+  - **Your own agents:** the SDKs have `inbox()` and `ack()`.
+  - **Gemini CLI:** can't receive messages.
+- Also needs `AGENT_OFFICE_INTERACTIVE=1`, like approvals.
+

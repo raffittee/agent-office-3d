@@ -18,7 +18,11 @@ import { errMsg, log } from './log';
 import { AccountsService, demoUsage } from './accounts/service';
 import { NameStore } from './model/names';
 import { Office } from '../shared/model/office';
+import type { AgentInfo } from '../shared/protocol';
 import { RoomAliases } from './model/room-aliases';
+import { createCodexQueueRunner, findCodexBin } from './messages/codex';
+import { createMessageRoutes } from './messages/http';
+import { MessageRegistry } from './messages/registry';
 import { createPermissionRoutes } from './permissions/http';
 import { PermissionRegistry } from './permissions/registry';
 
@@ -49,6 +53,7 @@ const interactiveOn = interactive(config);
 if (config.interactiveRequested && !interactiveOn) log.warn(`interactive features stay off: ${config.host} is not a loopback address`);
 // set once the office exists (the registry reads it, the office reads the registry)
 let permissions: PermissionRegistry | null = null;
+let messages: MessageRegistry | null = null;
 
 const office = new Office({
   names,
@@ -65,6 +70,7 @@ const office = new Office({
         interactive: true,
         permissions: () => permissions?.snapshot() ?? new Map(),
         onToolEnd: (id: string, tool: string, at: number) => permissions?.toolEnded(id, tool, at),
+        canMessage: (a: AgentInfo) => messages?.canMessage(a) ?? false,
       }
     : {}),
 });
@@ -74,6 +80,12 @@ hub.start();
 if (interactiveOn) {
   permissions = new PermissionRegistry({ office, viewers: () => hub.size });
   permissions.start();
+  const codexBin = findCodexBin(process.env);
+  messages = new MessageRegistry({
+    office,
+    ...(codexBin ? { codex: { run: createCodexQueueRunner(codexBin), homeOf: (account: string) => adapters.accountsOf('codex').find((a) => a.id === account)?.dir } } : {}),
+  });
+  messages.start();
   log.info('interactive features on: permission requests and questions can be answered from the office');
 }
 const tick = setInterval(() => office.tick(), 250);
@@ -100,7 +112,9 @@ const api = createApiHandler({
   sources: () => adapters.sources(),
   providers,
   ingest,
-  ...(permissions ? { actions: { '/api/permissions': createPermissionRoutes(permissions) } } : {}),
+  ...(permissions && messages
+    ? { actions: { '/api/permissions': createPermissionRoutes(permissions), '/api/messages': createMessageRoutes(messages), '/api/inbox': createMessageRoutes(messages) } }
+    : {}),
 });
 
 type Handler = (req: http.IncomingMessage, res: http.ServerResponse, pathname: string) => void;
@@ -144,6 +158,7 @@ function shutdown(): void {
   clearInterval(tick);
   clearInterval(liveness);
   permissions?.stop();
+  messages?.stop();
   adapters.stop();
   hub.stop();
   names.flush();

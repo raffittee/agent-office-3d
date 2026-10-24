@@ -1,0 +1,4 @@
+{
+  "description": "Hooks module of the Agent Office messages plugin (fetches the messages typed in the office and sends them to the session as yours)",
+  "modules": ["./register.ts"]
+}

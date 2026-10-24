@@ -59,6 +59,31 @@ office.turn_end()
 office.close()
 ```
 
+## Messages from the office
+
+With the interactive features on (`AGENT_OFFICE_INTERACTIVE=1`, see
+[docs/interactive.md](../docs/interactive.md)), you can type a message for your agent in the office. The agent
+fetches it from its inbox. Polling every few seconds also tells the office that the agent can receive messages,
+which shows the message box in its details panel.
+
+```ts
+setInterval(async () => {
+  for (const m of await office.inbox()) {
+    const ok = await myAgent.addUserMessage(m.text); // however your agent takes input
+    await office.ack([{ id: m.id, ok }]);
+  }
+}, 2_000);
+```
+
+```python
+for m in office.inbox():
+    agent.add_user_message(m["text"])
+    office.ack([{"id": m["id"], "ok": True}])
+```
+
+A message nobody fetches fails after 60 s, and one fetched but never confirmed fails after 30 s. `inbox()` returns
+`[]` while the interactive features are off.
+
 ## Tool names
 
 Any name works. The office guesses a description from common words (`read`, `write`, `edit`, `search`, `shell`,

@@ -597,7 +597,10 @@ need a look on your machine.
   Nothing built; see [docs/spikes/gemini-approvals.md](docs/spikes/gemini-approvals.md).
   - Can a `BeforeTool` decision safely mirror the CLI's own confirmation?
   - Document the answer. Implement it only if it's safe, and only as an opt-in.
-- [ ] **P7-04 Send messages** (M)
+- [x] **P7-04 Send messages** (M) — done: `server/messages/{registry,http,codex}.ts` (provider-neutral queue; inbox
+  for Claude Code and SDKs, `codex queue` for Codex, verified against codex-cli 0.164.0), the `agent-office-messages`
+  plugin in `plugins/` with `.claude-plugin/marketplace.json` (validated, 15 tests pass under `claude plugin test`
+  2.1.310, installed from the marketplace), SDK `inbox()`/`ack()`, the drawer's message box (`client/src/ui/compose.ts`).
   - Claude through a plugin inbox, Codex through `codex queue`, and custom agents through an SDK inbox.
   - **Ref:** `server/messages/*`, `mod/habblaud-mensagens/*`.
 - [ ] **P7-05 Read-only conversation view** (L)

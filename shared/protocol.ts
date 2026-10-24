@@ -308,6 +308,8 @@ export interface AgentInfo {
    * the interactive features on). While it exists the agent shows as 'waiting'.
    */
   permission?: PermissionRequestInfo;
+  /** Messages typed in the office can reach this (main) agent now (P7-04: a plugin, `codex queue` or an SDK inbox). */
+  canMessage?: boolean;
 }
 
 /**
@@ -464,6 +466,24 @@ export interface PermissionAnswer {
   options?: number[];
   /** Free text ("Other"). */
   other?: string;
+}
+
+/** A message sent from the office (POST /api/messages, GET /api/messages/:id). Its text is never sent back. */
+export interface OutboxMessage {
+  id: string;
+  /** The recipient (always a main agent). */
+  agentId: string;
+  /** queued → sent (fetched by the session's inbox) → delivered (in the session or its queue) | failed. */
+  status: 'queued' | 'sent' | 'delivered' | 'failed';
+  error?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+/** A message as an inbox poll returns it (the Claude Code plugin, an SDK): the text exactly as typed. */
+export interface InboxMessage {
+  id: string;
+  text: string;
 }
 
 /** Body of POST /api/permissions/:id/decision. `terminal` = hand the request back to the terminal. */

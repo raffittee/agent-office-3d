@@ -231,6 +231,40 @@ export class AgentOffice {
     }
   }
 
+  // ---------------------------------------------------------------- messages from the office (P7-04)
+
+  /**
+   * Messages typed for this agent in the office, oldest first. Call it every few seconds while the agent can take
+   * input: polling also tells the office this agent can receive messages. Needs the server's interactive features
+   * (AGENT_OFFICE_INTERACTIVE=1); otherwise, and on any error, returns []. Confirm each one with `ack()`.
+   */
+  async inbox(): Promise<{ id: string; text: string }[]> {
+    const body = await this.postJson('/api/inbox', { provider: this.provider, session: this.session });
+    const list = body && typeof body === 'object' ? (body as { messages?: unknown }).messages : undefined;
+    if (!Array.isArray(list)) return [];
+    return list.filter((m): m is { id: string; text: string } => !!m && typeof m.id === 'string' && typeof m.text === 'string');
+  }
+
+  /** What happened to the messages from `inbox()`: ok, or failed with a reason. Unconfirmed ones fail after 30 s. */
+  async ack(results: { id: string; ok: boolean; error?: string }[]): Promise<void> {
+    if (results.length) await this.postJson('/api/inbox/ack', { provider: this.provider, session: this.session, results });
+  }
+
+  private async postJson(path: string, body: unknown): Promise<unknown> {
+    if (!this.fetchFn) return undefined;
+    try {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 2_000);
+      const res = await this.fetchFn(`${this.url}${path}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), signal: ctrl.signal });
+      clearTimeout(t);
+      if (!res.ok) return undefined;
+      return (await res.json()) as unknown;
+    } catch (err) {
+      this.onError(err);
+      return undefined;
+    }
+  }
+
   /** Posts what's queued. Never rejects. */
   flush(): Promise<void> {
     if (this.timer) clearTimeout(this.timer);

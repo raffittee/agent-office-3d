@@ -1,7 +1,7 @@
 # Interacting from the office
 
-Phase 7 adds features that act on your agents' sessions: approving permission requests and answering questions
-from the office. They are **off by default**. This page explains how to turn them on, what they can do, and what
+Phase 7 adds features that act on your agents' sessions: approving permission requests, answering questions and
+sending messages from the office. They are **off by default**. This page explains how to turn them on, what they can do, and what
 the risks are.
 
 ## Turning them on
@@ -40,6 +40,25 @@ the risks are.
 
 The terminal dialog stays live the whole time, and whichever answers first wins. If you answer in the terminal, the
 card goes away when the tool call ends.
+
+## Messages (P7-04)
+
+Select an agent. If it can receive messages, a **Message** box appears under its details (Ctrl+Enter sends). The
+text goes into the session exactly as typed, as if you had typed it in the terminal. If the agent is busy, the
+message waits in the session's queue. The box shows whether each message got through.
+
+| Provider | How it reaches the session | Setup |
+| --- | --- | --- |
+| Claude Code | The `agent-office-messages` plugin polls the office every 2 s and submits each message as yours (`$.prompt.submit`, Claude Code 2.1.287+). | `claude plugin marketplace add <this checkout>`, then `claude plugin install agent-office-messages@agent-office`. Set `AGENT_OFFICE_PORT` if the office isn't on 4848. |
+| Codex | The server runs `codex queue --thread=<id> --message=<text>` with the account's `CODEX_HOME`. Codex picks it up when the session is idle. | `codex` on `PATH`, or `AGENT_OFFICE_CODEX_BIN`. Subagent threads can't be messaged; Codex refuses that. |
+| Custom agents | The SDKs' `inbox()` / `ack()` (see [sdk/README.md](../sdk/README.md)). | Poll `inbox()` every few seconds. |
+| Gemini CLI | Not supported: no hook or command can put a prompt into a running session. | — |
+
+**Message privacy:** a message is never sent back to the page and never logged. The timeline shows only its start,
+masked.
+
+**Message risk:** a message is a prompt in your name. Anything on this computer that can reach the office can send
+one to an agent that has messaging set up.
 
 ## How it works
 

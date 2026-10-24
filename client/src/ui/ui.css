@@ -261,8 +261,19 @@
   background: var(--panel);
   box-shadow: var(--shadow);
   backdrop-filter: blur(6px);
-  overflow: auto;
+  overflow: hidden;
   padding: 14px 16px 18px;
+  display: flex;
+  flex-direction: column;
+}
+.ui-drawer-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+/* the request cards move left of an open drawer */
+.ui-drawer:not([hidden]) ~ .ui-requests {
+  right: 364px;
 }
 .ui-drawer[hidden] {
   display: none;
@@ -779,6 +790,47 @@
 }
 .ui-req-status {
   margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* The message box under the details drawer (P7-04) */
+.ui-compose {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.ui-compose[hidden] {
+  display: none;
+}
+.ui-compose-label {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: 600;
+  font-size: 13px;
+}
+.ui-compose textarea {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  min-height: 52px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-solid);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+}
+.ui-compose-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+.ui-compose-status {
+  flex: 1;
+  margin: 0;
   font-size: 12px;
   color: var(--muted);
 }

@@ -71,6 +71,8 @@ export interface OfficeDeps {
   interactive?: boolean;
   /** Pending requests answerable from the office, per agent id (server/permissions/registry.ts, P7-01). */
   permissions?: () => ReadonlyMap<string, PermissionRequestInfo>;
+  /** Can this (main) agent receive messages from the office now (server/messages/registry.ts, P7-04)? */
+  canMessage?: (agent: AgentInfo) => boolean;
   /** A tool call of an agent ended (a request answered in the terminal, for the registry). */
   onToolEnd?: (agentId: string, tool: string, at: number) => void;
   now?: () => number;
@@ -828,6 +830,7 @@ export class Office {
     const agents = [...this.agents.values()].map((r) => {
       const a = cloneAgent(r.info);
       if (a.recent.length > SNAPSHOT_RECENT) a.recent = a.recent.slice(-SNAPSHOT_RECENT);
+      if (this.deps.canMessage?.(a)) a.canMessage = true;
       const p = permissions?.get(a.id);
       if (p && a.status !== 'offline' && a.status !== 'done') {
         // a pending request shows the agent waiting (a background subagent's dialog only reaches the terminal later)

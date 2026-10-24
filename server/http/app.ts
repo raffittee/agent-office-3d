@@ -24,7 +24,7 @@ export interface ApiDeps {
 }
 
 /** Path prefixes of the session-touching routes: answered 403 while the interactive features are off. */
-export const ACTION_PREFIXES = ['/api/permissions', '/api/messages'];
+export const ACTION_PREFIXES = ['/api/permissions', '/api/messages', '/api/inbox'];
 
 export const MAX_BODY = 256 * 1024;
 

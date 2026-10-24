@@ -512,12 +512,18 @@ no page errors, 37–52 draw calls) and renders the preview page; `themes/cabin/
     - Codex: `token_count.rate_limits`;
     - Gemini: only if P0-04 found a source.
   - **Ref:** `server/accounts/*`, `client/src/ui/usage.ts`.
-- [ ] **P5-05 Spike: OTLP receiver** (M)
+- [x] **P5-05 Spike: OTLP receiver** (M) — done: real Codex 0.164.0 and Gemini CLI 0.65.0 telemetry captured with
+  `docs/spikes/otlp/receiver.mjs`; measurements and the mapping in `docs/spikes/otlp.md`; decision **not to ship it**
+  in ADR 0006 (no turn or session end, no cwd, content in the payloads, 40–250× the shim traffic).
   - Accept OTLP/HTTP JSON logs at `/v1/logs` (local only) as another generic path.
   - Map the telemetry events from Claude Code, Gemini CLI and Codex to `AgentEvent`s.
   - Decide whether to keep it, and record the decision in an ADR.
 
 **Exit:** Codex sessions and an SDK-reporting custom agent appear alongside Claude Code and Gemini CLI.
+
+**Exit status (2026-10-25):** met. A real Codex 0.164.0 session (offline, stub model) and its subagent appeared live in
+the office through the installed shim and the lock and rollout files; `test/sdk.test.ts` shows SDK agents (TypeScript,
+Python and both examples) in the office alongside the built-in providers.
 
 ---
 

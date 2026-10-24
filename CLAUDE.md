@@ -1,6 +1,6 @@
 # Agent Office — guide for AI agents
 
-> **Status: Phases 0–4 done (pending on the user's machine: a live Gemini CLI check and the frame-rate checks); Phase 5 next.** The phased plan lives in [TASKS.md](TASKS.md).
+> **Status: Phases 0–5 done (pending on the user's machine: a live Gemini CLI check, the frame-rate checks and the Claude usage tap); Phase 6 next.** The phased plan lives in [TASKS.md](TASKS.md).
 > Provider facts: [docs/providers/](docs/providers/). Decisions: [docs/adr/](docs/adr/). Spike results:
 > [docs/spikes/](docs/spikes/).
 
@@ -468,5 +468,7 @@ Update this table as commands land. *(planned)* marks the ones that don't exist 
 
 - **D15:** Until the ADR 0004 human pack can be built, the default character is Quaternius's RobotExpressive (CC0),
   driven by a model-agnostic rig profile. See [ADR 0005](docs/adr/0005-interim-character.md).
+- **D16:** No OTLP receiver in v1: the CLIs' telemetry has no turn or session end and no working folder, and it
+  carries content (P5-05). See [ADR 0006](docs/adr/0006-otlp.md).
 
 ADRs are listed in [docs/adr/README.md](docs/adr/README.md).

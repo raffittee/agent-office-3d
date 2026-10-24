@@ -10,17 +10,19 @@
 //   rollouts don't show.
 //
 // Never read: auth.json, config.toml.
+import { cwdFromHead, dirsIn, filesIn, folderName, readHeadLines } from '../../conversation/files';
+import { parseCodexConversation } from './conversation';
 import { existsSync, readdirSync, readSync, openSync, closeSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { t } from '../../../shared/i18n';
 import type { LivenessTarget } from '../../../shared/model/office';
-import type { AgentEvent, AgentEventType, EventTool, ProviderCapabilities, SourceInfo } from '../../../shared/protocol';
+import type { AgentEvent, AgentEventType, AgentInfo, EventTool, ProviderCapabilities, SourceInfo } from '../../../shared/protocol';
 import { codexToolName, describeCodexTool } from '../../../shared/tools/codex';
 import { errMsg, log } from '../../log';
 import { usageFromCodex, type ProviderAccount } from '../../accounts/service';
 import { accountSlug, discoverCodexHomes, samePath, type CodexHome } from '../accounts';
-import type { AdapterContext, ProviderAdapter } from '../adapter';
+import type { AdapterContext, ProviderAdapter, SessionFile } from '../adapter';
 import { FileTail } from '../tail';
 import { codexHomeOf, HOOK_EVENTS, parseHookBody, type CodexHook } from './hook';
 import { createRolloutState, isThreadId, parseRolloutLine, type RateLimits, type RolloutItem, type RolloutMeta, type RolloutState } from './rollout';
@@ -88,9 +90,45 @@ export class CodexAdapter implements ProviderAdapter {
   readonly id = 'codex' as const;
   readonly label = 'Codex';
   readonly color = '#10a37f';
-  readonly capabilities: ProviderCapabilities = { transcript: false, approve: false, message: false, usage: true, subagents: true };
+  readonly capabilities: ProviderCapabilities = { transcript: true, approve: false, message: true, usage: true, subagents: true };
 
   describeTool = describeCodexTool;
+  parseConversation = parseCodexConversation;
+
+  /** A thread's rollout (the main agent's, or a subagent's own thread). */
+  transcriptOf(agent: AgentInfo): string | undefined {
+    const id = agent.kind === 'main' ? agent.sessionId : agent.id.slice(`${this.id}:${agent.account}:${agent.sessionId}:`.length);
+    return this.threads.get(id)?.path;
+  }
+
+  /** The newest main-thread rollouts of every home: sessions/YYYY/MM/DD/rollout-*-<threadId>.jsonl. */
+  recentSessions(limit: number): SessionFile[] {
+    const found: SessionFile[] = [];
+    for (const h of this.homes) {
+      const root = join(h.dir, 'sessions');
+      let files: { file: string; mtime: number }[] = [];
+      outer: for (const y of dirsIn(root).sort().reverse())
+        for (const m of dirsIn(join(root, y)).sort().reverse())
+          for (const d of dirsIn(join(root, y, m)).sort().reverse()) {
+            files.push(...filesIn(join(root, y, m, d), /^rollout-.*\.jsonl$/));
+            if (files.length >= limit * 3) break outer;
+          }
+      files = files.sort((a, b) => b.mtime - a.mtime);
+      let n = 0;
+      for (const f of files) {
+        if (n >= limit) break;
+        const head = readHeadLines(f.file, 16 * 1024);
+        // subagent threads have their own rollouts: only main threads are sessions
+        if (/"source"\s*:\s*\{\s*"subagent"/.test(head[0] ?? '')) continue;
+        const id = /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.jsonl$/i.exec(f.file)?.[1];
+        if (!id) continue;
+        const project = folderName(cwdFromHead(head));
+        found.push({ provider: this.id, account: h.slug, sessionId: id, file: f.file, lastAt: f.mtime, ...(project ? { project } : {}) });
+        n++;
+      }
+    }
+    return found;
+  }
 
   private ctx: AdapterContext | null = null;
   private threads = new Map<string, Thread>();

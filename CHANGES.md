@@ -703,3 +703,64 @@ Branch `phase-1`. One commit per task, each pushed. At the end of the phase ther
 - **Needs your machine:** the exit check is subjective ("the office feels alive"): run `npm run demo`, turn on sounds
   in Settings, and tell me what feels off.
 
+## Phase 7: Interact from the office (branch `phase-7`)
+
+### P7-01 Approve permissions and P7-02 Answer questions — done, 2026-10-25 06:54
+
+- **Answer Claude Code from the office (off by default):** when Claude Code asks "Do you want to…", a card at the
+  bottom right lets you **Allow**, **Always allow** (the rule Claude Code proposed), **Deny** (with an optional reason
+  the agent sees), or leave it to the terminal. Questions (`AskUserQuestion`) get their options and an "Other" field.
+  The terminal dialog stays live too, and whichever answers first wins.
+- **To turn it on:** start with `AGENT_OFFICE_INTERACTIVE=1` (it works only on a local bind), run
+  `npm run hooks:install -- --provider claude-code`, and restart open Claude Code sessions. Read
+  [docs/interactive.md](docs/interactive.md) first: anything on this computer that can reach the office can approve a
+  request.
+- With the office closed or the feature off, the hook steps aside at once and Claude Code asks in the terminal as
+  before.
+
+### P7-03 Gemini approvals (spike) — done, 2026-10-25 06:57
+
+- **Answer: not possible.** Gemini CLI's hooks can refuse a tool call or force its prompt, but they can't approve
+  one, and they run before Gemini decides whether to ask you. Approving Gemini from the office would have meant
+  pausing every tool call, so it wasn't built. Gemini still asks in its terminal, and the office shows the raised hand
+  as before. Details: [docs/spikes/gemini-approvals.md](docs/spikes/gemini-approvals.md).
+
+### P7-04 Send messages — done, 2026-10-25 07:06
+
+- **Message an agent from the office:** select it and type in the **Message** box under its details. The text
+  enters the session as if you had typed it in the terminal, and the box shows whether it got through.
+  - **Claude Code:** install the `agent-office-messages` plugin (`claude plugin marketplace add <this folder>`, then
+    `claude plugin install agent-office-messages@agent-office`).
+  - **Codex:** works when `codex` is on your PATH; it uses `codex queue`.
+  - **Your own agents:** the SDKs have `inbox()` and `ack()`.
+  - **Gemini CLI:** can't receive messages.
+- Also needs `AGENT_OFFICE_INTERACTIVE=1`, like approvals.
+
+### P7-05 Read-only conversation view — done, 2026-10-25 07:13
+
+- **💬 Conversation** in an agent's details shows what you and the agent said: its thinking, every tool call with
+  its result (failures in red), and compactions and interruptions. It updates live while open. Works for Claude
+  Code, Codex and Gemini CLI.
+- **🕘 Session history** in the top bar lists recent sessions, including ended ones, and opens their conversations.
+- Read-only, masked, and only with `AGENT_OFFICE_INTERACTIVE=1` (local only). Conversations can contain anything
+  the agents read, so see [docs/interactive.md](docs/interactive.md).
+
+### P7-06 Interactive route tests — done, 2026-10-25 07:15
+
+- Every route that acts on a session is now tested against each way a request can be refused: features off, not on
+  this computer, wrong `Host`, a page from another site, or a body that isn't JSON. No visible change.
+
+### Phase 7 closed — 2026-10-25 07:15
+
+- All 6 tasks are ticked. Pull request `phase-7` → `main`.
+- **New since Phase 6** (all off by default, local only; [docs/interactive.md](docs/interactive.md)):
+  - approve Claude Code's permission requests and answer its questions from the office;
+  - message Claude Code, Codex and your own agents;
+  - read any agent's conversation, and browse recent sessions.
+- **Needs your machine:**
+  1. Start with `AGENT_OFFICE_INTERACTIVE=1`.
+  2. Run `npm run hooks:install -- --provider claude-code`.
+  3. Run `claude plugin marketplace add <this folder>`, then
+     `claude plugin install agent-office-messages@agent-office`.
+  4. Try it on a real session.
+

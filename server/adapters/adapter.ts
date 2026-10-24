@@ -7,7 +7,7 @@
 // are no notices, and the feed is held to come out in chronological order at the end of the last one.
 import type { ProviderAccount } from '../accounts/service';
 import type { ActivityDescription } from '../../shared/activity';
-import type { AgentEvent, ProviderCapabilities, ProviderId, ProviderMeta, SourceInfo } from '../../shared/protocol';
+import type { AgentEvent, AgentInfo, ConversationEntry, ProviderCapabilities, ProviderId, ProviderMeta, SourceInfo } from '../../shared/protocol';
 import { validateAgentEvent } from '../../shared/validate';
 import { maskEvent } from '../ingest/mask';
 import { errMsg, log } from '../log';
@@ -43,6 +43,23 @@ export interface ProviderAdapter {
   alive?(target: LivenessTarget): boolean | undefined;
   /** The accounts it watches, with plan usage when the tool records it (P5-04; server/accounts/service.ts). */
   accounts?(): ProviderAccount[];
+  /** P7-05: the transcript file of an agent it shows (main or subagent), or undefined. The server only reads its tail. */
+  transcriptOf?(agent: AgentInfo): string | undefined;
+  /** P7-05: transcript lines → conversation entries (pure, masked and cut). */
+  parseConversation?(lines: Iterable<string>): ConversationEntry[];
+  /** P7-05: transcripts of recent sessions (open or ended), newest first. */
+  recentSessions?(limit: number): SessionFile[];
+}
+
+/** A recent session's transcript (server-side only: the path never reaches the page). */
+export interface SessionFile {
+  provider: ProviderId;
+  account: string;
+  sessionId: string;
+  file: string;
+  lastAt: number;
+  /** The project folder's name. */
+  project?: string;
 }
 
 /** Agents without a PID are offline after this long without events (the SDK sends a heartbeat every 30 s). */
@@ -150,6 +167,37 @@ export class AdapterSet {
     } catch {
       return [];
     }
+  }
+
+  /** An agent's conversation source (P7-05): its transcript and the provider's parser, or undefined. */
+  conversationOf(agent: AgentInfo): { file: string; parse: (lines: Iterable<string>) => ConversationEntry[] } | undefined {
+    const a = this.of(agent.provider);
+    if (!a?.transcriptOf || !a.parseConversation) return undefined;
+    try {
+      const file = a.transcriptOf(agent);
+      return file ? { file, parse: (l) => a.parseConversation!(l) } : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
+  /** Recent sessions of every provider that lists them, newest first. */
+  recentSessions(limit: number): SessionFile[] {
+    const all: SessionFile[] = [];
+    for (const a of this.list) {
+      try {
+        all.push(...(a.recentSessions?.(limit) ?? []));
+      } catch {
+        // a provider that can't list (a folder that vanished): the others still do
+      }
+    }
+    return all.sort((x, y) => y.lastAt - x.lastAt).slice(0, limit);
+  }
+
+  /** The parser of a provider (for history sessions). */
+  parserOf(provider: string): ((lines: Iterable<string>) => ConversationEntry[]) | undefined {
+    const a = this.of(provider);
+    return a?.parseConversation ? (l) => a.parseConversation!(l) : undefined;
   }
 
   /** The adapter that accepts hook payloads for `provider`, if any. */

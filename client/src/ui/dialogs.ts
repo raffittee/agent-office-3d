@@ -7,7 +7,7 @@ import { button, el, prefs } from './dom';
 
 export const SETTINGS_KEY = 'world';
 
-function modal(title: string, body: HTMLElement[], onClose: () => void): HTMLElement {
+export function modal(title: string, body: HTMLElement[], onClose: () => void): HTMLElement {
   const back = el('div', 'ui-modal-back');
   const box = el('div', 'ui-modal');
   box.setAttribute('role', 'dialog');

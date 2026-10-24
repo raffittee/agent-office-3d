@@ -581,26 +581,50 @@ need a look on your machine.
 
 ## Phase 7: Interact from the office (local-only)
 
-- [ ] **P7-01 Approve permissions: Claude Code** (L)
+- [x] **P7-01 Approve permissions: Claude Code** (L) — done: `hooks/claude-permission.mjs` (ported hook, long-poll),
+  `server/permissions/{registry,http}.ts` (registry trimmed to provider-neutral rules; a terminal answer is seen as the
+  tool call ending), `AgentInfo.permission`, request cards (`client/src/ui/requests.ts`), `hooks:install --provider
+  claude-code`, `AGENT_OFFICE_INTERACTIVE` (loopback only), [docs/interactive.md](docs/interactive.md). Verified live with
+  the real hook against the built server.
   - The `PermissionRequest` hook, a registry, long-polling, and request cards in the UI.
   - **Ref:** `server/permissions/*`, `mod/habblaud-permissoes/*`, `scripts/permission-hook.mjs`.
-- [ ] **P7-02 Answer questions** (M)
+- [x] **P7-02 Answer questions** (M) — done: `shared/answers.ts` (ported with tests); `AskUserQuestion` cards with
+  options and "Other", answered by position and sent back with the original texts.
   - Answer `AskUserQuestion` prompts through the same flow.
   - **Ref:** `shared/answers.ts`.
-- [ ] **P7-03 Spike: Gemini approvals** (M)
+- [x] **P7-03 Spike: Gemini approvals** (M) — done: not safe or possible in 0.65.0: `BeforeTool` can deny or force a
+  prompt but `allow` is ignored, and it runs before the policy check (verified on the real TUI with a stub model).
+  Nothing built; see [docs/spikes/gemini-approvals.md](docs/spikes/gemini-approvals.md).
   - Can a `BeforeTool` decision safely mirror the CLI's own confirmation?
   - Document the answer. Implement it only if it's safe, and only as an opt-in.
-- [ ] **P7-04 Send messages** (M)
+- [x] **P7-04 Send messages** (M) — done: `server/messages/{registry,http,codex}.ts` (provider-neutral queue; inbox
+  for Claude Code and SDKs, `codex queue` for Codex, verified against codex-cli 0.164.0), the `agent-office-messages`
+  plugin in `plugins/` with `.claude-plugin/marketplace.json` (validated, 15 tests pass under `claude plugin test`
+  2.1.310, installed from the marketplace), SDK `inbox()`/`ack()`, the drawer's message box (`client/src/ui/compose.ts`).
   - Claude through a plugin inbox, Codex through `codex queue`, and custom agents through an SDK inbox.
   - **Ref:** `server/messages/*`, `mod/habblaud-mensagens/*`.
-- [ ] **P7-05 Read-only conversation view** (L)
+- [x] **P7-05 Read-only conversation view** (L) — done: one provider-neutral `ConversationEntry` format; parsers in
+  `server/adapters/{claude-code,codex,gemini-cli}/conversation.ts` (condensed from Habblaud's terminal parser, Gemini's
+  built from the `chats/` format with rewrites, `$rewindTo` and `$patch`); `ProviderAdapter.transcriptOf/recentSessions`;
+  `server/conversation/` (tail reader, routes behind the interactive gate); the viewer and the session history in
+  `client/src/ui/conversation.ts`. Polling instead of Habblaud's SSE stream.
   - Turn each provider's transcript into terminal entries: port the Claude and Codex parsers; build Gemini's from
     the `chats/` format.
   - Mask everything, and add a session history.
   - **Ref:** `server/sources/terminal.ts`, `server/http/terminal.ts`, `server/sources/history.ts`.
-- [ ] **P7-06 Interactive route tests** (S)
+- [x] **P7-06 Interactive route tests** (S) — done: `test/interactive-routes.test.ts` drives every action route
+  (permissions, messages, inbox, conversation, history) through one table: off or non-loopback bind, non-loopback or
+  allow-listed Host, non-JSON body and foreign Origin are all refused (45 tests); a test fails if a new action prefix
+  isn't in the table.
   - Every action route requires a local bind, a local `Host`, JSON and a local `Origin`. Add negative tests for
     each.
+
+**Exit:** local-only actions work, with tests.
+
+**Exit status (2026-10-25):** met. Approving and answering (Claude Code), messages (Claude Code plugin, `codex queue`,
+SDK inbox) and the conversation view were verified live in the cloud environment against the real hook, Claude Code
+2.1.310's plugin test runner, codex-cli 0.164.0 and the built server; Gemini approvals were shown impossible (P7-03).
+On your machine: install the permission hook and the messages plugin and try them on a real session.
 
 ---
 

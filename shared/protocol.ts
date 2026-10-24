@@ -303,6 +303,13 @@ export interface AgentInfo {
   seed: number;
   /** Subagent running in the background. */
   background?: boolean;
+  /**
+   * The oldest pending permission request or question that can be answered from the office (P7-01/P7-02; only with
+   * the interactive features on). While it exists the agent shows as 'waiting'.
+   */
+  permission?: PermissionRequestInfo;
+  /** Messages typed in the office can reach this (main) agent now (P7-04: a plugin, `codex queue` or an SDK inbox). */
+  canMessage?: boolean;
 }
 
 /**
@@ -407,8 +414,121 @@ export interface OfficeSnapshot {
     build?: string;
     /** The default theme pack id (AGENT_OFFICE_THEME); a theme picked in the browser wins. */
     theme?: string;
+    /** The session-touching features (approve, answer, message) are on (AGENT_OFFICE_INTERACTIVE, local bind only). */
+    interactive?: boolean;
   };
 }
+
+// ---------------------------------------------------------------- answering from the office (P7)
+
+/** An "always allow" rule the agent's CLI offered with a permission request. */
+export interface PermissionSuggestionInfo {
+  /** Position in the list the hook received: it comes back in the decision (the hook applies the original). */
+  index: number;
+  /** Rules in the CLI's format, e.g. "Bash(npm test:*)" (masked). */
+  rules: string[];
+  /** Where the rule is kept: 'session', 'localSettings', 'projectSettings' or 'userSettings'. */
+  destination: string;
+}
+
+/**
+ * A pending permission request (or question) a hook registered and waits on. The snapshot carries it without `input`;
+ * the full arguments come from GET /api/permissions/:id (local only).
+ */
+export interface PermissionRequestInfo {
+  id: string;
+  provider: ProviderId;
+  /** The raw tool name ("Bash", "Edit", "mcp__github__create_issue"). */
+  tool: string;
+  /** A CLI-style title: "Bash(npm test)", "Edit(src/app.ts)". Masked and truncated. */
+  title: string;
+  /** The activity text and icon ("Running the tests", 🧪). */
+  text: string;
+  icon: string;
+  /** The arguments (command, diff, JSON…), masked and truncated. Only in the detail. */
+  input?: string;
+  /** A subagent the office doesn't show asked: its type (e.g. "Explore"). */
+  subagent?: string;
+  suggestions?: PermissionSuggestionInfo[];
+  /** Ask-the-user requests: the questions, answered with the `answer` decision. */
+  questions?: AskQuestion[];
+  /** More requests from the same agent waiting after this one. */
+  queued?: number;
+  createdAt: number;
+  /** When the hook stops waiting and the request goes back to the terminal only. */
+  expiresAt: number;
+}
+
+/** An answer to one question, by POSITION (AskQuestion.index and the options' `index`). */
+export interface PermissionAnswer {
+  question: number;
+  /** Chosen options (exactly one without multiSelect, unless `other` is used instead). */
+  options?: number[];
+  /** Free text ("Other"). */
+  other?: string;
+}
+
+/** A message sent from the office (POST /api/messages, GET /api/messages/:id). Its text is never sent back. */
+export interface OutboxMessage {
+  id: string;
+  /** The recipient (always a main agent). */
+  agentId: string;
+  /** queued → sent (fetched by the session's inbox) → delivered (in the session or its queue) | failed. */
+  status: 'queued' | 'sent' | 'delivered' | 'failed';
+  error?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+/** A message as an inbox poll returns it (the Claude Code plugin, an SDK): the text exactly as typed. */
+export interface InboxMessage {
+  id: string;
+  text: string;
+}
+
+// ---------------------------------------------------------------- read-only conversation view (P7-05)
+
+/**
+ * One entry of an agent's conversation, rebuilt from its provider's transcript (GET /api/conversation/:agentId).
+ * Every text is masked and cut before it leaves the server. A tool's result comes as a later 'result' entry that
+ * points at the 'tool' entry by `toolId`.
+ */
+export type ConversationEntry =
+  | { kind: 'user'; id: string; at: number; text: string }
+  | { kind: 'assistant'; id: string; at: number; text: string }
+  | { kind: 'thinking'; id: string; at: number; text?: string }
+  | { kind: 'tool'; id: string; at: number; tool: string; title: string; input?: string }
+  | { kind: 'result'; id: string; at: number; toolId: string; text: string; error?: boolean }
+  | { kind: 'system'; id: string; at: number; text: string; level?: 'info' | 'warn' | 'error' };
+
+/** The latest part of a conversation (oldest first); `truncated` = older parts weren't read. */
+export interface ConversationPage {
+  provider: ProviderId;
+  entries: ConversationEntry[];
+  truncated: boolean;
+}
+
+/** A recent session in the history (open or ended), whose conversation GET /api/sessions/:key/conversation returns. */
+export interface RecentSession {
+  /** Opaque key for the conversation route. */
+  key: string;
+  provider: ProviderId;
+  account: string;
+  sessionId: string;
+  /** Project folder name (never a full path). */
+  project?: string;
+  title?: string;
+  lastAt: number;
+  /** In the office right now. */
+  open: boolean;
+}
+
+/** Body of POST /api/permissions/:id/decision. `terminal` = hand the request back to the terminal. */
+export type PermissionDecision =
+  | { behavior: 'allow'; suggestion?: number }
+  | { behavior: 'deny'; message?: string; interrupt?: boolean }
+  | { behavior: 'terminal' }
+  | { behavior: 'answer'; answers: PermissionAnswer[] };
 
 export interface FeedItem {
   id: string;

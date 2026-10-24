@@ -239,3 +239,11 @@ Payloads carry conversation content: `prompt`, `prompt_response`, full `tool_inp
   - **Ignored events.** Events we don't register (`PreCompress`, …) are accepted and ignored.
 - **Not covered yet:** sessions that were already running when the office started appear on their next hook. Gemini
   has no session registry to read at boot.
+
+## Approving from the office (P7-03)
+
+Not possible in 0.65.0. `BeforeTool` can return `deny`/`block` (the tool doesn't run, and the model sees `Tool
+execution blocked: <reason>`) or `ask` (forces the prompt, even in YOLO mode). `allow` is ignored, so the CLI still
+asks. The hook also runs before the policy check, so it can't tell whether a prompt will follow. See
+[docs/spikes/gemini-approvals.md](../spikes/gemini-approvals.md).
+

@@ -5,6 +5,7 @@
 //   npm run hooks:uninstall -- --provider gemini-cli
 //   npm run hooks:status -- --provider gemini-cli
 //   npm run hooks:install -- --provider codex
+//   npm run hooks:install -- --provider claude-code   (P7: answer permission requests and questions from the office)
 //
 // Settings with the `hooks: { <Event>: [{ matcher, hooks: [{ type: "command", command, ... }] }] }` shape (Gemini
 // CLI, Claude Code) are merged idempotently: only Agent Office's entries change; everything else stays. A backup
@@ -14,7 +15,7 @@ import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, statSync, u
 import { homedir } from 'node:os';
 import { delimiter, dirname, join, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { discoverCodexHomes } from '../server/adapters/accounts';
+import { discoverClaudeAccounts, discoverCodexHomes } from '../server/adapters/accounts';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 export const DEFAULT_PORT = 4848;
@@ -87,6 +88,26 @@ export function installedGeminiVersion(env: NodeJS.ProcessEnv, exists: (p: strin
 }
 
 export const TARGETS: Record<string, Target> = {
+  'claude-code': {
+    id: 'claude-code',
+    label: 'Claude Code',
+    // Claude Code is watched through its files; the only hook is PermissionRequest, to answer from the office (P7-01).
+    script: join(ROOT, 'hooks', 'claude-permission.mjs'),
+    // one settings.json per Claude config folder (~/.claude*, CLAUDE_CONFIG_DIR); ~/.claude when none exists yet
+    settingsFiles: (env, home) => {
+      const accounts = discoverClaudeAccounts(env, home);
+      return (accounts.length ? accounts.map((a) => a.dir) : [join(home, '.claude')]).map((d) => join(d, 'settings.json'));
+    },
+    profiles: ['default'],
+    defaultProfile: () => 'default',
+    events: () => ['PermissionRequest'],
+    allEvents: ['PermissionRequest'],
+    matcher: '*',
+    // Claude Code's timeout is in seconds: the shim waits 5 min by default (AGENT_OFFICE_PERMISSION_TIMEOUT, up to 24 h)
+    entry: (command) => ({ type: 'command', command, timeout: 86_430, statusMessage: 'Waiting for an answer in Agent Office' }),
+    afterInstall:
+      'Answering from the office also needs the server started with AGENT_OFFICE_INTERACTIVE=1 (local bind only) and a page open; otherwise the hook leaves at once and the terminal asks as usual.',
+  },
   'gemini-cli': {
     id: 'gemini-cli',
     label: 'Gemini CLI',

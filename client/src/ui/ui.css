@@ -261,8 +261,19 @@
   background: var(--panel);
   box-shadow: var(--shadow);
   backdrop-filter: blur(6px);
-  overflow: auto;
+  overflow: hidden;
   padding: 14px 16px 18px;
+  display: flex;
+  flex-direction: column;
+}
+.ui-drawer-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+/* the request cards move left of an open drawer */
+.ui-drawer:not([hidden]) ~ .ui-requests {
+  right: 364px;
 }
 .ui-drawer[hidden] {
   display: none;
@@ -659,4 +670,288 @@
   .ui-usage {
     display: none;
   }
+}
+
+/* Requests answered from the office (P7-01/P7-02) */
+.ui-requests {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  width: min(400px, calc(100vw - 24px));
+  max-height: calc(100vh - 90px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 5;
+}
+.ui-requests[hidden] {
+  display: none;
+}
+.ui-req {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--panel-solid);
+  box-shadow: var(--shadow);
+  border-left: 4px solid #e0861f;
+  font-size: 13px;
+}
+.ui-req-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.ui-req-who {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 700;
+  color: var(--text);
+  cursor: pointer;
+}
+.ui-req-what {
+  color: var(--muted);
+}
+.ui-req-queued {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--muted);
+}
+.ui-req-title {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  word-break: break-all;
+}
+.ui-req-text {
+  margin: 2px 0 6px;
+  color: var(--muted);
+}
+.ui-req-details pre {
+  max-height: 180px;
+  overflow: auto;
+  margin: 6px 0;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+  font-size: 11.5px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.ui-req-details summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 12px;
+}
+.ui-req-q {
+  margin: 0 0 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.ui-req-q legend {
+  padding: 0 4px;
+  font-weight: 600;
+}
+.ui-req-opt {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+  cursor: pointer;
+}
+.ui-req-other,
+.ui-req-reason {
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 4px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--panel-solid);
+  color: var(--text);
+  font: inherit;
+}
+.ui-req-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.ui-req-actions .ui-btn {
+  height: auto;
+  min-height: 28px;
+  white-space: normal;
+  text-align: left;
+}
+.ui-req-terminal {
+  margin-left: auto;
+}
+.ui-req-status {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* The message box under the details drawer (P7-04) */
+.ui-compose {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.ui-compose[hidden] {
+  display: none;
+}
+.ui-compose-label {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: 600;
+  font-size: 13px;
+}
+.ui-compose textarea {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  min-height: 52px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-solid);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+}
+.ui-compose-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+.ui-compose-status {
+  flex: 1;
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* The read-only conversation view and the session history (P7-05) */
+.ui-modal.wide {
+  width: min(820px, calc(100vw - 32px));
+}
+.ui-conv-btn {
+  margin-top: 8px;
+}
+.ui-conv {
+  max-height: calc(100vh - 170px);
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+}
+.ui-conv pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font: inherit;
+}
+.ui-conv-note {
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.ui-conv-note:empty {
+  display: none;
+}
+.ui-conv-user {
+  display: flex;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent, #3b7bd8) 12%, transparent);
+  font-weight: 600;
+}
+.ui-conv-who {
+  color: var(--accent, #3b7bd8);
+}
+.ui-conv-assistant {
+  padding: 0 4px;
+}
+.ui-conv-thinking {
+  color: var(--muted);
+  font-style: italic;
+}
+.ui-conv-thinking summary,
+.ui-conv-tool summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 12px;
+}
+.ui-conv-tool {
+  padding: 6px 10px;
+  border-left: 3px solid var(--border);
+}
+.ui-conv-title {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  word-break: break-all;
+}
+.ui-conv-tool pre,
+.ui-conv-result pre {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11.5px;
+}
+.ui-conv-result {
+  margin-top: 4px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+  max-height: 260px;
+  overflow: auto;
+}
+.ui-conv-result.err {
+  background: color-mix(in srgb, #e5383b 12%, transparent);
+}
+.ui-conv-system {
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+}
+.ui-conv-system.warn {
+  color: #b7791f;
+}
+.ui-conv-system.error {
+  color: #e5383b;
+}
+.ui-history {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.ui-history li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.ui-history-open {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  color: var(--accent, #3b7bd8);
+  cursor: pointer;
+  text-align: left;
+}
+.ui-history-meta {
+  flex: 1;
+  color: var(--muted);
+}
+.ui-history time {
+  color: var(--muted);
+  font-size: 12px;
 }

@@ -4,6 +4,8 @@ import { t } from '../../../shared/i18n';
 import type { Activity, AgentInfo, OfficeSnapshot } from '../../../shared/protocol';
 import type { OfficeStore } from '../net/store';
 import type { Selection, WorldApi } from '../render3d/world';
+import { createCompose } from './compose';
+import { openConversation } from './conversation';
 import { badge, button, el } from './dom';
 import { ago, compact, providerMeta, STATUS_COLORS, statusLabel } from './model';
 
@@ -25,10 +27,14 @@ function agentRow(a: AgentInfo, onClick: () => void): HTMLLIElement {
   return li;
 }
 
-export function createDrawer(store: OfficeStore, world: WorldApi): Drawer {
+export function createDrawer(store: OfficeStore, world: WorldApi, dialog: (open: () => () => void) => void = (open) => void open()): Drawer {
   const root = el('aside', 'ui-drawer');
   root.hidden = true;
   root.setAttribute('aria-label', t('Details'));
+  // the re-rendered part, and the message box under it (kept, so a draft survives new snapshots)
+  const content = el('div', 'ui-drawer-content');
+  const compose = createCompose();
+  root.append(content, compose.el);
   let history: { id: string; items: Activity[]; key: number } | null = null;
   let fetchedAt = 0;
 
@@ -43,6 +49,11 @@ export function createDrawer(store: OfficeStore, world: WorldApi): Drawer {
     if (a.model) m.append(el('span', '', a.model));
     parts.push(m);
     if (a.title) parts.push(el('div', 'meta', a.title));
+    // the read-only conversation (P7-05), live while open
+    if (snap.meta.interactive && meta.capabilities?.transcript) {
+      const host = root.parentElement ?? document.body;
+      parts.push(button(t('💬 Conversation'), t('Read this agent’s conversation (read-only)'), () => dialog(() => openConversation(host, `${a.name} · ${meta.label}`, `/api/conversation/${encodeURIComponent(a.id)}`, true)), 'ui-btn ui-conv-btn'));
+    }
     const room = store.room(a.roomId);
     if (room) {
       const r = el('div', 'meta');
@@ -156,9 +167,10 @@ export function createDrawer(store: OfficeStore, world: WorldApi): Drawer {
       parts = a ? renderAgent(snap, a) : null;
     } else if (snap && sel?.type === 'room') parts = renderRoom(snap, sel.id);
     root.hidden = !parts;
+    compose.update(sel?.type === 'agent' && parts ? (store.agent(sel.id) ?? null) : null);
     if (!parts) return;
     const close = button('✕', t('Close (Esc)'), () => world.select(null), 'ui-btn close');
-    root.replaceChildren(close, ...parts);
+    content.replaceChildren(close, ...parts);
   };
   let timer = 0;
   const schedule = () => {

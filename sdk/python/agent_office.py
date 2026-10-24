@@ -203,6 +203,37 @@ class AgentOffice:
                     return
                 self._post(batch, timeout)
 
+    # ------------------------------------------------------------ messages from the office (P7-04)
+
+    def inbox(self) -> List[Dict[str, str]]:
+        """Messages typed for this agent in the office, oldest first: [{"id", "text"}].
+
+        Call it every few seconds while the agent can take input: polling also tells the office this agent can receive
+        messages. Needs the server's interactive features (AGENT_OFFICE_INTERACTIVE=1); otherwise, and on any error,
+        returns []. Confirm each one with ack().
+        """
+        body = self._post_json("/api/inbox", {"provider": self.provider, "session": self.session})
+        items = body.get("messages") if isinstance(body, dict) else None
+        if not isinstance(items, list):
+            return []
+        return [{"id": m["id"], "text": m["text"]} for m in items if isinstance(m, dict) and isinstance(m.get("id"), str) and isinstance(m.get("text"), str)]
+
+    def ack(self, results: List[Dict[str, Any]]) -> None:
+        """What happened to the messages from inbox(): [{"id", "ok", "error"?}]. Unconfirmed ones fail after 30 s."""
+        if results:
+            self._post_json("/api/inbox/ack", {"provider": self.provider, "session": self.session, "results": results})
+
+    def _post_json(self, path: str, body: Dict[str, Any], timeout: float = 2.0) -> Any:
+        req = urllib.request.Request(f"{self.url}{path}", data=json.dumps(body).encode("utf-8"), headers={"content-type": "application/json"}, method="POST")
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as res:
+                return json.loads(res.read().decode("utf-8") or "null")
+        except urllib.error.HTTPError:
+            return None
+        except Exception as err:  # the office isn't running
+            self.on_error(err)
+            return None
+
     def _next(self, prefix: str) -> str:
         with self._lock:
             self._seq += 1

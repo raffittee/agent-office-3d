@@ -1,6 +1,6 @@
 # Agent Office — guide for AI agents
 
-> **Status: Phases 0–6 done (pending on the user's machine: a live Gemini CLI check, the frame-rate checks, the Claude usage tap and a look and listen at Phase 6); Phase 7 next.** The phased plan lives in [TASKS.md](TASKS.md).
+> **Status: Phases 0–7 done (pending on the user's machine: a live Gemini CLI check, the frame-rate checks, the Claude usage tap, a look and listen at Phase 6, and the Phase 7 hook and plugin on a real session); Phase 8 next.** The phased plan lives in [TASKS.md](TASKS.md).
 > Provider facts: [docs/providers/](docs/providers/). Decisions: [docs/adr/](docs/adr/). Spike results:
 > [docs/spikes/](docs/spikes/).
 
@@ -301,8 +301,9 @@ points below summarize it.
   chat file shows its activity.
 - **Output contract:** stdout must contain only JSON, and exit code 2 blocks the action. Our shim always prints
   nothing (or `{}`) and exits 0.
-- **Approvals:** `Notification` is observe-only, so it can't approve from the office. Whether a `BeforeTool`
-  decision could do it safely is a Phase 7 spike, off by default.
+- **Approvals:** not possible from the office (P7-03, [docs/spikes/gemini-approvals.md](docs/spikes/gemini-approvals.md)).
+  A `BeforeTool` hook can deny or force a prompt but can't approve, and it runs before the CLI decides whether to ask.
+  `Notification` is observe-only.
 - **Session files:** `~/.gemini/tmp/<project-slug>/chats/session-<YYYY-MM-DDTHH-MM>-<id8>.jsonl`. The slug comes
   from `~/.gemini/projects.json`, keyed by the lower-cased project path. Subagents are in
   `chats/<parentSessionId>/<subagentSessionId>.jsonl`. The format is append-only JSONL: messages are re-appended
@@ -401,6 +402,9 @@ These rules come from Habblaud's `mod/habblaud-codex/hook.mjs`.
   | `AGENT_OFFICE_CLAUDE_DIRS` | discovered | Comma-separated Claude config folders to watch, replacing discovery. |
   | `AGENT_OFFICE_CODEX_DIRS` | discovered | Comma-separated Codex homes to watch (else `CODEX_HOME` and `~/.codex*`). |
   | `AGENT_OFFICE_IN_DOCKER` | auto | `1` skips PID checks (the agents' PIDs belong to the host). |
+  | `AGENT_OFFICE_INTERACTIVE` | off | `1` (or `--interactive`) turns on approving and answering from the office; loopback bind only. See [docs/interactive.md](docs/interactive.md). |
+  | `AGENT_OFFICE_PERMISSION_TIMEOUT` | `300` | Seconds the Claude Code permission hook waits for the office before the terminal decides. |
+  | `AGENT_OFFICE_CODEX_BIN` | `codex` on PATH | The Codex binary used for `codex queue` (messages to Codex sessions, P7-04). |
   | `AGENT_OFFICE_THEME` | `modern` | Default theme pack id for browsers that haven't picked one. |
 
 ## Commands
@@ -414,7 +418,7 @@ Update this table as commands land. *(planned)* marks the ones that don't exist 
 | `npm start` | Runs the built server (`dist/server/index.js`) |
 | `node spikes/renderer/measure.mjs` · `node spikes/assets/measure.mjs <dir>` | Re-run the Phase 0 measurements |
 | `npm run demo` | Dev mode with simulated agents from several providers (`AGENT_OFFICE_DEMO=1` or `--demo` on any run) |
-| `npm run hooks:install -- --provider gemini-cli` · `--provider codex` | Install a provider's hooks (Gemini: `--profile light` or `full`; also `hooks:status`, `hooks:uninstall`) |
+| `npm run hooks:install -- --provider gemini-cli` · `--provider codex` · `--provider claude-code` | Install a provider's hooks (Gemini: `--profile light` or `full`; Claude Code: the permission hook, P7; also `hooks:status`, `hooks:uninstall`) |
 | `npm run assets:fetch` · `npm run assets:build` | Download pinned asset sources into `assets-src/`, then build the committed GLBs and profiles |
 | `npm run shot` | After `npm run build`: screenshot the demo office in Chrome (`--sessions 30`, `--out <dir>`); CI runs it |
 | `npm run usage:install` · `usage:status` · `usage:uninstall` | Put the statusline tap in front of each Claude Code account's statusline (plan usage) |

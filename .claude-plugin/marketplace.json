@@ -1,0 +1,13 @@
+{
+  "name": "agent-office",
+  "owner": { "name": "Agent Office" },
+  "description": "Claude Code plugins for Agent Office, the 3D office of your AI coding agents.",
+  "plugins": [
+    {
+      "name": "agent-office-messages",
+      "source": "./plugins/agent-office-messages",
+      "description": "Send messages from Agent Office: what you type in the office goes into the session as if you had typed it in the terminal.",
+      "category": "productivity"
+    }
+  ]
+}

@@ -147,7 +147,10 @@ The plan, phase by phase. [CLAUDE.md](CLAUDE.md) has the design, contracts and r
   - Add one tool table per provider: `claude-code` from Habblaud's `describeTool`; `gemini-cli` from P0-04.
   - **Ref:** `shared/activity.ts`, `shared/activity.test.ts`.
   - **Done when:** the ported masking tests pass, and each provider's fixture tools map to the expected kinds.
-- [ ] **P1-03 Office reducer** (L)
+- [x] **P1-03 Office reducer** (L) — done: `server/model/office.ts` is a reducer (`apply(AgentEvent)`) keeping
+  Habblaud's rules (grace periods, synthesized Done/Needs-you/shell bubbles, notice dedupe, quiet boot), plus
+  `/clear` continuity via `continues`, jobs (`job.*` → `shell`), denials, liveness targets and `markOffline`;
+  22 tests cover every status transition.
   - `server/model/office.ts`: `apply(event)` updates the agent and room records.
   - Implement the status machine from `CLAUDE.md`, including the offline and done grace periods, plus `shell`
     while `job.*` events leave a background job open (ADR 0002). Duplicate `session.end` events must be harmless.

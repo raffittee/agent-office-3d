@@ -242,3 +242,14 @@ Branch `phase-1`. One commit per task, each pushed. At the end of the phase ther
   parent folder added ("company/app" vs "other/app"). Rooms can be renamed, and the names persist.
 - Agents get names from a new list of 120 international names. Each session keeps its name across restarts.
 - Habblaud's "pick your character per project" editor isn't ported yet; it's in the backlog.
+
+### P1-03 Office reducer — done
+
+- The heart of the server: every event from any provider goes through one function that decides each agent's
+  state (working, waiting, idle, waiting-for-shell, done, offline), its bubble text, the activity feed and the
+  pop-up notices. It's Habblaud's model rewritten around our event protocol, keeping its rules: grace periods
+  before agents leave, "Done in 30s" bubbles, "Needs you" bubbles, no duplicate alerts within 10 s, and no
+  notifications while the server catches up at startup.
+- New: `/clear` keeps the same character (the session links to the old one); denied permissions don't show
+  "Done"; background shells keep the agent in "waiting for the shell" until the last one ends.
+- 22 tests, one per state transition plus these flows.

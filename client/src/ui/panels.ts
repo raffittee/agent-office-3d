@@ -55,6 +55,15 @@ export function createTopbar(store: OfficeStore, world: WorldApi, actions: { set
   store.on('connection', renderConn);
   renderCounts();
   renderConn(store.connection);
+  // ?stats=1: frame rate and draw calls, to check the performance budget on a real GPU
+  if (new URLSearchParams(location.search).has('stats')) {
+    const perf = el('span', 'ui-conn');
+    conn.after(perf);
+    setInterval(() => {
+      const st = world.stats();
+      perf.textContent = t('{0} fps · {1} draw calls · {2} agents', [st.fps, st.calls, st.agents]);
+    }, 1000);
+  }
   return root;
 }
 

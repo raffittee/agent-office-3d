@@ -581,10 +581,15 @@ need a look on your machine.
 
 ## Phase 7: Interact from the office (local-only)
 
-- [ ] **P7-01 Approve permissions: Claude Code** (L)
+- [x] **P7-01 Approve permissions: Claude Code** (L) — done: `hooks/claude-permission.mjs` (ported hook, long-poll),
+  `server/permissions/{registry,http}.ts` (registry trimmed to provider-neutral rules; a terminal answer is seen as the
+  tool call ending), `AgentInfo.permission`, request cards (`client/src/ui/requests.ts`), `hooks:install --provider
+  claude-code`, `AGENT_OFFICE_INTERACTIVE` (loopback only), [docs/interactive.md](docs/interactive.md). Verified live with
+  the real hook against the built server.
   - The `PermissionRequest` hook, a registry, long-polling, and request cards in the UI.
   - **Ref:** `server/permissions/*`, `mod/habblaud-permissoes/*`, `scripts/permission-hook.mjs`.
-- [ ] **P7-02 Answer questions** (M)
+- [x] **P7-02 Answer questions** (M) — done: `shared/answers.ts` (ported with tests); `AskUserQuestion` cards with
+  options and "Other", answered by position and sent back with the original texts.
   - Answer `AskUserQuestion` prompts through the same flow.
   - **Ref:** `shared/answers.ts`.
 - [ ] **P7-03 Spike: Gemini approvals** (M)

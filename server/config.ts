@@ -26,6 +26,13 @@ export interface Config {
   version: string;
   /** The default theme pack id (AGENT_OFFICE_THEME); the browser falls back to its built-in default if unknown. */
   theme?: string;
+  /** Asked for the session-touching features (AGENT_OFFICE_INTERACTIVE=1 or --interactive); see `interactive()`. */
+  interactiveRequested: boolean;
+}
+
+/** The session-touching features are on only when asked for AND bound to loopback (CLAUDE.md, security). */
+export function interactive(c: Pick<Config, 'interactiveRequested' | 'host'>): boolean {
+  return c.interactiveRequested && isLoopbackBind(c.host);
 }
 
 export const DEFAULT_PORT = 4848;
@@ -102,6 +109,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env, argv: readonly 
     port: parsePort(env.AGENT_OFFICE_PORT),
     dev: argv.includes('--dev'),
     demo: isTruthy(env.AGENT_OFFICE_DEMO) || argv.includes('--demo'),
+    interactiveRequested: isTruthy(env.AGENT_OFFICE_INTERACTIVE) || argv.includes('--interactive'),
     inDocker: isTruthy(env.AGENT_OFFICE_IN_DOCKER) || (process.platform === 'linux' && existsSync('/.dockerenv')),
     home,
     dataDir: resolve(env.AGENT_OFFICE_DATA_DIR?.trim() || join(home, '.agent-office')),

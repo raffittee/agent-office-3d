@@ -7,6 +7,7 @@ import { openHelp, openSettings, SETTINGS_KEY } from './dialogs';
 import { prefs } from './dom';
 import { createDrawer } from './drawer';
 import { createFeed, createHoverTip, createToasts, createTopbar } from './panels';
+import { createRequests } from './requests';
 import { createSidebar } from './sidebar';
 import './ui.css';
 
@@ -32,7 +33,7 @@ export function createUI(root: HTMLElement, store: OfficeStore, world: WorldApi)
   });
   const sidebar = createSidebar(store, world);
   const drawer = createDrawer(store, world);
-  root.append(topbar, sidebar.el, createFeed(store, world), drawer.el, createToasts(store, world), createHoverTip(store, world));
+  root.append(topbar, sidebar.el, createFeed(store, world), drawer.el, createRequests(store, world), createToasts(store, world), createHoverTip(store, world));
 
   const insets = () => {
     const narrow = innerWidth < 760;

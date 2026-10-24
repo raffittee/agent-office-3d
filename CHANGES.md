@@ -703,3 +703,18 @@ Branch `phase-1`. One commit per task, each pushed. At the end of the phase ther
 - **Needs your machine:** the exit check is subjective ("the office feels alive"): run `npm run demo`, turn on sounds
   in Settings, and tell me what feels off.
 
+## Phase 7: Interact from the office (branch `phase-7`)
+
+### P7-01 Approve permissions and P7-02 Answer questions — done, 2026-10-25 06:54
+
+- **Answer Claude Code from the office (off by default):** when Claude Code asks "Do you want to…", a card at the
+  bottom right lets you **Allow**, **Always allow** (the rule Claude Code proposed), **Deny** (with an optional reason
+  the agent sees), or leave it to the terminal. Questions (`AskUserQuestion`) get their options and an "Other" field.
+  The terminal dialog stays live too, and whichever answers first wins.
+- **To turn it on:** start with `AGENT_OFFICE_INTERACTIVE=1` (it works only on a local bind), run
+  `npm run hooks:install -- --provider claude-code`, and restart open Claude Code sessions. Read
+  [docs/interactive.md](docs/interactive.md) first: anything on this computer that can reach the office can approve a
+  request.
+- With the office closed or the feature off, the hook steps aside at once and Claude Code asks in the terminal as
+  before.
+

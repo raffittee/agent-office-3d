@@ -21,6 +21,7 @@ import {
   type Notice,
   type NoticeLevel,
   type OfficeSnapshot,
+  type PermissionRequestInfo,
   type ProviderId,
   type ProviderMeta,
   type RoomEffect,
@@ -66,6 +67,12 @@ export interface OfficeDeps {
   demo?: boolean;
   /** The default theme pack id (OfficeSnapshot.meta.theme, from AGENT_OFFICE_THEME). */
   theme?: string;
+  /** The session-touching features are on (OfficeSnapshot.meta.interactive). */
+  interactive?: boolean;
+  /** Pending requests answerable from the office, per agent id (server/permissions/registry.ts, P7-01). */
+  permissions?: () => ReadonlyMap<string, PermissionRequestInfo>;
+  /** A tool call of an agent ended (a request answered in the terminal, for the registry). */
+  onToolEnd?: (agentId: string, tool: string, at: number) => void;
   now?: () => number;
 }
 
@@ -533,6 +540,7 @@ export class Office {
     // A finished tool ends a wait (the permission was answered); a denial or cancel usually ends the turn too,
     // and the adapter follows with turn.end.
     if (rec.info.status === 'waiting') this.setStatus(rec, 'working');
+    this.deps.onToolEnd?.(rec.info.id, tool.name, e.at);
   }
 
   /**
@@ -651,6 +659,23 @@ export class Office {
     const out: { label?: string; count: number; detail?: string } = { label: main.label, count: jobs.length };
     if (main.command) out.detail = main.command;
     return out;
+  }
+
+  // ---------------------------------------------------------------- outside events (P7)
+
+  /** Adds an activity to an agent from outside the event stream (a permission request or its answer). */
+  noteActivity(id: string, activity: Activity, opts: { feed?: boolean } = {}): void {
+    const rec = this.agents.get(id);
+    if (!rec) return;
+    this.addActivity(rec, activity, opts);
+    this.markDirty();
+  }
+
+  /** A "needs you" notice for a request registered from outside (deduped like the status one). */
+  noticeNeedsYou(id: string, text: string): void {
+    const rec = this.agents.get(id);
+    if (!rec) return;
+    this.notice('wait', id, 'alert', text, rec.info.roomId);
   }
 
   // ---------------------------------------------------------------- activities
@@ -799,9 +824,20 @@ export class Office {
         return room;
       })
       .sort((a, b) => a.slot - b.slot);
+    const permissions = this.deps.permissions?.();
     const agents = [...this.agents.values()].map((r) => {
       const a = cloneAgent(r.info);
       if (a.recent.length > SNAPSHOT_RECENT) a.recent = a.recent.slice(-SNAPSHOT_RECENT);
+      const p = permissions?.get(a.id);
+      if (p && a.status !== 'offline' && a.status !== 'done') {
+        // a pending request shows the agent waiting (a background subagent's dialog only reaches the terminal later)
+        a.permission = p;
+        if (a.status !== 'waiting') {
+          a.status = 'waiting';
+          a.statusSince = p.createdAt;
+        }
+        a.waitingFor ??= p.questions?.length ? t('answer a question') : t('approve a permission');
+      }
       return a;
     });
     const sessions = new Map<string, number>();
@@ -821,6 +857,7 @@ export class Office {
         version: this.deps.version,
         ...(build ? { build } : {}),
         ...(this.deps.theme ? { theme: this.deps.theme } : {}),
+        ...(this.deps.interactive ? { interactive: true } : {}),
       },
     };
   }

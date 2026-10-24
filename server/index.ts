@@ -8,7 +8,7 @@ import { ClaudeCodeAdapter } from './adapters/claude-code/adapter';
 import { CodexAdapter } from './adapters/codex/adapter';
 import { DemoAdapter } from './adapters/demo';
 import { GeminiCliAdapter } from './adapters/gemini-cli/adapter';
-import { loadConfig } from './config';
+import { interactive, loadConfig } from './config';
 import { createApiHandler } from './http/app';
 import { createRequestGuard } from './http/guard';
 import { Hub } from './http/sse';
@@ -19,6 +19,8 @@ import { AccountsService, demoUsage } from './accounts/service';
 import { NameStore } from './model/names';
 import { Office } from '../shared/model/office';
 import { RoomAliases } from './model/room-aliases';
+import { createPermissionRoutes } from './permissions/http';
+import { PermissionRegistry } from './permissions/registry';
 
 /** How often agents' processes are checked (the Phase 1 exit asks for status changes within 2 s). */
 const LIVENESS_MS = 2_000;
@@ -43,6 +45,11 @@ const accounts = new AccountsService({
   ...(demo ? { extraUsage: demoUsage } : {}),
 });
 
+const interactiveOn = interactive(config);
+if (config.interactiveRequested && !interactiveOn) log.warn(`interactive features stay off: ${config.host} is not a loopback address`);
+// set once the office exists (the registry reads it, the office reads the registry)
+let permissions: PermissionRegistry | null = null;
+
 const office = new Office({
   names,
   accounts: (sessions) => accounts.accounts(sessions),
@@ -53,10 +60,22 @@ const office = new Office({
   providers,
   demo: config.demo,
   ...(config.theme ? { theme: config.theme } : {}),
+  ...(interactiveOn
+    ? {
+        interactive: true,
+        permissions: () => permissions?.snapshot() ?? new Map(),
+        onToolEnd: (id: string, tool: string, at: number) => permissions?.toolEnded(id, tool, at),
+      }
+    : {}),
 });
 await adapters.start(office);
 const hub = new Hub(office);
 hub.start();
+if (interactiveOn) {
+  permissions = new PermissionRegistry({ office, viewers: () => hub.size });
+  permissions.start();
+  log.info('interactive features on: permission requests and questions can be answered from the office');
+}
 const tick = setInterval(() => office.tick(), 250);
 tick.unref();
 const liveness = setInterval(() => adapters.checkLiveness(office), LIVENESS_MS);
@@ -74,7 +93,15 @@ usageTimer.unref();
 
 const guard = createRequestGuard({ allowedHosts: config.allowedHosts });
 const ingest = createIngestHandler({ apply: (e) => office.apply(e), hooks: (p) => adapters.hooks(p) });
-const api = createApiHandler({ office, hub, version: config.version, sources: () => adapters.sources(), providers, ingest });
+const api = createApiHandler({
+  office,
+  hub,
+  version: config.version,
+  sources: () => adapters.sources(),
+  providers,
+  ingest,
+  ...(permissions ? { actions: { '/api/permissions': createPermissionRoutes(permissions) } } : {}),
+});
 
 type Handler = (req: http.IncomingMessage, res: http.ServerResponse, pathname: string) => void;
 let fallback: Handler = createStaticHandler(join(config.rootDir, 'dist', 'client'));
@@ -116,6 +143,7 @@ server.listen(config.port, config.host, () => {
 function shutdown(): void {
   clearInterval(tick);
   clearInterval(liveness);
+  permissions?.stop();
   adapters.stop();
   hub.stop();
   names.flush();

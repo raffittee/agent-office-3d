@@ -4,7 +4,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { ProviderMeta, SourceInfo } from '../../shared/protocol';
 import type { Office } from '../../shared/model/office';
-import { isJsonContentType } from './guard';
+import { isJsonContentType, isLoopbackHost } from './guard';
 import type { Hub } from './sse';
 
 export interface ApiDeps {
@@ -16,7 +16,15 @@ export interface ApiDeps {
   demo?: () => boolean;
   /** Ingest routes; returns false for paths it doesn't own. */
   ingest?: (req: IncomingMessage, res: ServerResponse, path: string) => boolean;
+  /**
+   * Session-touching routes (P7: /api/permissions…), keyed by path prefix. Present only with the interactive features
+   * on; each request must also come with a loopback Host (local-only, whatever names are allow-listed).
+   */
+  actions?: Record<string, (req: IncomingMessage, res: ServerResponse, path: string) => void>;
 }
+
+/** Path prefixes of the session-touching routes: answered 403 while the interactive features are off. */
+export const ACTION_PREFIXES = ['/api/permissions', '/api/messages'];
 
 export const MAX_BODY = 256 * 1024;
 
@@ -101,6 +109,19 @@ export function createApiHandler(deps: ApiDeps): (req: IncomingMessage, res: Ser
     if (!path.startsWith('/api/')) return false;
 
     if (deps.ingest?.(req, res, path)) return true;
+
+    const prefix = ACTION_PREFIXES.find((p) => path === p || path.startsWith(`${p}/`));
+    if (prefix) {
+      const route = deps.actions?.[prefix];
+      if (!route) {
+        req.resume();
+        sendJson(res, 403, { error: 'the interactive features are off (start with AGENT_OFFICE_INTERACTIVE=1 on a local bind)' });
+      } else if (!isLoopbackHost(req.headers.host)) {
+        req.resume();
+        sendJson(res, 403, { error: 'interactive routes answer only on localhost' });
+      } else route(req, res, path);
+      return true;
+    }
 
     if (path === '/api/stream') {
       if (readOnly(req, res)) hub.attach(req, res);

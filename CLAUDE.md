@@ -401,6 +401,8 @@ These rules come from Habblaud's `mod/habblaud-codex/hook.mjs`.
   | `AGENT_OFFICE_CLAUDE_DIRS` | discovered | Comma-separated Claude config folders to watch, replacing discovery. |
   | `AGENT_OFFICE_CODEX_DIRS` | discovered | Comma-separated Codex homes to watch (else `CODEX_HOME` and `~/.codex*`). |
   | `AGENT_OFFICE_IN_DOCKER` | auto | `1` skips PID checks (the agents' PIDs belong to the host). |
+  | `AGENT_OFFICE_INTERACTIVE` | off | `1` (or `--interactive`) turns on approving and answering from the office; loopback bind only. See [docs/interactive.md](docs/interactive.md). |
+  | `AGENT_OFFICE_PERMISSION_TIMEOUT` | `300` | Seconds the Claude Code permission hook waits for the office before the terminal decides. |
   | `AGENT_OFFICE_THEME` | `modern` | Default theme pack id for browsers that haven't picked one. |
 
 ## Commands
@@ -414,7 +416,7 @@ Update this table as commands land. *(planned)* marks the ones that don't exist 
 | `npm start` | Runs the built server (`dist/server/index.js`) |
 | `node spikes/renderer/measure.mjs` · `node spikes/assets/measure.mjs <dir>` | Re-run the Phase 0 measurements |
 | `npm run demo` | Dev mode with simulated agents from several providers (`AGENT_OFFICE_DEMO=1` or `--demo` on any run) |
-| `npm run hooks:install -- --provider gemini-cli` · `--provider codex` | Install a provider's hooks (Gemini: `--profile light` or `full`; also `hooks:status`, `hooks:uninstall`) |
+| `npm run hooks:install -- --provider gemini-cli` · `--provider codex` · `--provider claude-code` | Install a provider's hooks (Gemini: `--profile light` or `full`; Claude Code: the permission hook, P7; also `hooks:status`, `hooks:uninstall`) |
 | `npm run assets:fetch` · `npm run assets:build` | Download pinned asset sources into `assets-src/`, then build the committed GLBs and profiles |
 | `npm run shot` | After `npm run build`: screenshot the demo office in Chrome (`--sessions 30`, `--out <dir>`); CI runs it |
 | `npm run usage:install` · `usage:status` · `usage:uninstall` | Put the statusline tap in front of each Claude Code account's statusline (plan usage) |

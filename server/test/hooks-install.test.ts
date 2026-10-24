@@ -236,3 +236,36 @@ describe('hooks-install: Codex', () => {
     expect(read()).toEqual(theirs);
   });
 });
+
+describe('hooks-install: Claude Code (P7 permission hook)', () => {
+  let tmp: ReturnType<typeof tempDir>;
+  let home: string;
+  let out: string[];
+  const settings = () => join(home, '.claude', 'settings.json');
+  const theirs = { model: 'opus', hooks: { Stop: [{ hooks: [{ type: 'command', command: 'say done' }] }] } };
+
+  beforeEach(() => {
+    tmp = tempDir();
+    home = join(tmp.dir, 'home');
+    out = [];
+    mkdirSync(join(home, '.claude', 'projects'), { recursive: true });
+    writeFileSync(settings(), `${JSON.stringify(theirs, null, 2)}\n`);
+  });
+  afterEach(() => tmp.cleanup());
+
+  const exec = (command: RunOptions['command']) =>
+    run({ command, provider: 'claude-code', port: 4848, dryRun: false }, { env: {}, home, now: new Date(2026, 9, 25, 9, 30, 0), platform: 'linux', out: (l) => out.push(l), health: async () => undefined, skipVersionCheck: true });
+
+  it('adds only PermissionRequest (matcher "*", a long timeout), keeps everything else, and uninstalls cleanly', async () => {
+    expect(await exec('install')).toBe(0);
+    const read = () => JSON.parse(readFileSync(settings(), 'utf8')) as typeof theirs & { hooks: Record<string, Array<{ matcher?: string; hooks: Array<Record<string, unknown>> }>> };
+    const s = read();
+    expect(s.model).toBe('opus');
+    expect(Object.keys(s.hooks).sort()).toEqual(['PermissionRequest', 'Stop']);
+    expect(s.hooks.PermissionRequest![0]!.matcher).toBe('*');
+    expect(s.hooks.PermissionRequest![0]!.hooks[0]).toMatchObject({ type: 'command', command: expect.stringMatching(/claude-permission\.mjs"$/), timeout: 86_430 });
+    expect(out.join('\n')).toContain('AGENT_OFFICE_INTERACTIVE=1');
+    expect(await exec('uninstall')).toBe(0);
+    expect(read()).toEqual(theirs);
+  });
+});

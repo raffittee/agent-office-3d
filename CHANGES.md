@@ -273,3 +273,10 @@ Branch `phase-1`. One commit per task, each pushed. At the end of the phase ther
 - `POST /api/hooks/<provider>` receives what the Gemini / Claude / Codex hook scripts send.
 - Both are reachable only from this computer, only JSON, at most 256 KB, rate-limited, validated, and every piece of
   text is secret-masked before it's stored or shown.
+
+### P1-07 Adapter framework & liveness — done
+
+- A common frame every provider plugs into: it starts them in order (one broken provider doesn't break the
+  others), collects their status for `/api/health`, and gives the UI each provider's badge color and capabilities.
+- Every 2 seconds it checks whether each agent's process is still running, and marks agents whose terminal was
+  closed as gone. Agents without a known process (custom agents) are considered gone after 2 minutes of silence.

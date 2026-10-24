@@ -185,7 +185,10 @@ The plan, phase by phase. [CLAUDE.md](CLAUDE.md) has the design, contracts and r
   - Both are local-only, JSON-only, capped at 256 KB per body, rate-limited per source, validated, and masked on
     entry.
   - **Done when:** tests reject a bad Host, a bad Origin, a bad schema and an oversized body.
-- [ ] **P1-07 Adapter framework & liveness** (M)
+- [x] **P1-07 Adapter framework & liveness** (M) — done: `server/adapters/adapter.ts` (`ProviderAdapter`,
+  `AdapterSet`: ordered start with failure isolation, counted boots, validated+masked `emit`, sources, provider
+  meta, hook routing; liveness every 2 s via the adapter, a PID probe or a 2-min heartbeat timeout); wired into
+  `server/index.ts`; ported tests.
   - Write the `ProviderAdapter` interface and an `AdapterSet` (start, stop, sources, health).
   - Liveness: check the PID with `process.kill(pid, 0)`, and fall back to a heartbeat timeout.
   - Wrap each adapter's boot in `beginBoot` / `endBoot` pairs.

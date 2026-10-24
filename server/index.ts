@@ -3,6 +3,7 @@
 //   npm start      -> node dist/server/index.js (serves dist/client)
 import http from 'node:http';
 import { join } from 'node:path';
+import { AdapterSet } from './adapters/adapter';
 import { loadConfig } from './config';
 import { createApiHandler } from './http/app';
 import { createRequestGuard } from './http/guard';
@@ -14,6 +15,9 @@ import { NameStore } from './model/names';
 import { Office } from './model/office';
 import { RoomAliases } from './model/room-aliases';
 
+/** How often agents' processes are checked (the Phase 1 exit asks for status changes within 2 s). */
+const LIVENESS_MS = 2_000;
+
 const config = loadConfig();
 
 const names = new NameStore(join(config.dataDir, 'names.json'));
@@ -21,20 +25,27 @@ names.load();
 const aliases = new RoomAliases(join(config.dataDir, 'rooms.json'));
 aliases.load();
 
+const adapters = new AdapterSet();
+
 const office = new Office({
   names,
   roomAlias: (path) => aliases.get(path),
   version: config.version,
   startedAt: Date.now(),
+  sources: () => adapters.sources(),
+  providers: () => adapters.providers(),
 });
+await adapters.start(office);
 const hub = new Hub(office);
 hub.start();
 const tick = setInterval(() => office.tick(), 250);
 tick.unref();
+const liveness = setInterval(() => adapters.checkLiveness(office), LIVENESS_MS);
+liveness.unref();
 
 const guard = createRequestGuard({ allowedHosts: config.allowedHosts });
-const ingest = createIngestHandler({ apply: (e) => office.apply(e), hooks: () => undefined });
-const api = createApiHandler({ office, hub, version: config.version, sources: () => [], providers: () => [], ingest });
+const ingest = createIngestHandler({ apply: (e) => office.apply(e), hooks: (p) => adapters.hooks(p) });
+const api = createApiHandler({ office, hub, version: config.version, sources: () => adapters.sources(), providers: () => adapters.providers(), ingest });
 
 type Handler = (req: http.IncomingMessage, res: http.ServerResponse, pathname: string) => void;
 let fallback: Handler = createStaticHandler(join(config.rootDir, 'dist', 'client'));
@@ -75,6 +86,8 @@ server.listen(config.port, config.host, () => {
 
 function shutdown(): void {
   clearInterval(tick);
+  clearInterval(liveness);
+  adapters.stop();
   hub.stop();
   names.flush();
   server.close(() => process.exit(0));

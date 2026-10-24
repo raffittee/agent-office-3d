@@ -167,20 +167,26 @@ Habblaud's `OfficeSnapshot`, `AgentInfo`, `RoomInfo`, `FeedItem` and `Notice`, r
 
 ### `ProviderAdapter`
 
+Source of truth: [`server/adapters/adapter.ts`](server/adapters/adapter.ts) (P1-07), with `AdapterSet` running
+them all.
+
 ```ts
 export interface ProviderAdapter {
   readonly id: ProviderId;
   readonly label: string; // "Gemini CLI"
   readonly color: string; // badge color
   readonly capabilities: { transcript: boolean; approve: boolean; message: boolean; usage: boolean; subagents: boolean };
-  start(emit: (e: AgentEvent) => void): void | Promise<void>;
+  /** ctx.emit validates and masks; ctx.beginBoot/endBoot bracket the rebuild of open sessions. */
+  start(ctx: AdapterContext): void | Promise<void>;
   stop(): void;
-  /** Raw payload from hooks/<provider>.mjs → normalized events. */
+  /** One entry per watched account or endpoint (meta.sources, /api/health). */
+  sources(): SourceInfo[];
+  /** Raw payload from hooks/<provider>.mjs → normalized events (routed by POST /api/hooks/:provider). */
   onHook?(payload: unknown): AgentEvent[];
-  /** Native tool name + input → activity (kind, icon, text, detail). */
+  /** Native tool name + input → activity (kind, icon, text, detail); usually the table in shared/tools/. */
   describeTool(name: string, input: unknown): ActivityDescription;
-  /** Is this agent's process still alive? (pid, lock file or heartbeat; undefined = unknown) */
-  alive?(agentId: string): boolean | undefined;
+  /** Is this agent's process alive? undefined = fall back to the PID probe, then a 2-minute heartbeat timeout. */
+  alive?(target: LivenessTarget): boolean | undefined;
 }
 ```
 

@@ -12,7 +12,7 @@ import { tempDir } from '../test/helpers';
 import { createApiHandler } from './app';
 import { createRequestGuard, hostAllowed, hostnameOf, isLoopbackHost, originAllowed, parseAllowedHosts } from './guard';
 import { Hub } from './sse';
-import { IMMUTABLE, REVALIDATE, createStaticHandler } from './static';
+import { CSP, IMMUTABLE, REVALIDATE, createStaticHandler } from './static';
 
 setQuiet(true);
 
@@ -183,6 +183,9 @@ describe('HTTP API', () => {
     expect(await page.text()).toContain('<title>Agent Office</title>');
     expect(page.headers.get('cache-control')).toBe(REVALIDATE);
     expect(page.headers.get('x-frame-options')).toBe('DENY');
+    expect(page.headers.get('content-security-policy')).toBe(CSP);
+    expect(CSP).toContain("frame-ancestors 'none'");
+    expect(CSP).not.toMatch(/script-src[^;]*'unsafe-inline'/);
     const bundle = await fetch(`${env.base}/bundle/main-abc12345.js`);
     expect(bundle.headers.get('cache-control')).toBe(IMMUTABLE);
     expect(bundle.headers.get('content-type')).toMatch(/javascript/);

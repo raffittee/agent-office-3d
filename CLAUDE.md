@@ -1,6 +1,6 @@
 # Agent Office — guide for AI agents
 
-> **Status: Phases 0–7 done (pending on the user's machine: a live Gemini CLI check, the frame-rate checks, the Claude usage tap, a look and listen at Phase 6, and the Phase 7 hook and plugin on a real session); Phase 8 next.** The phased plan lives in [TASKS.md](TASKS.md).
+> **Status: Phases 0–8 done, v0.1.0 released (pending on the user's machine: a live Gemini CLI check, the frame-rate checks, the Claude usage tap, a look and listen at Phase 6, the Phase 7 hook and plugin on a real session, and Docker against real agent folders). Next: the backlog in TASKS.md.** The phased plan lives in [TASKS.md](TASKS.md).
 > Provider facts: [docs/providers/](docs/providers/). Decisions: [docs/adr/](docs/adr/). Spike results:
 > [docs/spikes/](docs/spikes/).
 
@@ -423,6 +423,9 @@ Update this table as commands land. *(planned)* marks the ones that don't exist 
 | `npm run shot` | After `npm run build`: screenshot the demo office in Chrome (`--sessions 30`, `--out <dir>`); CI runs it |
 | `npm run usage:install` · `usage:status` · `usage:uninstall` | Put the statusline tap in front of each Claude Code account's statusline (plan usage) |
 | `npm run theme:check` · `npm run theme:new -- <id>` | Validate theme packs (`-- --write-schema` regenerates the schema) and scaffold a new one |
+| `npm run soak -- --hours 8` | Accelerated soak: demo, reducer and client sim on a simulated clock; heap and per-frame cost (P8-02) |
+| `npm run docker:up` · `npm run docker:down` | Docker with read-only mounts of only what the office reads (`-- --dry-run` prints them) |
+| `npm run release -- <version>` | Checks, then sets the version in package.json, the lockfile and the plugin; needs a CHANGELOG.md section |
 | `/preview.html?theme=<id>` | Every furniture kind of a theme side by side (hot-reloads under `npm run dev`) |
 | `npm run shot -- --themes` · `-- --thumbs` | Screenshot every theme (CI) · rewrite the theme picker thumbnails |
 

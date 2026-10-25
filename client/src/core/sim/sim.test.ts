@@ -107,6 +107,26 @@ describe('office simulation', () => {
     expect(caio.pose).toBe('type');
   });
 
+  it('arrival: someone still waiting to step out of the elevator who goes offline never appears and is removed', () => {
+    const sim = newSim();
+    const clock = { now: T0 };
+    sim.applySnapshot(snap([room('/a', 0)], [agent('ana', '/a', 'working')]), clock.now);
+    run(sim, clock, 0.2);
+    // a burst of arrivals: the last ones wait several seconds for their turn in the elevators
+    const late = Array.from({ length: 12 }, (_, i) => agent(`n${i}`, '/a', 'working'));
+    sim.applySnapshot(snap([room('/a', 0)], [agent('ana', '/a', 'working'), ...late], 2), clock.now);
+    run(sim, clock, 0.3);
+    const last = sim.chars.get('n11')!;
+    expect(clock.now).toBeLessThan(last.hiddenUntil);
+    // they all leave before their turn comes
+    sim.applySnapshot(snap([room('/a', 0)], [agent('ana', '/a', 'working'), ...late.map((a) => ({ ...a, status: 'offline' as const }))], 3), clock.now);
+    run(sim, clock, 0.5);
+    expect(sim.chars.has('n11')).toBe(false);
+    expect(last.alpha).toBe(0);
+    run(sim, clock, 30);
+    expect([...sim.chars.keys()]).toEqual(['ana']);
+  });
+
   it('arrival: a status change on the way to the switch does not leave the room dark', () => {
     const sim = newSim();
     const clock = { now: T0 };

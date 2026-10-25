@@ -630,21 +630,36 @@ On your machine: install the permission hook and the messages plugin and try the
 
 ## Phase 8: Hardening & release
 
-- [ ] **P8-01 Security review** (M)
+- [x] **P8-01 Security review** (M) — done: threat model in [docs/security.md](docs/security.md); a seeded fuzz test
+  (`server/test/fuzz.test.ts`: events, hook bodies, decisions and transcript parsers); a Content-Security-Policy on
+  the pages; at most 64 open streams; a boundary test that the page never parses text as HTML; shims and
+  installers reviewed (nothing to fix).
   - Write a threat model in `docs/security.md`, fuzz the event validator, and review the shims and installers.
-- [ ] **P8-02 Soak & performance** (M)
+- [x] **P8-02 Soak & performance** (M) — done: `npm run soak` (`scripts/soak.ts`, 8 h: heap +0.1 MB, p99 0.08 ms);
+  CI runs `server/test/soak.test.ts` (2 h) and `client/src/core/sim/churn.test.ts` (50× churn). Fixed a leak of
+  characters still waiting for the elevator when their agent left, and the frame loop's sub-steps and fps readout.
+  Results in [docs/perf.md](docs/perf.md).
   - Run the demo for 8 hours and check memory and the frame-time budget. Add a performance check to CI.
-- [ ] **P8-03 Accessibility** (M)
+- [x] **P8-03 Accessibility** (M) — done: `client/src/a11y.ts` (motion setting following `prefers-reduced-motion`,
+  provider shapes ● ◆ ■ ▲); arrow-key sidebar, focusable rooms and feed, focus-trapping dialogs, `role=alert` toasts,
+  one-sentence agent row labels.
   - Keyboard navigation for the panels, reduced motion, provider badges told apart by shape as well as color, and
     screen-reader text for the agent list.
-- [ ] **P8-04 Docs** (M)
+- [x] **P8-04 Docs** (M) — done: `README.md` rewritten (demo screenshot, per-provider install and uninstall,
+  privacy, troubleshooting), `CONTRIBUTING.md`, `CHANGELOG.md`.
   - `README.md` (what and why, screenshots from demo mode), install and uninstall per provider, privacy,
     troubleshooting, `CONTRIBUTING.md`.
-- [ ] **P8-05 Packaging & release** (M)
+- [x] **P8-05 Packaging & release** (M) — done: `Dockerfile` (read-only root, non-root user, no capabilities),
+  `docker-compose.yml` and `npm run docker:up` (read-only mounts of only what the office reads), `npm run release`
+  (version 0.1.0 set), tag `v0.1.0` on the merge commit.
   - `npm start` serves the production build.
   - An optional Docker image with read-only mounts.
   - `CHANGELOG.md`; tag v0.1.0.
   - **Ref:** `Dockerfile`, `docker-compose.yml`, `scripts/docker-up.ts`, `scripts/release.ts`.
+
+**Exit status (2026-10-25):** met. Security reviewed, soak clean, docs and Docker in place, v0.1.0 released.
+Still to check on your machine: the 60 fps budget on a real GPU (`?stats=1`) and the Docker image against your
+real agent folders.
 
 ---
 

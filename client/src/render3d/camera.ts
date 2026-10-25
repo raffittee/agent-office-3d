@@ -1,6 +1,7 @@
 // The camera rig (P2-05, ADR 0003): orthographic isometric (pitch 35.264°, yaw 45° + k·90°), rotation in animated
 // 90° steps, zoom towards the cursor, pan, "frame the office" and following an agent. Plus pointer/keyboard input.
 import * as THREE from 'three';
+import { reducedMotion } from '../a11y';
 
 export const PITCH_DEG = 35.264;
 /** Visible height (m) limits: from a close look at one desk to a large office. */
@@ -98,7 +99,8 @@ export class CameraRig {
   update(dt: number): boolean {
     const f = this.follow?.();
     if (f) this.targetGoal.set(f.x, 0, f.z);
-    const k = 1 - Math.exp(-dt * 9);
+    // reduced motion: no glides, the view jumps straight to where it's going
+    const k = reducedMotion() ? 1 : 1 - Math.exp(-dt * 9);
     const before = this.yaw + this.zoom + this.target.x + this.target.z;
     this.yaw = Math.abs(this.yawGoal - this.yaw) < 0.01 ? this.yawGoal : easeAngle(this.yaw, this.yawGoal, k);
     this.zoom = Math.abs(this.zoomGoal - this.zoom) < 0.001 ? this.zoomGoal : this.zoom + (this.zoomGoal - this.zoom) * k;

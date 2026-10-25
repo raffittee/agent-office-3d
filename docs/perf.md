@@ -59,3 +59,46 @@ Inside the robots' 5 ms of scene sync, timed separately per frame:
   on an Intel UHD (ADR 0003). The asset spike measured 30 animated characters at ~13 ms with 2 draw calls each; ours
   use 1. **Check on the target machine** with `?stats=1`. If it falls short, the next levers are the quality tiers in
   ADR 0003 (MSAA off, DPR 1) and lowering the update rate of small on-screen robots.
+
+## Soak (P8-02, 2026-10-25)
+
+### 8 hours through the reducer and the sim
+
+`npm run soak -- --hours 8` replays a busy demo office (20 sessions with subagents, jobs and errors) through the
+server's reducer and the client's simulation in real-time 100 ms frames. It reports the heap, the agent and
+character counts and the update time each simulated hour. The run took 17 s of wall time.
+
+| | Hour 1 | Hour 8 | Worst |
+| --- | --- | --- | --- |
+| Heap after GC | 23.7 MB | 23.8 MB | +0.1 MB over the run |
+| Agents / characters | 25 / 28 | 9 / 9 | peak 54 agents |
+| Sim + reducer per frame, p99 | 0.076 ms | 0.047 ms | 0.076 ms |
+
+CI runs two checks:
+
+- `server/test/soak.test.ts` runs 2 simulated hours of the same loop. It fails if the feed outgrows its cap,
+  characters outnumber agents by more than 40, or p99 goes over 4 ms.
+- `client/src/core/sim/churn.test.ts` runs the high-churn case below for 20 minutes. It fails if more than 10
+  characters have no agent.
+
+### The browser at high churn
+
+The office ran in headless Chromium with `?mock=1&speed=50&sessions=15` for 12 minutes, about 10 hours of demo time
+compressed:
+
+| | Before the fix | After the fix |
+| --- | --- | --- |
+| Characters | 20 → 322 by minute 12, still growing | 9–21 throughout (9 at minute 12) |
+| JS heap | 8.9 → 33.7 MB, still growing | 13.0–14.5 MB from minute 1 on |
+| Page errors | none | none |
+
+**The bug.** Arrivals take turns in the two elevators, 520 ms apart. At 50× speed they come faster than that, so the
+queue grew to almost a minute. A character whose agent left (or whose subagent finished) while it was still waiting,
+unseen, for its turn was never cleaned up. It waited out the whole queue first.
+
+**The fix** (`client/src/core/sim/sim.ts`, `stepElevOut`). A character that hasn't appeared yet and no longer needs
+to come in is removed at once. A unit test covers it. At normal speed the queue rarely holds more than a few people,
+so this was mostly invisible, but a burst of short subagents could trigger it.
+
+Frame timing in software rendering (SwiftShader) is meaningless here, so the 60 fps check stays on the target machine
+(`?stats=1`).

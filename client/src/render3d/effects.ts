@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import type { Character } from '../core/sim/character';
 import type { Sim } from '../core/sim/sim';
+import { reducedMotion } from '../a11y';
 import { fxFade } from '../core/sim/room-state';
 import { SHELL_COBWEB_BIG_MS } from '../core/sim/shell';
 import { WALL_H, mx, mz, tm } from './units';
@@ -50,13 +51,6 @@ const head = new THREE.Vector3();
 const HIDE = new THREE.Matrix4().makeScale(0, 0, 0);
 const RED = new THREE.Color('#ff2a2a');
 const tmpC = new THREE.Color();
-
-let reducedMq: MediaQueryList | null | undefined;
-/** prefers-reduced-motion (the query follows changes by itself). */
-export function reducedMotion(): boolean {
-  if (reducedMq === undefined) reducedMq = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null;
-  return !!reducedMq?.matches;
-}
 
 /** The alarm's floor pulse (0..1) at time t (seconds); steady with reduced motion. */
 export function alarmPulse(t: number, reduced: boolean): number {
@@ -144,7 +138,7 @@ export class EffectsView {
       if (e.kind !== 'confetti' || this.seen.has(key)) continue;
       this.seen.add(key);
       const c = sim.chars.get(e.charId);
-      if (c && c.visible && !c.inside) this.burst(heads.headPoint(c, head));
+      if (c && c.visible && !c.inside && !reducedMotion()) this.burst(heads.headPoint(c, head));
     }
     if (this.seen.size > 200) this.seen.clear();
     this.syncRooms(sim, now, dt);

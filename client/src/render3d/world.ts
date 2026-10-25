@@ -1,6 +1,8 @@
 // The 3D world: store → sim (core/) → building, characters and labels (Three.js + DOM overlay), with the camera
 // rig, picking and the API the UI panels use. Pauses while the tab is hidden and fast-forwards the sim on return.
 import * as THREE from 'three';
+import { t } from '../../../shared/i18n';
+import { setMotion, type MotionSetting } from '../a11y';
 import { DEFAULT_WORLD_OPTIONS, type WorldOptions } from '../core/options';
 import { Sim } from '../core/sim/sim';
 import type { OfficeStore } from '../net/store';
@@ -32,9 +34,11 @@ export interface WorldSettings extends WorldOptions {
   daylight: DaylightMode;
   /** Seasonal decorations (P6-07): follow the calendar, off, or a fixed one. */
   season: SeasonMode;
+  /** Motion (P8-03): follow the system's reduced-motion preference, or always reduce / never. */
+  motion: MotionSetting;
 }
 
-export const DEFAULT_WORLD_SETTINGS: WorldSettings = { ...DEFAULT_WORLD_OPTIONS, cutaway: 'cut', characters: 'rigged', theme: '', daylight: 'auto', season: 'auto' };
+export const DEFAULT_WORLD_SETTINGS: WorldSettings = { ...DEFAULT_WORLD_OPTIONS, cutaway: 'cut', characters: 'rigged', theme: '', daylight: 'auto', season: 'auto', motion: 'auto' };
 
 /** Where the pipeline's character assets are served from, and the default character. */
 const CHARACTER_BASE = 'assets/characters';
@@ -71,6 +75,7 @@ const PICK_PX = 26;
 
 export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElement, store: OfficeStore, initial: Partial<WorldSettings> = {}, quality: Quality = 'medium'): WorldApi {
   let options: WorldSettings = { ...DEFAULT_WORLD_SETTINGS, ...initial };
+  setMotion(options.motion);
   const parts = createScene(canvas, quality);
   const { renderer, scene } = parts;
   // world matrices are updated once per frame in the loop (before attachments), not again inside render()
@@ -141,6 +146,8 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
   const rig2d = new CameraRig();
   const overlay = new Overlay(overlayParent);
   canvas.tabIndex = 0;
+  canvas.setAttribute('role', 'application');
+  canvas.setAttribute('aria-label', t('The 3D office. Drag or use W A S D to move, Q and E to turn; the agent list on the left lists everyone.'));
   // rigged characters replace the capsules once their model has loaded
   let rig: RigView | null = null;
   loadRigModel(CHARACTER_BASE, CHARACTER_ID)
@@ -269,13 +276,22 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
     raf = 0;
     if (!running) return;
     const t0 = performance.now();
-    const dt = Math.min(0.1, Math.max(0, (t - last) / 1000));
+    const elapsed = Math.max(0, (t - last) / 1000);
+    // animations take at most 0.1 s per frame (no jumps after a hitch)
+    const dt = Math.min(0.1, elapsed);
     last = t;
-    if (dt > 0) fps = fps ? fps * 0.95 + (1 / dt) * 0.05 : 1 / dt;
+    if (elapsed > 0) fps = fps ? fps * 0.95 + (1 / elapsed) * 0.05 : 1 / elapsed;
     const now = Date.now();
     if (parts.resize() || !framed) rig2d.setViewport(canvas.clientWidth, canvas.clientHeight);
     const tSim = performance.now();
-    sim.update(dt, now);
+    // the simulation keeps real time on slow frames (P8-02): up to 0.5 s per frame, in steps of at most 0.1 s, so
+    // agents still walk out at their pace on a slow machine and leavers can't pile up
+    let left = Math.min(0.5, elapsed);
+    do {
+      const step = Math.min(0.1, left);
+      sim.update(step, now);
+      left -= step;
+    } while (left > 1e-6);
     ema('sim', performance.now() - tSim);
     if (!framed && sim.initialized) {
       framed = true;
@@ -381,6 +397,7 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
     setOptions(o) {
       const themeChanged = o.theme !== undefined && o.theme !== options.theme;
       options = { ...options, ...o };
+      if (o.motion !== undefined) setMotion(o.motion);
       if (themeChanged) {
         const next = themeFor(options.theme || store.snapshot?.meta.theme);
         if (next.look.id !== theme.look.id) applyTheme(next);

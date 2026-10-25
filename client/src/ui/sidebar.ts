@@ -2,6 +2,7 @@
 // moves the camera there.
 import { t } from '../../../shared/i18n';
 import type { OfficeSnapshot, ProviderId } from '../../../shared/protocol';
+import { providerShape, shapeGlyph } from '../a11y';
 import type { OfficeStore } from '../net/store';
 import type { WorldApi } from '../render3d/world';
 import { button, el } from './dom';
@@ -51,6 +52,7 @@ export function createSidebar(store: OfficeStore, world: WorldApi): Sidebar {
       chip.title = t('Show or hide {0} agents', [meta.label]);
       const dot = el('i');
       dot.style.background = meta.color;
+      dot.dataset.shape = providerShape(id);
       chip.append(dot, meta.label);
       chip.addEventListener('click', () => {
         if (hidden.has(id)) hidden.delete(id);
@@ -79,6 +81,12 @@ export function createSidebar(store: OfficeStore, world: WorldApi): Sidebar {
   const boxes = new Map<string, RoomBox>();
   const empty = el('div', 'ui-empty');
 
+  /** Moves the focus to the next or previous row or room header in the list. */
+  const moveFocus = (from: HTMLElement, step: 1 | -1) => {
+    const items = [...body.querySelectorAll<HTMLElement>('.ui-room-head, .ui-agent')];
+    items[items.indexOf(from) + step]?.focus();
+  };
+
   const rowFor = (id: string): Row => {
     let r = rows.get(id);
     if (r) return r;
@@ -98,6 +106,10 @@ export function createSidebar(store: OfficeStore, world: WorldApi): Sidebar {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
         go();
+      } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        // arrows move between the list's rows and room headers
+        e.preventDefault();
+        moveFocus(row, e.key === 'ArrowDown' ? 1 : -1);
       }
     });
     r = { el: row, dot, name, line, badge, key: '' };
@@ -113,7 +125,19 @@ export function createSidebar(store: OfficeStore, world: WorldApi): Sidebar {
     const title = el('span');
     const sub = el('small');
     h.append(title, sub);
-    h.addEventListener('click', () => world.select({ type: 'room', id }, { focus: true }));
+    h.tabIndex = 0;
+    h.setAttribute('role', 'button');
+    const pick = () => world.select({ type: 'room', id }, { focus: true });
+    h.addEventListener('click', pick);
+    h.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        pick();
+      } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        moveFocus(h, e.key === 'ArrowDown' ? 1 : -1);
+      }
+    });
     box.append(h);
     b = { el: box, title, sub };
     boxes.set(id, b);
@@ -160,8 +184,11 @@ export function createSidebar(store: OfficeStore, world: WorldApi): Sidebar {
           row.dot.title = statusLabel(a.status);
           row.name.textContent = a.name;
           row.line.textContent = line;
-          row.badge.textContent = meta.label;
+          row.badge.textContent = `${shapeGlyph(a.provider)} ${meta.label}`;
           row.badge.style.background = meta.color;
+          // one sentence for screen readers instead of the row's pieces
+          row.el.setAttribute('aria-label', t('{0}, {1}, {2}: {3}', [a.name, meta.label, statusLabel(a.status), line]));
+          row.el.setAttribute('aria-pressed', String(selected));
         }
         kids.push(row.el);
       }

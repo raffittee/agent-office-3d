@@ -764,3 +764,54 @@ Branch `phase-1`. One commit per task, each pushed. At the end of the phase ther
      `claude plugin install agent-office-messages@agent-office`.
   4. Try it on a real session.
 
+## Phase 8: Hardening & release (branch `phase-8`)
+
+### P8-01 Security review — done, 2026-10-25 07:18
+
+- **[docs/security.md](docs/security.md)** explains what Agent Office protects, from whom, how, and the risks that
+  remain by design.
+- **Stricter page security:** the office now sends a Content-Security-Policy, so it only runs its own code. The
+  server also refuses more than 64 open pages at once, so a runaway script can't wear it out.
+- Fuzz tests throw thousands of random and hostile inputs at the parts that read outside data. Nothing broke.
+
+
+### P8-02 Soak & performance — done, 2026-10-25 07:56
+
+- **An 8-hour run stays flat:** memory grew by 0.1 MB, and the office's per-frame work stayed under 0.1 ms. Run it
+  yourself with `npm run soak`; CI runs a shorter version on every push.
+- **Fixed: characters piling up at the elevator.** When many agents arrived at once, they queue for the elevators.
+  An agent that left while its character was still waiting, unseen, used to leave that character behind. Over hours
+  of a busy office they added up. Now such a character is simply never shown.
+- **Smoother after a hiccup:** after a slow frame (a busy tab, a background tab coming back), characters catch up in
+  small steps instead of jumping. The fps readout in `?stats=1` now shows the real rate.
+- Results in [docs/perf.md](docs/perf.md).
+
+### P8-03 Accessibility — done, 2026-10-25 07:56
+
+- **Keyboard:** arrow keys move through the agent list, rooms and feed items can be focused, and dialogs keep the
+  focus inside until you close them.
+- **Shapes as well as colors:** provider badges are ● Claude Code, ◆ Gemini CLI, ■ Codex, ▲ custom.
+- **Screen readers:** each agent row reads as one sentence, and alerts are announced.
+- **Motion:** a new Settings → Motion option. It follows your system's reduced-motion setting by default.
+
+### P8-04 Docs — done, 2026-10-25 07:56
+
+- The README now explains what Agent Office is, with a screenshot from demo mode, plus install and uninstall per
+  provider, privacy and troubleshooting.
+- New: [CONTRIBUTING.md](CONTRIBUTING.md), and [CHANGELOG.md](CHANGELOG.md) with release notes.
+
+### P8-05 Packaging & release — done, 2026-10-25 07:56
+
+- **Docker (optional):** `npm run docker:up` builds and starts the office in a container. It sees only the folders
+  it reads, read-only, and is reachable only from this computer. `npm run docker:down` stops it.
+- **Releases:** `npm run release -- <version>` runs the checks and sets the version everywhere. This release is
+  **0.1.0**.
+
+### Phase 8 closed — 2026-10-25 07:56
+
+- All 5 tasks are ticked. Pull request `phase-8` → `main`, then tag `v0.1.0`. This was the last planned phase.
+- **Needs your machine:**
+  - the 60 fps check on a real GPU (`?stats=1`);
+  - `npm run docker:up` against your real agent folders;
+  - the earlier checks: live Gemini CLI, the Claude usage tap, the look and sound of Phase 6, and the Phase 7 hook
+    and plugin.

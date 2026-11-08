@@ -1,11 +1,11 @@
 // The integrations runner and the pieces around it.
 import { mkdtempSync, copyFileSync, mkdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { CH, parseIntegration, parseIntegrationAction, parseMode } from './ipc';
-import { describeNode, installerArgs, integrationsInfo, nodeVersionOk, parseInstalled, runInstaller } from './integrations';
+import { describeNode, findOnPath, installerArgs, integrationsInfo, nodeVersionOk, parseInstalled, probeNode, runInstaller } from './integrations';
 import { createLogger } from './log';
 import { readFileSync } from 'node:fs';
 
@@ -46,9 +46,26 @@ describe('node check', () => {
   });
 
   it('explains each case', () => {
-    expect(describeNode(null)).toMatchObject({ ok: false, message: expect.stringContaining('not found') });
-    expect(describeNode('v20.1.0\n')).toMatchObject({ ok: false, message: expect.stringContaining('too old') });
-    expect(describeNode('v22.22.0\n')).toEqual({ ok: true, message: 'Node.js v22.22.0 found.' });
+    expect(describeNode({ path: null, version: null })).toMatchObject({ ok: false, message: expect.stringContaining('not found') });
+    expect(describeNode({ path: '/usr/bin/node', version: 'v20.1.0\n' })).toMatchObject({ ok: false, message: expect.stringContaining('too old') });
+    expect(describeNode({ path: '/usr/bin/node', version: 'v22.22.0\n' })).toEqual({ ok: true, message: 'Node.js v22.22.0 found.' });
+    // found but slow to answer: Node is there, so don't claim it is missing
+    expect(describeNode({ path: 'C:\\node\\node.exe', version: null })).toMatchObject({ ok: true, message: expect.stringContaining('could not be read') });
+  });
+
+  it('finds node on the PATH by looking for the file', () => {
+    const exists = (p: string) => p === '/opt/node/bin/node' || p === 'C:\\Program Files\\nodejs\\node.exe';
+    expect(findOnPath('node', { env: { PATH: '/usr/bin:/opt/node/bin/:/bin' }, platform: 'linux', exists })).toBe('/opt/node/bin/node');
+    expect(findOnPath('node', { env: { PATH: '/usr/bin:/bin' }, platform: 'linux', exists })).toBeNull();
+    expect(findOnPath('node', { env: { Path: 'C:\\Windows;"C:\\Program Files\\nodejs\\";' }, platform: 'win32', exists })).toBe('C:\\Program Files\\nodejs\\node.exe');
+    expect(findOnPath('node', { env: {}, platform: 'linux', exists })).toBeNull();
+  });
+
+  it('probes the real node that runs these tests', async () => {
+    const p = await probeNode({ env: { PATH: dirname(process.execPath) } });
+    expect(p.path).toBe(process.execPath);
+    expect(p.version).toBe(`v${process.versions.node}`);
+    expect(await probeNode({ env: { PATH: join(tmpdir(), 'ao-no-node-here') } })).toEqual({ path: null, version: null });
   });
 });
 

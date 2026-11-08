@@ -990,3 +990,102 @@
   transition: none !important;
   scroll-behavior: auto !important;
 }
+
+/* ---- Desktop app (P9-05, P9-07): the widget bar and the integrations dialog. Only present inside the app. ---- */
+html.shell-widget .ui-topbar,
+html.shell-widget .ui-sidebar,
+html.shell-widget .ui-feed,
+html.shell-widget .ui-drawer,
+html.shell-widget .ui-requests {
+  display: none !important;
+}
+.ui-shellbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 4px 0 10px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  -webkit-app-region: drag;
+  user-select: none;
+}
+.ui-shellbar.click-through {
+  opacity: 0.6;
+}
+.ui-shellbar-title {
+  font-weight: 700;
+}
+.ui-shellbar-counts {
+  display: flex;
+  gap: 8px;
+  color: var(--muted);
+  overflow: hidden;
+}
+.ui-shellbar-alert {
+  color: #fff;
+  background: #e5484d;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-weight: 600;
+}
+.ui-shellbar .ui-btn {
+  -webkit-app-region: no-drag;
+}
+.ui-shell-btn {
+  min-width: 26px;
+  height: 24px;
+  padding: 0 6px;
+}
+.ui-integrations {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+.ui-int-node.bad,
+.ui-int-output.bad {
+  color: #e5484d;
+}
+.ui-int-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-top: 1px solid color-mix(in srgb, var(--text) 12%, transparent);
+}
+.ui-int-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+.ui-int-row .ui-btn {
+  flex: none;
+}
+.ui-int-text small {
+  color: var(--muted);
+}
+.ui-int-state {
+  font-size: 12px;
+  color: var(--muted);
+}
+.ui-int-output {
+  max-height: 160px;
+  overflow: auto;
+  margin: 0;
+  padding: 8px;
+  font-size: 12px;
+  white-space: pre-wrap;
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+  border-radius: 6px;
+}

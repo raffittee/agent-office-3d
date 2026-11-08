@@ -72,6 +72,21 @@ describe('folder boundaries', () => {
     expect(bad).toEqual([]);
   });
 
+  it('desktop/ pins exact versions, and only its Electron files import electron', () => {
+    const pkg = JSON.parse(readFileSync(join(root, 'desktop/package.json'), 'utf8')) as Record<string, Record<string, string> | undefined>;
+    expect(pkg.dependencies ?? {}).toEqual({});
+    for (const [name, version] of Object.entries(pkg.devDependencies ?? {})) expect(version, name).toMatch(/^\d+\.\d+\.\d+(-[\w.]+)?$/);
+    // the logic imports only node:*, relative paths (never server/ or client/) and, in tests, vitest
+    const libBad = violations('desktop/src/lib', ['.ts', '.mjs'], (s, f) => {
+      if (isTest(f)) return s === 'vitest' || s.startsWith('node:') || isRelative(s);
+      return s.startsWith('node:') || (isRelative(s) && !/\.\.\/(\.\.\/)*(server|client)\//.test(s));
+    });
+    expect(libBad).toEqual([]);
+    // the Electron files import electron, node:* and relative paths only (the page runs in the browser, not here)
+    const shellBad = violations('desktop/src', ['.ts'], (s, f) => f.includes(`${join('desktop/src', 'lib')}`) || isTest(f) || s === 'electron' || s.startsWith('node:') || isRelative(s));
+    expect(shellBad).toEqual([]);
+  });
+
   it('shared/ imports nothing but relative paths (tests may also use vitest and node:*)', () => {
     expect(violations('shared', ['.ts'], (s, f) => isRelative(s) || (isTest(f) && (s === 'vitest' || s.startsWith('node:'))))).toEqual([]);
   });

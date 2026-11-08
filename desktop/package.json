@@ -1,0 +1,23 @@
+{
+  "name": "agent-office-desktop",
+  "productName": "Agent Office",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Agent Office as a desktop app and widget (Electron shell around the release package).",
+  "author": "Agent Office",
+  "license": "MIT",
+  "main": "dist/main.cjs",
+  "scripts": {
+    "build": "node build.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "dev": "node build.mjs && electron .",
+    "pack": "node tools/pack.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "electron": "45.2.3",
+    "electron-builder": "26.18.0",
+    "esbuild": "0.28.2",
+    "typescript": "7.0.2"
+  }
+}

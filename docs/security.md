@@ -82,3 +82,20 @@ session-touching features are described in [interactive.md](interactive.md).
 ## Reporting a problem
 
 Open an issue without exploit details and ask for a private channel. Please don't include transcripts or tokens.
+
+## The desktop app
+
+The Electron shell ([desktop.md](desktop.md), [ADR 0007](adr/0007-desktop-app.md)) adds one process and one trust
+boundary, handled like this:
+
+- The window loads only `http://127.0.0.1:<port>`. Other navigation is cancelled; `http(s)` links open in the user's
+  browser; `file:`, `javascript:` and custom protocols never do. Pop-up windows are denied.
+- The page runs with `contextIsolation`, `sandbox` and no `nodeIntegration`. The preload exposes nine functions, and
+  the main process re-checks every message: the sender must be the app's own page, and each value is validated
+  against a fixed list (modes, integration names, actions).
+- Only the notifications permission is granted; camera, microphone, location and the rest are refused.
+- The server is a child of the app bound to `127.0.0.1`, started with the same environment rules as `npm start`. An
+  already-running server is adopted only if `/api/health` identifies it as Agent Office.
+- The app logs its own lifecycle to `%APPDATA%\Agent Office\logs\desktop.log`: never conversation content.
+- No network calls of its own, no telemetry, no auto-update. The installer is unsigned for now.
+

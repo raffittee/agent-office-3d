@@ -180,3 +180,8 @@ function shutdown(): void {
 }
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
+// A parent that started us with an IPC channel (the desktop app) asks for a clean shutdown this way: signals can't do
+// it on Windows.
+process.on('message', (m) => {
+  if (m === 'shutdown') shutdown();
+});

@@ -670,9 +670,21 @@ real agent folders.
   `.zip` and `.tar.gz` with `SHA256SUMS`. `scripts/package-smoke.mjs` unpacks the archive on Linux, Windows and macOS
   and runs the server and the installer; normal CI runs it on Linux and Windows. Also fixed `/api/health` always
   reporting `demo: false`.
-- [ ] **P9-02 Desktop widget** (L) — proposed, not started (waiting for your go-ahead): an Electron shell with a compact,
-  always-on-top window, a tray badge for agents that need you, and installers (`.exe`, `.dmg`, AppImage) built by the
-  same pipeline.
+- [ ] **Desktop app and widget** (L) — planned in [docs/plans/desktop-widget.md](docs/plans/desktop-widget.md), waiting
+  for approval: an Electron shell with a compact always-on-top widget, a tray badge for agents that need you, and a
+  Windows installer built by the release pipeline.
+  - [x] **P9-02 Scaffold** — done: [ADR 0007](docs/adr/0007-desktop-app.md); `desktop/` (own package.json and lockfile, exact versions, esbuild build); `npm run desktop:install|dev|build|typecheck`; boundary tests; the pure logic in `desktop/src/lib/` is type-checked by the root typecheck and tested by the root vitest; original icons from `desktop/tools/make-icon.mjs`.
+  - [x] **P9-03 Server host** — done: `desktop/src/lib/{ports,health,serverProcess,supervisor}.ts` (free port or adopt a running Agent Office, child server with a health wait, restart with backoff, clean stop over IPC; `server/index.ts` now shuts down on an IPC `shutdown` message), single-instance lock in `main.ts`.
+  - [x] **P9-04 Window and hardening** — done: `main.ts`, `preload.ts`, `lib/{security,ipc,windowState,settings}.ts` (contextIsolation, sandbox, own-origin-only navigation, notifications-only permission, validated IPC, bounds kept on screen, settings file).
+  - [x] **P9-05 Widget mode** — done: `client/src/ui/shell.ts` + CSS (one slim bar, panels hidden, camera re-fitted on resize, lighter rendering); frameless always-on-top window, opacity, click-through with `Ctrl+Alt+C`, per-mode bounds. Checked in Chromium with a stand-in for the preload; the real window is checked in CI and by hand.
+  - [x] **P9-06 Tray and attention** — done: tray menu and tooltip, red-dot tray icon and taskbar overlay, notifications and taskbar flash when an agent starts waiting (`lib/attention.ts`, `lib/sse.ts` reads the existing `/api/stream`), close hides to the tray, start with Windows.
+  - [x] **P9-07 Integrations** — done: the `🔌` dialog installs and removes the Gemini CLI, Codex, Claude Code and plan-usage hooks by running the bundled installers (`lib/integrations.ts`), and says when Node.js isn't on the PATH.
+  - [x] **P9-08 Packaging** — done: `desktop/tools/{builder-config,pack}.mjs` (electron-builder NSIS, per user, the release package bundled as `resources/package`), `assets/installer.nsh` (uninstall removes the hooks, an upgrade keeps them).
+  - [x] **P9-09 Pipeline** — done: `desktop/tools/smoke.mjs` drives the packaged app over the DevTools protocol; CI builds and tests the unpacked app on Windows and type-checks the Electron files; the `release` workflow builds the installer, installs it silently, runs it, uninstalls it, and publishes it with the other files.
+  - [x] **P9-10 Docs and close** — done: [docs/desktop.md](docs/desktop.md), README, CHANGELOG, `docs/releasing.md`, `docs/security.md`, ASSETS and NOTICE.
+  - [ ] **P9-11 (later) macOS and Linux**
+
+  **Status (2026-11-08):** built and tested as far as the cloud allows: every pure part has tests, the page was driven in Chromium with a stand-in bridge, and CI builds the Windows app, installs it, drives it and uninstalls it. **Not verifiable from here:** how it looks and feels on a real desktop (always-on-top, click-through, tray and taskbar badge, notifications, DPI scaling), and the very first CI run of the Windows build.
 
 ---
 

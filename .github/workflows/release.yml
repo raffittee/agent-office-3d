@@ -3,7 +3,8 @@ name: Release
 # Push to the `release` branch to publish the version in package.json as a GitHub release:
 #   1. package: checks, build, the release package, archives (.zip, .tar.gz) and checksums
 #   2. smoke:   unpack the archive on Linux, Windows and macOS, run the server, run the installer
-#   3. publish: create tag v<version> and the release, only if 1 and 2 passed
+#   3. desktop: build the Windows installer, install it silently, run it, uninstall it
+#   4. publish: create tag v<version> and the release, only if 1, 2 and 3 passed
 # Run it by hand (Actions > Release > Run workflow) to build and test without publishing. Docs: docs/releasing.md.
 on:
   push:
@@ -132,8 +133,65 @@ jobs:
           VERSION: ${{ needs.package.outputs.version }}
         run: node scripts/package-smoke.mjs "unpacked/agent-office-${VERSION}" --installer
 
+  desktop:
+    needs: package
+    runs-on: windows-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22.12'
+          cache: npm
+
+      - run: npm ci
+      - name: Install Electron and electron-builder
+        run: node desktop/tools/retry.mjs 3 20 -- npm run desktop:install
+      - name: Build the installer
+        run: node desktop/tools/retry.mjs 6 60 -- node desktop/tools/pack.mjs
+
+      - name: Checksum
+        shell: bash
+        working-directory: desktop/out
+        run: |
+          sha256sum Agent-Office-Setup-*.exe > SHA256SUMS.desktop
+          cat SHA256SUMS.desktop
+
+      # What users do: run the installer silently, start the installed app, then uninstall it.
+      - name: Install, run and uninstall
+        shell: pwsh
+        run: |
+          $setup = (Get-Item desktop/out/Agent-Office-Setup-*.exe).FullName
+          Start-Process -FilePath $setup -ArgumentList '/S' -Wait
+          $dir = Join-Path $env:LOCALAPPDATA 'Programs\Agent Office'
+          if (-not (Test-Path (Join-Path $dir 'Agent Office.exe'))) { throw "the installer did not install into $dir" }
+          node desktop/tools/smoke.mjs (Join-Path $dir 'Agent Office.exe') --out artifacts-desktop
+          if ($LASTEXITCODE -ne 0) { throw 'the installed app failed its smoke test' }
+          # _?= makes the silent uninstaller wait instead of copying itself away and returning at once
+          Start-Process -FilePath (Join-Path $dir 'Uninstall Agent Office.exe') -ArgumentList "/S _?=$dir" -Wait
+          if (Test-Path (Join-Path $dir 'Agent Office.exe')) { throw 'the uninstaller left the app behind' }
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: agent-office-desktop
+          path: |
+            desktop/out/Agent-Office-Setup-*.exe
+            desktop/out/SHA256SUMS.desktop
+          if-no-files-found: error
+          retention-days: 14
+
+      - if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: desktop-screenshots
+          path: artifacts-desktop/
+          if-no-files-found: ignore
+
   publish:
-    needs: [package, smoke]
+    needs: [package, smoke, desktop]
     if: github.ref == 'refs/heads/release' && (github.event_name == 'push' || inputs.publish)
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -147,8 +205,17 @@ jobs:
       - name: Download the package
         run: gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --name agent-office-package --dir dl
 
+      - name: Download the Windows installer
+        run: gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --name agent-office-desktop --dir dl
+
       - name: Verify checksums
-        run: cd dl && sha256sum -c SHA256SUMS
+        run: |
+          cd dl
+          sha256sum -c SHA256SUMS
+          sha256sum -c SHA256SUMS.desktop
+          cat SHA256SUMS.desktop >> SHA256SUMS
+          rm SHA256SUMS.desktop
+          cat SHA256SUMS
 
       - name: Create the release
         run: |
@@ -158,7 +225,7 @@ jobs:
           fi
           flags=()
           if [ "${{ needs.package.outputs.prerelease }}" = "true" ]; then flags+=(--prerelease); fi
-          url=$(gh release create "v${VERSION}" dl/*.zip dl/*.tar.gz dl/SHA256SUMS \
+          url=$(gh release create "v${VERSION}" dl/*.zip dl/*.tar.gz dl/Agent-Office-Setup-*.exe dl/SHA256SUMS \
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
             --title "Agent Office ${VERSION}" \

@@ -7,7 +7,7 @@ import { button, el } from './dom';
 import { ago, countByStatus, STATUS_COLORS, statusLabel } from './model';
 import { createUsage } from './usage';
 
-export function createTopbar(store: OfficeStore, world: WorldApi, actions: { settings(): void; help(): void; history(): void }): HTMLElement {
+export function createTopbar(store: OfficeStore, world: WorldApi, actions: { settings(): void; help(): void; history(): void }, extra: HTMLElement[] = []): HTMLElement {
   const root = el('header', 'ui-topbar');
   const brand = el('div', 'ui-brand', t('Agent Office'));
   const counters = el('div', 'ui-counters');
@@ -28,6 +28,7 @@ export function createTopbar(store: OfficeStore, world: WorldApi, actions: { set
     button('⟲', t('Turn left (Q)'), () => world.rotate(1)),
     button('⟳', t('Turn right (E)'), () => world.rotate(-1)),
     history,
+    ...extra,
     button('⚙', t('Settings (,)'), actions.settings),
     button('?', t('Help (?)'), actions.help),
   );

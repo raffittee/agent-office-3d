@@ -1,6 +1,6 @@
 # Agent Office — guide for AI agents
 
-> **Status: Phases 0–8 done, v0.1.0 released (pending on the user's machine: a live Gemini CLI check, the frame-rate checks, the Claude usage tap, a look and listen at Phase 6, the Phase 7 hook and plugin on a real session, and Docker against real agent folders). Next: the backlog in TASKS.md.** The phased plan lives in [TASKS.md](TASKS.md).
+> **Status: Phases 0–9 done (Phase 9: the Windows desktop app and widget; macOS and Linux builds are P9-11, later), v0.1.0 prepared (pending on the user's machine: a live Gemini CLI check, the frame-rate checks, the Claude usage tap, a look and listen at Phase 6, the Phase 7 hook and plugin on a real session, Docker against real agent folders, and the desktop app on a real desktop: widget, tray, notifications). Next: the backlog in TASKS.md.** The phased plan lives in [TASKS.md](TASKS.md).
 > Provider facts: [docs/providers/](docs/providers/). Decisions: [docs/adr/](docs/adr/). Spike results:
 > [docs/spikes/](docs/spikes/).
 
@@ -102,6 +102,7 @@ idea for Claude Code and Codex. Use it as the reference for behavior, data sourc
 | `client/src/render3d/` | Three.js only. Reads sim state every frame and never mutates it. |
 | `client/src/themes/`, `themes/<id>/` | Theme loader, and the packs themselves (JSON + glTF + textures). |
 | `client/src/ui/` | DOM panels: sidebar, details drawer, feed, settings. |
+| `desktop/` | The Windows desktop app and widget: an Electron shell with its own `package.json` ([ADR 0007](docs/adr/0007-desktop-app.md)). `desktop/src/lib/` is pure, tested logic (imports only `node:*`); only the other files in `desktop/src/` import `electron`. |
 | `sdk/` | Small emitters (TypeScript, Python) that let custom agents report `AgentEvent`s. |
 
 ## Core contracts
@@ -427,6 +428,7 @@ Update this table as commands land. *(planned)* marks the ones that don't exist 
 | `npm run docker:up` · `npm run docker:down` | Docker with read-only mounts of only what the office reads (`-- --dry-run` prints them) |
 | `npm run release -- <version>` | Checks, then sets the version in package.json, the lockfile and the plugin; needs a CHANGELOG.md section |
 | `npm run package` · `npm run package:smoke -- <folder> [--installer]` | Build the release package into `release/` (after `npm run build`) · unpack-and-run test of it; the `release` branch pipeline ([docs/releasing.md](docs/releasing.md)) publishes it |
+| `npm run desktop:install` · `desktop:dev` · `desktop:build` · `desktop:typecheck` | The desktop app: install Electron (in `desktop/`), run it from the sources, build the Windows installer, type-check its Electron files ([docs/desktop.md](docs/desktop.md)) |
 | `/preview.html?theme=<id>` | Every furniture kind of a theme side by side (hot-reloads under `npm run dev`) |
 | `npm run shot -- --themes` · `-- --thumbs` | Screenshot every theme (CI) · rewrite the theme picker thumbnails |
 
@@ -478,5 +480,11 @@ Update this table as commands land. *(planned)* marks the ones that don't exist 
   driven by a model-agnostic rig profile. See [ADR 0005](docs/adr/0005-interim-character.md).
 - **D16:** No OTLP receiver in v1: the CLIs' telemetry has no turn or session end and no working folder, and it
   carries content (P5-05). See [ADR 0006](docs/adr/0006-otlp.md).
+
+**Settled in Phase 9 (2026-11-08):**
+
+- **D17:** The desktop app is an Electron shell in its own `desktop/` package (amends D11), with the server as a child
+  process and the release package bundled. Unsigned installer and manual updates for now. See
+  [ADR 0007](docs/adr/0007-desktop-app.md) and [docs/plans/desktop-widget.md](docs/plans/desktop-widget.md).
 
 ADRs are listed in [docs/adr/README.md](docs/adr/README.md).

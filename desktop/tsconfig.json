@@ -1,0 +1,21 @@
+{
+  // The Electron side (main process, preload, build tools). The pure logic in src/lib is also checked by
+  // server/tsconfig.json, so the root `npm run typecheck` covers it without installing Electron.
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2023"],
+    "types": ["node"],
+    "strict": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "noEmit": true
+  },
+  "include": ["src"],
+  "exclude": ["src/**/*.test.ts"]
+}

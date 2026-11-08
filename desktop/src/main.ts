@@ -360,7 +360,8 @@ function installIpc(): void {
   ipcMain.handle(CH.getState, (e): ShellState | null => (ok(e) ? shellState() : null));
   ipcMain.handle(CH.setMode, (e, value: unknown) => {
     const mode = parseMode(value);
-    if (ok(e) && mode) setMode(mode);
+    // replacing the window destroys the page that asked: answer it first
+    if (ok(e) && mode) setImmediate(() => setMode(mode));
   });
   ipcMain.handle(CH.togglePinned, (e) => {
     if (ok(e)) setPinned(!settings.pinned);

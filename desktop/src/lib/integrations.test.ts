@@ -55,8 +55,8 @@ describe('node check', () => {
 describe('installer commands', () => {
   it('builds the commands the CLI would run', () => {
     expect(installerArgs('gemini-cli', 'install', 4848)).toEqual({ script: 'hooks-install.mjs', args: ['install', '--provider', 'gemini-cli', '--port', '4848'] });
-    expect(installerArgs('codex', 'status', 4848)).toEqual({ script: 'hooks-install.mjs', args: ['status', '--provider', 'codex'] });
-    expect(installerArgs('claude-code', 'uninstall', 4848).args).toEqual(['uninstall', '--provider', 'claude-code']);
+    expect(installerArgs('codex', 'status', 4848)).toEqual({ script: 'hooks-install.mjs', args: ['status', '--provider', 'codex', '--port', '4848', '--no-version-check'] });
+    expect(installerArgs('claude-code', 'uninstall', 4848).args).toEqual(['uninstall', '--provider', 'claude-code', '--port', '4848']);
     expect(installerArgs('usage', 'install', 4848)).toEqual({ script: 'usage-install.mjs', args: ['install'] });
   });
 

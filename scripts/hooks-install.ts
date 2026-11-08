@@ -357,6 +357,8 @@ export interface RunOptions {
   port: number;
   dryRun: boolean;
   nodeCmd?: string;
+  /** Don't run `<cli> --version` (it can take seconds on Windows): for status shown in a dialog. */
+  noVersionCheck?: boolean;
 }
 
 export interface RunContext {
@@ -387,6 +389,7 @@ Options:
   --port <n>        Agent Office's port (default: AGENT_OFFICE_PORT or ${DEFAULT_PORT})
   --node <cmd>      node command used in the hook (default: node)
   --dry-run         show what would change, write nothing
+  --no-version-check  don't look for the CLI's version (faster)
   -h, --help        this help`;
 
 export function parseArgs(argv: string[], env: NodeJS.ProcessEnv = process.env): RunOptions | 'help' {
@@ -395,12 +398,14 @@ export function parseArgs(argv: string[], env: NodeJS.ProcessEnv = process.env):
   let profile: string | undefined;
   let nodeCmd: string | undefined;
   let dryRun = false;
+  let noVersionCheck = false;
   const envPort = Number.parseInt(env.AGENT_OFFICE_PORT ?? '', 10);
   let port = Number.isInteger(envPort) && envPort > 0 && envPort < 65_536 ? envPort : DEFAULT_PORT;
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]!;
     if (a === '-h' || a === '--help') return 'help';
     if (a === '--dry-run') dryRun = true;
+    else if (a === '--no-version-check') noVersionCheck = true;
     else if (a === '--provider') provider = argv[++i];
     else if (a === '--profile') profile = argv[++i];
     else if (a === '--node') {
@@ -414,7 +419,7 @@ export function parseArgs(argv: string[], env: NodeJS.ProcessEnv = process.env):
   }
   if (!command) throw new UsageError(`say what to do: install, uninstall or status.\n\n${USAGE}`);
   if (!provider) throw new UsageError(`--provider is required (${Object.keys(TARGETS).join(', ')}).`);
-  return { command, provider, ...(profile ? { profile } : {}), port, dryRun, ...(nodeCmd ? { nodeCmd } : {}) };
+  return { command, provider, ...(profile ? { profile } : {}), port, dryRun, ...(nodeCmd ? { nodeCmd } : {}), ...(noVersionCheck ? { noVersionCheck } : {}) };
 }
 
 async function fetchHealth(port: number): Promise<unknown> {
@@ -482,7 +487,7 @@ export async function run(opts: RunOptions, ctx: RunContext): Promise<number> {
     }
   }
   if (opts.command === 'install' && !opts.dryRun) out(`Port ${opts.port} saved to ${tildify(writeHookConfig(home, opts.port), home)}.`);
-  if (opts.command !== 'uninstall' && !ctx.skipVersionCheck) {
+  if (opts.command !== 'uninstall' && !ctx.skipVersionCheck && !opts.noVersionCheck) {
     const warning = target.versionWarning?.();
     if (warning) out(`! ${warning}`);
   }

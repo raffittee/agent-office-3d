@@ -82,6 +82,7 @@ describe('hooks-install (pure)', () => {
   it('parseArgs and versions', () => {
     expect(parseArgs(['install', '--provider', 'gemini-cli'], {})).toEqual({ command: 'install', provider: 'gemini-cli', port: 4848, dryRun: false });
     expect(parseArgs(['status', '--provider', 'gemini-cli', '--port', '4851', '--profile', 'full', '--dry-run'], {})).toMatchObject({ port: 4851, profile: 'full', dryRun: true });
+    expect(parseArgs(['status', '--provider', 'codex', '--no-version-check'], {})).toMatchObject({ noVersionCheck: true });
     expect(parseArgs(['install', '--provider', 'x'], { AGENT_OFFICE_PORT: '5000' })).toMatchObject({ port: 5000 });
     expect(parseArgs(['--help'], {})).toBe('help');
     expect(() => parseArgs(['install'], {})).toThrow(/--provider/);

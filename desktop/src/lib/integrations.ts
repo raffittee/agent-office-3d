@@ -21,7 +21,7 @@ export function describeNode(output: string | null): IntegrationsInfo['node'] {
 }
 
 /** `node --version` as the agent CLIs would see it, or null when there is none. */
-export function checkNode(timeoutMs = 4000): Promise<string | null> {
+export function checkNode(timeoutMs = 15_000): Promise<string | null> {
   return new Promise((resolve) => {
     execFile('node', ['--version'], { timeout: timeoutMs, windowsHide: true }, (err, stdout) => resolve(err ? null : String(stdout)));
   });
@@ -36,7 +36,8 @@ export function parseInstalled(id: Integration, output: string): boolean {
 
 export function installerArgs(id: Integration, action: IntegrationAction | 'status', port: number): { script: string; args: string[] } {
   if (id === 'usage') return { script: 'usage-install.mjs', args: [action] };
-  return { script: 'hooks-install.mjs', args: [action, '--provider', id, ...(action === 'install' ? ['--port', String(port)] : [])] };
+  // status is only shown in the dialog: skip the `<cli> --version` probe, which can take seconds on Windows
+  return { script: 'hooks-install.mjs', args: [action, '--provider', id, '--port', String(port), ...(action === 'status' ? ['--no-version-check'] : [])] };
 }
 
 export interface RunOptions {
@@ -76,7 +77,9 @@ export function runInstaller(o: RunOptions, id: Integration, action: Integration
 }
 
 export async function integrationsInfo(o: RunOptions): Promise<IntegrationsInfo> {
-  const [node, ...statuses] = await Promise.all([checkNode(), ...INTEGRATIONS.map((id) => runInstaller(o, id, 'status'))]);
+  // the Node check first and alone: starting five processes at once can starve it on a small machine
+  const node = await checkNode();
+  const statuses = await Promise.all(INTEGRATIONS.map((id) => runInstaller(o, id, 'status')));
   const items: IntegrationStatus[] = INTEGRATIONS.map((id, i) => ({ id, installed: parseInstalled(id, statuses[i]!.output) }));
   return { node: describeNode(node), items };
 }

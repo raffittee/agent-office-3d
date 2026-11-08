@@ -118,7 +118,8 @@ try {
   check('the integrations check finds Node', info?.node?.ok === true, info?.node?.message);
 
   // ---- widget mode
-  await page.evaluate(() => window.agentOfficeShell.setMode('widget'));
+  // the window is replaced, so the page that asks goes away before it can see an answer
+  await page.evaluate(() => void window.agentOfficeShell.setMode('widget')).catch(() => {});
   page = await pageOf('mode=widget');
   await page.waitForFunction(() => document.documentElement.classList.contains('shell-widget'), null, { timeout: 30_000 });
   check('widget mode swaps the panels for one bar', await page.evaluate(() => !!document.querySelector('.ui-shellbar') && getComputedStyle(document.querySelector('.ui-topbar')).display === 'none'));
@@ -131,7 +132,7 @@ try {
   check('the shell reports widget mode, kept on top', wstate?.mode === 'widget' && wstate?.pinned === true, JSON.stringify(wstate));
 
   // ---- back, so the saved mode isn't left on widget for the next run, then quit with the whole process tree
-  await page.evaluate(() => window.agentOfficeShell.setMode('window'));
+  await page.evaluate(() => void window.agentOfficeShell.setMode('window')).catch(() => {});
   await pageOf('mode=window');
   check('it can switch back to the window', true);
 } catch (err) {

@@ -9,6 +9,7 @@ import { prefs } from './dom';
 import { createDrawer } from './drawer';
 import { createFeed, createHoverTip, createToasts, createTopbar } from './panels';
 import { createRequests } from './requests';
+import { createShell } from './shell';
 import { createSidebar } from './sidebar';
 import './ui.css';
 
@@ -28,16 +29,27 @@ export function createUI(root: HTMLElement, store: OfficeStore, world: WorldApi)
       closeDialog = null;
     };
   };
-  const topbar = createTopbar(store, world, {
-    settings: () => dialog(() => openSettings(root, world, alerts)),
-    help: () => dialog(() => openHelp(root)),
-    history: () => dialog(() => openHistory(root)),
-  });
+  // inside the desktop app: the widget bar, or window-mode buttons (a no-op in a browser)
+  const shell = createShell(root, store, world, (open) => dialog(open));
+  const topbar = createTopbar(
+    store,
+    world,
+    {
+      settings: () => dialog(() => openSettings(root, world, alerts)),
+      help: () => dialog(() => openHelp(root)),
+      history: () => dialog(() => openHistory(root)),
+    },
+    shell.topbarButtons,
+  );
   const sidebar = createSidebar(store, world);
   const drawer = createDrawer(store, world, (open) => dialog(open));
   root.append(topbar, sidebar.el, createFeed(store, world), drawer.el, createRequests(store, world), createToasts(store, world), createHoverTip(store, world));
 
   const insets = () => {
+    if (shell.insets) {
+      world.setViewInsets(shell.insets());
+      return;
+    }
     const narrow = innerWidth < 760;
     world.setViewInsets({ top: 64, left: narrow ? 0 : sidebar.width(), right: narrow ? 0 : drawer.width(), bottom: 0 });
   };

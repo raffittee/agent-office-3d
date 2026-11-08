@@ -2,8 +2,11 @@
 // Screenshot smoke test (P2-11): starts the built server on a free port, opens the demo office in Chromium
 // (playwright-core), waits for the scene, saves screenshots and fails on page errors or an empty scene.
 //
-//   npm run build && npm run shot [-- --out artifacts --sessions 8 --seed 7 --hour 22:30] [--themes] [--thumbs]
+//   npm run build && npm run shot [-- --out artifacts --sessions 8 --seed 7 --hour 22:30] [--themes] [--thumbs] [--golden]
 //
+// --golden (P10-19) shoots the office at 08:00, 13:30, 18:30 and 22:30 with the panels hidden (golden-<hhmm>.png) and
+// checks the mean brightness of the building: day is bright, and night, dusk and morning stay readable.
+
 // --themes also switches live to every theme pack and saves theme-<id>.png (P4-02: no page errors, state kept).
 // --thumbs writes each theme's picker thumbnail to themes/<id>/thumb.png (run after changing a built-in theme).
 //
@@ -29,6 +32,14 @@ const seed = Number(arg('seed', '7'));
 const hour = arg('hour', '');
 const allThemes = args.includes('--themes') || args.includes('--thumbs');
 const thumbs = args.includes('--thumbs');
+const golden = args.includes('--golden');
+/** Hours of the golden shots, and the lowest mean brightness (0..255, of the building's own pixels) each must have. */
+const GOLDEN = [
+  ['08:00', 140],
+  ['13:30', 140],
+  ['18:30', 90],
+  ['22:30', 55],
+];
 
 const freePort = () =>
   new Promise((ok, fail) => {
@@ -121,7 +132,44 @@ async function main() {
       await pv.screenshot({ path: join(out, 'preview.png') });
       await pv.close();
     }
-    const result = { overview, drawer, themes, preview, errors };
+    // golden shots (P10-19): each hour on a fresh page, panels hidden, mean brightness of the building measured
+    const goldenStats = {};
+    if (golden) {
+      await page.close(); // the software renderer is slow: don't let this page compete for it
+      for (const [h] of GOLDEN) {
+        const gp = await browser.newPage({ viewport: { width: 1600, height: 900 } });
+        gp.on('pageerror', (e) => errors.push(`golden ${h} pageerror: ${e.message}`));
+        await gp.goto(`http://127.0.0.1:${port}/?mock=1&seed=${seed}&sessions=${sessions}&hour=${encodeURIComponent(h)}`);
+        await gp.waitForFunction(() => window.agentOffice?.world?.stats().agents > 0, null, { timeout: 30_000 });
+        await gp.evaluate(() => {
+          document.getElementById('ui').style.visibility = 'hidden';
+          document.getElementById('labels').style.visibility = 'hidden';
+        });
+        await gp.waitForTimeout(6000);
+        const png = await gp.screenshot({ path: join(out, `golden-${h.replace(':', '')}.png`) });
+        goldenStats[h] = await gp.evaluate(async (b64) => {
+          const bytes = Uint8Array.from(atob(b64), (ch) => ch.charCodeAt(0));
+          const bmp = await createImageBitmap(new Blob([bytes], { type: 'image/png' }));
+          const c = new OffscreenCanvas(bmp.width, bmp.height).getContext('2d');
+          c.drawImage(bmp, 0, 0);
+          const d = c.getImageData(0, 0, bmp.width, bmp.height).data;
+          // the sky is the background: it's the most common color along the top edge, so skip pixels close to it
+          const key = (i) => `${d[i] >> 4},${d[i + 1] >> 4},${d[i + 2] >> 4}`;
+          const sky = new Set();
+          for (let x = 0; x < bmp.width; x += 7) for (const y of [2, 40, 80]) sky.add(key((y * bmp.width + x) * 4));
+          let sum = 0;
+          let n = 0;
+          for (let i = 0; i < d.length; i += 16) {
+            if (sky.has(key(i))) continue;
+            sum += 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
+            n++;
+          }
+          return { mean: n ? Math.round(sum / n) : 0, share: Math.round((n * 400) / (d.length / 4)) / 100 };
+        }, png.toString('base64'));
+        await gp.close();
+      }
+    }
+    const result = { overview, drawer, themes, preview, golden: goldenStats, errors };
     writeFileSync(join(out, 'shot.json'), `${JSON.stringify(result, null, 2)}\n`);
     console.log(JSON.stringify(result));
     const problems = [];
@@ -129,6 +177,13 @@ async function main() {
     if (!overview.agents || !overview.rooms) problems.push('empty scene');
     if (overview.calls > 300) problems.push(`${overview.calls} draw calls (budget 300)`);
     if (!drawer) problems.push('the details drawer did not open');
+    if (golden) {
+      for (const [h, min] of GOLDEN) {
+        const g = goldenStats[h];
+        if (!g || g.share < 0.15) problems.push(`golden ${h}: the building is not visible`);
+        else if (g.mean < min) problems.push(`golden ${h}: mean brightness ${g.mean} is below ${min}`);
+      }
+    }
     for (const [id, t] of Object.entries(themes)) {
       if (t.calls > 300) problems.push(`${id}: ${t.calls} draw calls (budget 300)`);
       if (!t.keptAgents) problems.push(`${id}: agents lost on the theme switch`);

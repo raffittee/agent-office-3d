@@ -12,3 +12,4 @@ never renumber. Supersede an ADR with a new one instead of rewriting it.
 | [0005](0005-interim-character.md) | Interim character model and a model-agnostic rig | accepted |
 | [0006](0006-otlp.md) | No OTLP receiver in v1 | accepted |
 | [0007](0007-desktop-app.md) | The desktop app is an Electron shell in its own package | accepted |
+| [0009](0009-rendering-tiers-and-light.md) | Rendering tiers, tone mapping and day/night light | accepted |

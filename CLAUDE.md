@@ -431,6 +431,7 @@ Update this table as commands land. *(planned)* marks the ones that don't exist 
 | `npm run desktop:install` · `desktop:dev` · `desktop:build` · `desktop:typecheck` | The desktop app: install Electron (in `desktop/`), run it from the sources, build the Windows installer, type-check its Electron files ([docs/desktop.md](docs/desktop.md)) |
 | `/preview.html?theme=<id>` | Every furniture kind of a theme side by side (hot-reloads under `npm run dev`) |
 | `npm run shot -- --themes` · `-- --thumbs` | Screenshot every theme (CI) · rewrite the theme picker thumbnails |
+| `npm run shot -- --golden` | Shoot the office at 08:00, 13:30, 18:30 and 22:30 and fail if its mean brightness drops below a floor (CI) |
 
 ## How to work in this repo
 

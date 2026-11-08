@@ -699,7 +699,10 @@ open questions and your go-ahead**. The plan has the decisions, the Boss's behav
 - [ ] **P10-01 Spike: the human pack** (M) — Universal Base Characters + Universal Animation Library: bones, clips,
   triangles, 30 in the renderer; `docs/spikes/humans.md`, ADR 0008 (supersedes ADR 0005). Needs the download.
 - [ ] **P10-02 Art direction** (S) — `docs/art-direction.md`, golden shots (`npm run shot -- --golden`).
-- [ ] **P10-03 Renderer and lighting** (M) — tone mapping, Standard-lite materials, tiered sun shadows, sky; ADR 0009.
+- [x] **P10-03 Renderer and lighting** (M) — done: neutral tone mapping with an exposure per hour, `low`/`medium`/`high`
+  tiers with tiered sun shadows (`render3d/scene.ts`), a sky gradient and environment map (`render3d/sky.ts`),
+  [ADR 0009](docs/adr/0009-rendering-tiers-and-light.md). Standard-lite materials moved to P10-05: Lambert stays until
+  the kit has bevels and baked AO.
   Partly done: Neutral tone mapping with exposure from the day/night levels, sun shadows by tier (off on low, 2048 px
   every 2nd frame on medium, 4096 px every frame on high; `scene.ts`), the sky gradient and the sky environment map
   (`sky.ts`). Still open: the Standard-lite materials (the building is still Lambert) and ADR 0009.
@@ -718,12 +721,10 @@ open questions and your go-ahead**. The plan has the decisions, the Boss's behav
   queue and cooldown, cosmetic reactions only.
 - [ ] **P10-15 Presence** (S) — page visibility and input; desktop idle time through the preload.
 - [ ] **P10-16 Interactive tie-in** (S) — approving, answering and messaging send the Boss to the agent.
-- [ ] **P10-19 Day/night rework** (M, after P10-03) — exposure curve and tested brightness floors in
-  `core/daylight.ts`, daylight in unlit rooms, lamp light pools, rim light at night, a Night brightness setting,
-  golden shots at four hours with a brightness check.
-  Partly done: `lightLevelsAt` with tested brightness floors, a brighter and sunnier day, daylight in unlit rooms, the
-  Night brightness setting, hue-only tints at night. Still open: lamp light pools, rim light at night, golden shots with
-  the brightness check in `npm run shot`.
+- [ ] **P10-19 Day/night rework** (M, after P10-03) — mostly done: `lightLevelsAt` with tested brightness floors
+  (`core/daylight.ts`), a sunnier day, daylight in unlit rooms, a Night brightness setting, and
+  `npm run shot -- --golden` (four hours, a measured brightness floor each; CI). **Still open:** warm lamp light pools
+  at night, and a rim light on characters.
 - [x] **P10-20 Reflective windows and sunlight** (M, after P10-19) — glass that reflects a sky environment map, sun
   glints that follow the sun, sunlight patches on the floor, lit windows glowing at night — done: `render3d/glass.ts`
   (reflective glass, sun glint band that follows `sunAt`, warm glow in lit rooms after dark), the sun's path in

@@ -164,14 +164,28 @@ jobs:
       - name: Install, run and uninstall
         shell: pwsh
         run: |
+          $uninstallKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall'
           $setup = (Get-Item desktop/out/Agent-Office-Setup-*.exe).FullName
-          Start-Process -FilePath $setup -ArgumentList '/S' -Wait
-          $dir = Join-Path $env:LOCALAPPDATA 'Programs\Agent Office'
-          if (-not (Test-Path (Join-Path $dir 'Agent Office.exe'))) { throw "the installer did not install into $dir" }
+          $installer = Start-Process -FilePath $setup -ArgumentList '/S' -Wait -PassThru
+          Write-Host "installer exit code: $($installer.ExitCode)"
+          # where it went: an installed app registers itself under the user's Uninstall key
+          $entry = Get-ChildItem $uninstallKey -ErrorAction SilentlyContinue | Get-ItemProperty | Where-Object { $_.DisplayName -like '*Agent Office*' } | Select-Object -First 1
+          $dir = if ($entry -and $entry.InstallLocation) { $entry.InstallLocation.TrimEnd('\') } else { Join-Path $env:LOCALAPPDATA 'Programs\Agent Office' }
+          Write-Host "install folder: $dir"
+          if (-not (Test-Path (Join-Path $dir 'Agent Office.exe'))) {
+            Write-Host '--- in Programs ---'
+            Get-ChildItem (Join-Path $env:LOCALAPPDATA 'Programs') -ErrorAction SilentlyContinue | ForEach-Object { Write-Host $_.FullName }
+            Write-Host '--- uninstall entries ---'
+            Get-ChildItem $uninstallKey -ErrorAction SilentlyContinue | Get-ItemProperty | ForEach-Object { Write-Host "$($_.DisplayName) -> $($_.InstallLocation)" }
+            Write-Host '--- any Agent Office.exe in the user profile ---'
+            Get-ChildItem $env:USERPROFILE -Recurse -Filter 'Agent Office.exe' -ErrorAction SilentlyContinue | ForEach-Object { Write-Host $_.FullName }
+            throw "the installer did not install into $dir"
+          }
           node desktop/tools/smoke.mjs (Join-Path $dir 'Agent Office.exe') --out artifacts-desktop
           if ($LASTEXITCODE -ne 0) { throw 'the installed app failed its smoke test' }
           # _?= makes the silent uninstaller wait instead of copying itself away and returning at once
-          Start-Process -FilePath (Join-Path $dir 'Uninstall Agent Office.exe') -ArgumentList "/S _?=$dir" -Wait
+          $uninstaller = Start-Process -FilePath (Join-Path $dir 'Uninstall Agent Office.exe') -ArgumentList "/S _?=$dir" -Wait -PassThru
+          Write-Host "uninstaller exit code: $($uninstaller.ExitCode)"
           if (Test-Path (Join-Path $dir 'Agent Office.exe')) { throw 'the uninstaller left the app behind' }
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

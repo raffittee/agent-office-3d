@@ -10,6 +10,7 @@ import type { RoomState } from '../core/sim/room-state';
 import type { Sim } from '../core/sim/sim';
 import type { FurnitureKind } from '../core/vocab';
 import type { ThemeEntry } from '../themes/registry';
+import { roomGain, type LightLevels } from '../core/daylight';
 import { buildScale, roomBrightness } from './building';
 import { fitModel, modelYaw } from './models-fit';
 import { TILE_M, UNIT_M } from './units';
@@ -100,6 +101,10 @@ export class ModelView {
   private key = '';
   private entry: ThemeEntry | null = null;
   private gen = 0;
+  /** Day and night (P10-19): the gains for lit and dark rooms. */
+  levels: LightLevels | null = null;
+  /** The sun casts shadows: models cast and receive them. */
+  shadows = false;
 
   constructor(private readonly onReady: (kinds: ReadonlySet<FurnitureKind>) => void) {
     this.root.name = 'theme-models';
@@ -165,7 +170,8 @@ export class ModelView {
           const room = p.room;
           const grow = room ? buildScale(room.phase, room.progress(now)) : 1;
           mesh.setMatrixAt(i, grow === 1 ? p.matrix : tmpM.copy(tmpS.makeScale(1, grow, 1)).multiply(p.matrix));
-          mesh.setColorAt(i, tmpC.setScalar(room ? roomBrightness(room.light(now)) : 1));
+          const lv = this.levels;
+          mesh.setColorAt(i, tmpC.setScalar(room ? (lv ? roomGain(lv, room.light(now)) : roomBrightness(room.light(now))) : lv ? lv.litGain : 1));
         });
         mesh.instanceMatrix.needsUpdate = true;
         if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
@@ -204,6 +210,8 @@ export class ModelView {
         const mesh = new THREE.InstancedMesh(geometry, material, cap);
         mesh.count = n;
         mesh.frustumCulled = false;
+        mesh.castShadow = this.shadows;
+        mesh.receiveShadow = this.shadows;
         mesh.setColorAt(0, tmpC.setScalar(1));
         this.root.add(mesh);
         return mesh;

@@ -63,6 +63,11 @@ export class CharacterView {
   /** Provider badge colors (from the snapshot's meta.providers). */
   providerColors = new Map<string, string>();
 
+  /** Day and night (P10-19): brightness gain on every capsule person. */
+  setGain(gain: number): void {
+    this.mat.color.setScalar(gain);
+  }
+
   constructor() {
     this.root.name = 'characters';
     this.ensure(32);

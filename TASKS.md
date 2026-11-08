@@ -740,4 +740,7 @@ updated, day and night both easy to read with windows that catch the sun, golden
 - A WebXR / VR walk-through.
 - AI theme generator: describe a space, any LLM drafts a `theme.json`, the schema validates it, and you preview it.
 - More adapters: Aider, OpenCode, Cursor CLI, Copilot CLI.
+- Claude Code cloud sessions (claude.ai/code): they run in Anthropic's containers, so no local files or hooks reach
+  the office. Start with a spike: can a third-party app read your cloud sessions and their events (supported API,
+  format, freshness, sign-in)? If yes, an opt-in `claude-code-cloud` adapter, with an ADR for the outbound call.
 - Translations (i18n).

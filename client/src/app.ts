@@ -1,6 +1,7 @@
 // Ported from habblaud client/src/app.ts (MIT, © 2026 Márcio Junior)
 // The client app: store (data) → world (canvas) → UI (panels).
 import { OfficeStore } from './net/store';
+import { parseQuality } from './render3d/scene';
 import { createWorld, DEFAULT_WORLD_SETTINGS } from './render3d/world';
 import { themes } from './themes/registry';
 import { createUI, savedSettings } from './ui';
@@ -15,8 +16,10 @@ export function start(): void {
   const settings = savedSettings(DEFAULT_WORLD_SETTINGS);
   // ?theme=<id> opens the office in that theme (links, screenshots)
   const theme = params.get('theme');
-  // the desktop widget is small: render it lighter (pixel ratio 1, no multisampling)
-  const quality = parseShell(location.search) === 'widget' ? 'low' : 'medium';
+  // ?quality=low|medium|high wins; the desktop widget is small, so it renders lighter (pixel ratio 1, no multisampling,
+  // no shadows); otherwise the setting, where 'auto' is medium
+  const picked = settings.graphics === 'low' || settings.graphics === 'medium' || settings.graphics === 'high' ? settings.graphics : 'medium';
+  const quality = parseQuality(location.search) ?? (parseShell(location.search) === 'widget' ? 'low' : picked);
   const world = createWorld(canvas, labels, store, theme ? { ...settings, theme } : settings, quality);
   createUI(uiRoot, store, world);
   store.connect();

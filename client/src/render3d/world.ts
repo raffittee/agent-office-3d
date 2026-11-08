@@ -17,7 +17,8 @@ import { SoundCues, type SoundView } from '../core/sound-cues';
 import { EffectsView } from './effects';
 import { ModelView } from './models';
 import { loadRigModel, RigView } from './rig';
-import { ambientAt, approachAmbient, effectiveHour, parseHourParam, type Ambient, type DaylightMode } from '../core/daylight';
+import { ambientAt, approachAmbient, clampNightBrightness, effectiveHour, lightLevelsAt, NIGHT_BRIGHTNESS_DEFAULT, parseHourParam, type Ambient, type DaylightMode } from '../core/daylight';
+import { updateGlass } from './glass';
 import { applyDaylight, applyLighting, createScene, type Quality } from './scene';
 import { ScreenView } from './screens';
 import { mx, mz, tm } from './units';
@@ -36,9 +37,13 @@ export interface WorldSettings extends WorldOptions {
   season: SeasonMode;
   /** Motion (P8-03): follow the system's reduced-motion preference, or always reduce / never. */
   motion: MotionSetting;
+  /** Night brightness (P10-19): how bright a lit room is at night, as a share of its daytime brightness (0.4–1). */
+  nightBrightness: number;
+  /** Graphics quality (P10-03): 'auto' = medium (low in the desktop widget). Applies on the next page load. */
+  graphics: 'auto' | Quality;
 }
 
-export const DEFAULT_WORLD_SETTINGS: WorldSettings = { ...DEFAULT_WORLD_OPTIONS, cutaway: 'cut', characters: 'rigged', theme: '', daylight: 'auto', season: 'auto', motion: 'auto' };
+export const DEFAULT_WORLD_SETTINGS: WorldSettings = { ...DEFAULT_WORLD_OPTIONS, cutaway: 'cut', characters: 'rigged', theme: '', daylight: 'auto', season: 'auto', motion: 'auto', nightBrightness: NIGHT_BRIGHTNESS_DEFAULT, graphics: 'auto' };
 
 /** Where the pipeline's character assets are served from, and the default character. */
 const CHARACTER_BASE = 'assets/characters';
@@ -90,7 +95,10 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
   let theme = themeFor(options.theme || store.snapshot?.meta.theme);
   const sim = new Sim({ options: () => options, roomTheme: (seed) => theme.look.roomTheme(seed), template: theme.look.template });
   const building = new BuildingView(theme.look);
+  building.setShadows(parts.shadows);
+  const offEnv = parts.sky.onEnv((env) => building.setEnv(env));
   const models = new ModelView((ready) => building.setLook(theme.look, ready));
+  models.shadows = parts.shadows;
   const chars = new CharacterView();
   const cues = new SoundCues(sim);
   const soundCbs = new Set<(c: SoundCue) => void>();
@@ -139,8 +147,14 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
     }
     // eases over about a second when the setting changes; the clock itself moves slowly anyway
     ambient = approachAmbient(ambient, targetAmbient(), 0.3);
-    applyDaylight(parts, theme.look, ambient);
-    building.setAmbient(ambient.night, ambient.inside);
+    const l = theme.look.lighting;
+    const levels = lightLevelsAt(ambient, { hemi: l.intensity, sun: l.sunIntensity }, clampNightBrightness(options.nightBrightness));
+    applyDaylight(parts, theme.look, ambient, levels);
+    building.setAmbient(levels, ambient.inside);
+    models.levels = levels;
+    chars.setGain(levels.charGain);
+    if (rig) rig.gain = levels.charGain;
+    updateGlass(ambient, levels, parts.sun.color, parts.sky.colors.sunDir);
   };
   const offThemes = onThemesChanged(() => applyTheme(themeFor(theme.look.id)));
   const rig2d = new CameraRig();
@@ -153,6 +167,7 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
   loadRigModel(CHARACTER_BASE, CHARACTER_ID)
     .then((model) => {
       rig = new RigView(model);
+      rig.castShadows = parts.shadows;
       rig.providerColors = chars.providerColors;
       scene.add(rig.root);
     })
@@ -164,6 +179,7 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
   const selectCbs = new Set<(s: Selection) => void>();
   const hoverCbs = new Set<(h: { id: string; x: number; y: number } | null) => void>();
   let framed = false;
+  let boundsKey = '';
   let fps = 0;
   /** Smoothed JavaScript time per frame (sim, scene sync, render submission, labels), in ms. */
   let cpuMs = 0;
@@ -301,6 +317,16 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
       rig2d.target.copy(rig2d.targetGoal);
     }
     rig2d.update(dt);
+    if (sim.initialized) {
+      // the sun's shadow covers the building, and follows it as it grows or shrinks
+      const b = building.bounds(sim);
+      const bk = `${b.x0},${b.z0},${b.x1},${b.z1},${theme.look.wallHeight}`;
+      if (bk !== boundsKey) {
+        boundsKey = bk;
+        parts.setBounds(b, theme.look.wallHeight);
+        ambientAt_ = 0;
+      }
+    }
     updateDaylight(t);
     const tSync = performance.now();
     building.sync(sim, rig2d.yaw, options.cutaway, now);
@@ -329,6 +355,7 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
     if (!useRig()) scene.updateMatrixWorld();
     const tRender = performance.now();
     ema('sync', tRender - tSync);
+    parts.beforeRender(t);
     renderer.render(scene, rig2d.camera);
     const tLabels = performance.now();
     ema('render', tLabels - tRender);
@@ -398,6 +425,7 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
       const themeChanged = o.theme !== undefined && o.theme !== options.theme;
       options = { ...options, ...o };
       if (o.motion !== undefined) setMotion(o.motion);
+      if (o.nightBrightness !== undefined || o.daylight !== undefined) ambientAt_ = 0;
       if (themeChanged) {
         const next = themeFor(options.theme || store.snapshot?.meta.theme);
         if (next.look.id !== theme.look.id) applyTheme(next);
@@ -426,6 +454,7 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
       stop();
       offSnap();
       offThemes();
+      offEnv();
       offInput();
       document.removeEventListener('visibilitychange', onVisibility);
       overlay.dispose();

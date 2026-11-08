@@ -80,6 +80,9 @@ interface Rigged {
   rest: Map<THREE.Bone, THREE.Quaternion>;
   yaw: number;
   material: THREE.MeshLambertMaterial;
+  /** The material's own color, and the day/night gain last applied to it. */
+  base: THREE.Color;
+  gain: number;
   /** Accumulated time for reduced-rate updates. */
   pending: number;
   sub: boolean;
@@ -149,6 +152,10 @@ export class RigView {
   providerColors = new Map<string, string>();
   /** Frame counter for reduced-rate updates. */
   private frame = 0;
+  /** Day and night (P10-19): brightness gain on every character, so they stay readable after dark. */
+  gain = 1;
+  /** The sun casts shadows: characters cast them (set before the first sync). */
+  castShadows = false;
 
   constructor(readonly model: RigModel) {
     this.root.name = 'rigged-characters';
@@ -197,6 +204,7 @@ export class RigView {
     const material = tintedMaterial(sm.material as THREE.Material, new THREE.Color(look.shirt));
     sm.material = material;
     sm.frustumCulled = false;
+    sm.castShadow = this.castShadows;
     const bones: Partial<Record<RigBone, THREE.Bone>> = {};
     for (const [k, name] of Object.entries(profile.bones) as [RigBone, string][]) {
       const b = root.getObjectByName(name);
@@ -219,7 +227,7 @@ export class RigView {
     this.root.add(root);
     const rest = new Map<THREE.Bone, THREE.Quaternion>();
     for (const b of Object.values(bones)) if (b) rest.set(b, b.quaternion.clone());
-    return { root, mesh: sm, mixer, actions, current: null, bones, rest, yaw: dirYaw(c.dir), material, pending: 0, sub: c.info.kind === 'sub', provider: c.info.provider };
+    return { root, mesh: sm, mixer, actions, current: null, bones, rest, yaw: dirYaw(c.dir), material, base: material.color.clone(), gain: 1, pending: 0, sub: c.info.kind === 'sub', provider: c.info.provider };
   }
 
   private play(r: Rigged, clip: RigClip): void {
@@ -276,6 +284,10 @@ export class RigView {
       const onScreen = show && visible(c);
       r.root.visible = onScreen;
       if (!show) continue;
+      if (r.gain !== this.gain) {
+        r.gain = this.gain;
+        r.material.color.copy(r.base).multiplyScalar(this.gain);
+      }
       r.yaw = turnTowards(r.yaw, dirYaw(c.dir), dt * 10);
       const seated = isSeatedPose(c.pose, c.seated);
       const base = baseClipFor(c.pose, c.seated, (k) => !!r!.actions[k]);

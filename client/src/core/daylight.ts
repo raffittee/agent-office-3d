@@ -133,3 +133,85 @@ export function effectiveHour(mode: DaylightMode, override: number | null, date:
 export function rgbHex(c: Rgb): string {
   return `#${c.map((v) => v.toString(16).padStart(2, '0')).join('')}`;
 }
+
+// ---- light levels (P10-19): how bright everything is at an hour, so day reads as daylight and night stays readable
+
+/** Night brightness setting: how bright a lit room is at night, as a share of its daytime brightness. */
+export const NIGHT_BRIGHTNESS_MIN = 0.4;
+export const NIGHT_BRIGHTNESS_MAX = 1;
+export const NIGHT_BRIGHTNESS_DEFAULT = 0.85;
+
+/** Share of the sun's intensity that reaches a typical surface (floors and desks; walls get less). */
+const SUN_SHARE = 0.55;
+
+export interface LightLevels {
+  /** Multipliers on the theme's fill (hemisphere) and sun intensities. */
+  hemi: number;
+  sun: number;
+  /** Tone-mapping exposure: up at night, like eyes adjusting to the dark. */
+  exposure: number;
+  /** Material gain for a room with its light on / off, and for common areas (always lit). */
+  litGain: number;
+  darkGain: number;
+  /** Material gain for characters: a lit room's, so a raised hand never gets lost in the dark. */
+  charGain: number;
+  /** Window glass: the warm glow of a lit room after dark (0..1), and the strength of the sun's glint (0..1). */
+  glassGlow: number;
+  glint: number;
+}
+
+const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
+
+export function clampNightBrightness(v: unknown): number {
+  const n = typeof v === 'number' && Number.isFinite(v) ? v : NIGHT_BRIGHTNESS_DEFAULT;
+  return clamp(n, NIGHT_BRIGHTNESS_MIN, NIGHT_BRIGHTNESS_MAX);
+}
+
+/** The theme's fill and sun intensities (its `lighting`). */
+export interface BaseLight {
+  hemi: number;
+  sun: number;
+}
+
+/** Light reaching a typical surface for these levels (before materials), relative units. */
+function irradiance(l: Pick<LightLevels, 'hemi' | 'sun' | 'exposure'>, base: BaseLight): number {
+  return l.exposure * (l.hemi * base.hemi + SUN_SHARE * l.sun * base.sun);
+}
+
+/**
+ * The light levels for an ambient. By day: a strong sun over a softer fill, so there are shadows and contrast. At
+ * night the sky and the moon are dim and the exposure comes up; lit rooms are lit by their lamps (the gain makes up for
+ * the darker sky) so they keep `nightBrightness` of their daytime brightness, and dark rooms stay readable. Pure.
+ */
+export function lightLevelsAt(a: Ambient, base: BaseLight, nightBrightness: number = NIGHT_BRIGHTNESS_DEFAULT): LightLevels {
+  const n = clamp(a.night, 0, 1);
+  const s = clampNightBrightness(nightBrightness);
+  const day = { hemi: 0.78, sun: 1.6, exposure: 1.06 };
+  const globals = { hemi: lerp(day.hemi, 0.42, n), sun: lerp(day.sun, 0.32, n), exposure: lerp(day.exposure, 1.18, n) };
+  const ref = irradiance(day, base);
+  const now = Math.max(1e-6, irradiance(globals, base));
+  // the brightness each kind of area should have, as a share of a lit room at noon
+  const litTarget = lerp(1, s, n);
+  const darkTarget = lerp(0.9, 0.55 * s, n);
+  const toGain = (target: number) => (target * ref) / now;
+  const sun = sunAt(a.hour);
+  return {
+    ...globals,
+    litGain: toGain(litTarget),
+    darkGain: toGain(darkTarget),
+    charGain: toGain(Math.max(litTarget * 0.95, 0.6)),
+    glassGlow: clamp((n - 0.25) / 0.6, 0, 1),
+    glint: sun.up ? clamp(1 - n * 1.6, 0, 1) * (0.55 + 0.45 * sun.elevation) : 0,
+  };
+}
+
+/** How bright a surface with this gain looks, as a share of a lit room at noon (what the tests pin). Pure. */
+export function relativeBrightness(levels: LightLevels, base: BaseLight, gain: number): number {
+  const noon = lightLevelsAt(ambientAt(12), base);
+  return (gain * irradiance(levels, base)) / (noon.litGain * irradiance(noon, base));
+}
+
+/** The material gain for a room's light level (0 = off, 1 = on; in between while it fades). */
+export function roomGain(levels: LightLevels, light: number): number {
+  return lerp(levels.darkGain, levels.litGain, clamp(light, 0, 1));
+}

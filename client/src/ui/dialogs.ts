@@ -181,6 +181,14 @@ function alertSettings(alerts: Alerts): HTMLElement[] {
   ];
 }
 
+/** The night brightness option closest to a stored value. */
+function nightKey(v: number): '0.4' | '0.6' | '0.85' | '1' {
+  const opts = [0.4, 0.6, 0.85, 1] as const;
+  let best: (typeof opts)[number] = 0.85;
+  for (const o of opts) if (Math.abs(o - v) < Math.abs(best - v)) best = o;
+  return String(best) as '0.4' | '0.6' | '0.85' | '1';
+}
+
 export function openSettings(root: HTMLElement, world: WorldApi, alerts?: Alerts): () => void {
   const o = world.getOptions();
   const set = (patch: Partial<WorldSettings>) => {
@@ -215,6 +223,12 @@ export function openSettings(root: HTMLElement, world: WorldApi, alerts?: Alerts
         ['day', t('Always day')],
         ['night', t('Always night')],
       ], (v) => set({ daylight: v })),
+      select(t('Brightness at night'), nightKey(o.nightBrightness), [
+        ['0.4', t('Dark')],
+        ['0.6', t('Dim')],
+        ['0.85', t('Comfortable')],
+        ['1', t('As bright as day')],
+      ], (v) => set({ nightBrightness: Number(v) })),
       select(t('Seasonal decorations'), o.season, [
         ['auto', t('Follow the calendar')],
         ['none', t('Off')],
@@ -226,6 +240,16 @@ export function openSettings(root: HTMLElement, world: WorldApi, alerts?: Alerts
         ['reduce', t('Reduce')],
         ['full', t('Full')],
       ], (v) => set({ motion: v })),
+      select(t('Graphics quality'), o.graphics, [
+        ['auto', t('Automatic')],
+        ['low', t('Low: no shadows')],
+        ['medium', t('Medium: shadows')],
+        ['high', t('High: sharper shadows')],
+      ], (v) => {
+        set({ graphics: v });
+        // the renderer is set up once: a new quality needs a fresh page
+        location.reload();
+      }),
       select(t('Walls in front'), o.cutaway, [
         ['cut', t('Cut down')],
         ['hide', t('Hidden')],

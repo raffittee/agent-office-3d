@@ -10,8 +10,10 @@ import type { AreaLayout, WallSegment } from '../core/layout/types';
 import type { RoomState } from '../core/sim/room-state';
 import type { Sim } from '../core/sim/sim';
 import { FURNITURE, TILE, type FurnitureKind } from '../core/vocab';
+import { roomGain, type LightLevels } from '../core/daylight';
 import type { Look, SurfacePattern } from '../themes/look';
 import { busySpans, decorFor, type FullWall } from './decor';
+import { createGlassMaterial, setGlassGlow, type GlassMaterial } from './glass';
 import { furnitureParts, wallItemShape, type PartMaterial } from './kit';
 import { CUT_H, mx, mz, TILE_M, UNIT_M } from './units';
 
@@ -118,7 +120,7 @@ function wallBox(out: THREE.BufferGeometry[], x0: number, x1: number, h: number,
 export interface AreaView {
   group: THREE.Group;
   solid: THREE.MeshLambertMaterial;
-  glass: THREE.MeshLambertMaterial;
+  glass: GlassMaterial;
   glow: THREE.MeshBasicMaterial;
   dispose(): void;
 }
@@ -130,6 +132,10 @@ export interface BuildCtx {
   look: Look;
   /** Kinds drawn as theme models (render3d/models.ts) instead of the procedural kit. */
   modelled: ReadonlySet<FurnitureKind>;
+  /** The sky's environment map, reflected by window glass (null: no reflections yet, or low quality). */
+  env?: THREE.Texture | null;
+  /** The sun casts shadows: solid meshes cast and receive them. */
+  shadows?: boolean;
 }
 
 /** Is a wall segment on the building's outer side that faces away from the camera (so it stays full height)? */
@@ -252,21 +258,23 @@ export function buildArea(area: AreaLayout, ctx: BuildCtx): AreaView {
   const group = new THREE.Group();
   group.name = area.id;
   const solid = new THREE.MeshLambertMaterial({ vertexColors: true });
-  const glass = new THREE.MeshLambertMaterial({ vertexColors: true, transparent: true, opacity: 0.38, depthWrite: false });
+  const glass = createGlassMaterial(ctx.env ?? null);
   const glow = new THREE.MeshBasicMaterial({ vertexColors: true });
-  const add = (parts: THREE.BufferGeometry[], mat: THREE.Material, order = 0) => {
+  const add = (parts: THREE.BufferGeometry[], mat: THREE.Material, order = 0, cast = false, receive = false) => {
     if (!parts.length) return;
     const geo = mergeGeometries(parts);
     for (const p of parts) p.dispose();
     if (!geo) return;
     const mesh = new THREE.Mesh(geo, mat);
     mesh.renderOrder = order;
+    mesh.castShadow = cast && !!ctx.shadows;
+    mesh.receiveShadow = receive && !!ctx.shadows;
     mesh.matrixAutoUpdate = false;
     mesh.updateMatrix();
     group.add(mesh);
   };
-  add(bucket.solid, solid);
-  add(bucket.glow, glow);
+  add(bucket.solid, solid, 0, true, true);
+  add(bucket.glow, glow, 0, false, true);
   add(bucket.glass, glass, 1);
   return {
     group,
@@ -313,13 +321,31 @@ export class BuildingView {
   private look: Look;
   private lookRev = 0;
   private modelled: ReadonlySet<FurnitureKind> = new Set();
-  /** Day and night (P6-02): 0 = day, 1 = night; `inside` tints lit common areas (lamp light at night). */
-  private night = 0;
+  /** Day and night (P6-02, P10-19): the light levels, and `inside`, the tint of lit interiors (lamp light at night). */
+  private levels: LightLevels | null = null;
   private inside = new THREE.Color(1, 1, 1);
+  private env: THREE.Texture | null = null;
+  private shadows = false;
 
-  setAmbient(night: number, inside: readonly [number, number, number]): void {
-    this.night = night;
+  setAmbient(levels: LightLevels, inside: readonly [number, number, number]): void {
+    this.levels = levels;
     this.inside.setRGB(inside[0] / 255, inside[1] / 255, inside[2] / 255, THREE.SRGBColorSpace);
+  }
+
+  /** The sky's environment map for the window glass (rebuilt now and then as the sky changes). */
+  setEnv(env: THREE.Texture | null): void {
+    const had = !!this.env;
+    this.env = env;
+    for (const cur of this.views.values()) {
+      cur.view.glass.envMap = env;
+      if (had !== !!env) cur.view.glass.needsUpdate = true;
+    }
+  }
+
+  /** Whether the sun casts shadows (from the renderer's quality); set before the first sync. */
+  setShadows(on: boolean): void {
+    this.shadows = on;
+    this.ground.receiveShadow = on;
   }
 
   constructor(look: Look) {
@@ -344,7 +370,7 @@ export class BuildingView {
   sync(sim: Sim, yawDeg: number, cutaway: Cutaway, now: number): void {
     const b = sim.building;
     const quad = cutKey(yawDeg);
-    const ctx: BuildCtx = { cols: b.cols, far: farSides(yawDeg), cutaway, look: this.look, modelled: this.modelled };
+    const ctx: BuildCtx = { cols: b.cols, far: farSides(yawDeg), cutaway, look: this.look, modelled: this.modelled, env: this.env, shadows: this.shadows };
     const areas: { layout: AreaLayout; room?: RoomState }[] = [...b.core.map((layout) => ({ layout })), { layout: b.corridor }];
     if (b.edge) areas.push({ layout: b.edge });
     for (const room of sim.rooms.values()) if (room.present) areas.push({ layout: room.layout, room });
@@ -363,17 +389,23 @@ export class BuildingView {
         this.root.add(cur.view.group);
       }
       const g = cur.view.group;
+      const lv = this.levels;
       if (room) {
         g.scale.y = buildScale(room.phase, room.progress(now));
         const light = Math.max(0, Math.min(1, room.light(now)));
-        // a dark room is darker at night; a lit one glows with lamp light
-        const k = roomBrightness(light) * (1 - 0.45 * this.night * (1 - light));
+        // by day a dark room is still lit by daylight; after dark a lit room is lit by its lamps (the gain makes up
+        // for the dim sky) and a dark one falls to a dim but readable level (core/daylight.ts)
+        const k = lv ? roomGain(lv, light) : roomBrightness(light);
         cur.view.solid.color.copy(this.inside).lerp(WHITE, 1 - light).multiplyScalar(k);
-        cur.view.glass.color.setScalar(k);
+        cur.view.glass.color.setScalar(Math.min(1, k));
         cur.view.glow.color.setScalar(0.15 + 0.85 * light);
+        if (lv) setGlassGlow(cur.view.glass, lv, light);
       } else {
-        cur.view.solid.color.copy(this.inside);
+        // common areas (reception, kitchen, lounge, corridor) keep their lights on
+        const k = lv ? lv.litGain : 1;
+        cur.view.solid.color.copy(this.inside).multiplyScalar(k);
         cur.view.glass.color.copy(this.inside);
+        if (lv) setGlassGlow(cur.view.glass, lv, 1, 0.6);
       }
     }
     for (const [id, cur] of this.views) {
@@ -390,6 +422,7 @@ export class BuildingView {
       this.ground.position.set(w / 2, -0.151, d / 2);
     }
     this.syncDoors(sim);
+    this.doorMat.color.set('#9aa4ae').multiplyScalar(this.levels ? this.levels.litGain : 1);
   }
 
   /** Elevator doors: two panels per elevator that slide apart with the door state (0..4). */

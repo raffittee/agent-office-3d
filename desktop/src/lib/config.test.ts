@@ -19,6 +19,11 @@ describe('installer config', () => {
     expect(builderConfig({ version: '1.2.3', packageDir: '/x', editExecutable: false }).win.signAndEditExecutable).toBe(false);
   });
 
+  it('can reuse the Electron files npm installed instead of downloading them again', () => {
+    expect(config.electronDist).toBeUndefined();
+    expect(builderConfig({ version: '1.2.3', packageDir: '/x', electronDist: '/d/node_modules/electron/dist' }).electronDist).toBe('/d/node_modules/electron/dist');
+  });
+
   it('bundles the release package as real files', () => {
     expect(config.extraResources).toEqual([{ from: '/x/release/agent-office-1.2.3', to: 'package' }]);
     expect(config.extraMetadata).toEqual({ version: '1.2.3', main: 'dist/main.cjs' });

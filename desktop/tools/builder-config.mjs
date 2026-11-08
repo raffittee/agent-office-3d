@@ -5,9 +5,12 @@
  * (npm run package) that goes into the app as resources/package: real files, outside the asar, so an external `node`
  * can run its hook scripts. `editExecutable: false` skips putting the icon and version info into the .exe, which is
  * what needs electron-builder's Windows tools (downloaded from GitHub): fine for a build only meant to be tested.
+ * `electronDist` is the folder of Electron files npm already installed (node_modules/electron/dist): using it keeps
+ * electron-builder from downloading Electron and its checksum list from GitHub a second time.
  */
-export function builderConfig({ version, packageDir, editExecutable = true }) {
+export function builderConfig({ version, packageDir, editExecutable = true, electronDist }) {
   return {
+    ...(electronDist ? { electronDist } : {}),
     appId: 'com.agentoffice.desktop',
     productName: 'Agent Office',
     copyright: 'Agent Office, MIT licensed',

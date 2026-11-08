@@ -1,7 +1,7 @@
 # Plan: a better-looking office, human agents, and the Boss (Phase 10)
 
 Status: **draft plan, awaiting your answers to the open questions and your go-ahead**. Nothing here is built yet.
-Written 2026-11-08.
+Written 2026-11-08; day/night and windows added the same day.
 
 ## Goal
 
@@ -10,9 +10,11 @@ Make the office look like a finished product rather than a working prototype, an
 1. **Graphics and design.** Better lighting, real shadows, more detailed furniture, rooms that read as rooms
    (windows, doors, ceiling lights, signs), a building that sits in a setting, and a cleaner UI. All five themes get
    the upgrade.
-2. **Human agents.** The robots become stylized low-poly people with a varied look (body, skin, hair, outfit,
+2. **Light you can see by, at any hour.** Daytime looks like bright daylight, night is dark outside but easy to read
+   inside, and windows catch and reflect the sun as it crosses the sky.
+3. **Human agents.** The robots become stylized low-poly people with a varied look (body, skin, hair, outfit,
    accessories) taken from each agent's seed. The robot stays available as a setting.
-3. **The Boss.** A new character who stands for you, the user. The Boss has a corner office. They walk over when you
+4. **The Boss.** A new character who stands for you, the user. The Boss has a corner office. They walk over when you
    give an agent work, check on agents that need you, and go home when you're away.
 
 ## Where we are today
@@ -28,6 +30,9 @@ The [current screenshot](../images/office.png) and the code show what holds the 
 | Setting | Flat grey clear color and a beige ground plane | The building floats in nothing |
 | Characters | RobotExpressive (ADR 0005 interim), 1.2 m, one tint slot | Small, all alike apart from color, hard to pick out |
 | Post-fx | `postfx` in themes is validated but not drawn | No AO or bloom, even on strong GPUs |
+| Day | Flat shading with no tone mapping or shadows, a grey-blue background, and nothing that looks like sunlight indoors. A room with its light off is drawn at 32%, even at noon (`roomBrightness` in `render3d/building.ts`) | Midday reads as an overcast afternoon. Rooms that are arriving or closing look like night |
+| Night | Sky light ×0.5 and sun ×0.28 for the whole scene, a near-black background, and dark rooms at 18% | Hard to see anything, characters included |
+| Windows | Flat pale-blue panels (`wallItemShape('window')` in `render3d/kit.ts`), one per project room | They don't react to the sun at all |
 
 The budget leaves room for more: 72 draw calls for 38 agents and 6 rooms (`docs/perf.md`), against a cap of 300.
 
@@ -44,6 +49,10 @@ The budget leaves room for more: 72 draw calls for 38 agents and 6 rooms (`docs/
 | 7 | **The Boss never changes what an agent's status looks like.** Agents may wave at or turn toward the Boss, but an idle agent never runs back to its desk to look busy | The office has to stay an honest picture of what the agents are doing |
 | 8 | **The Boss's identity is local and yours to set:** a name (default "Boss") and a look, in Settings. Stored in `localStorage`, and in the desktop app's settings file. Never filled from your email or account data | Privacy rules. Nothing about you leaves the machine |
 | 9 | **The Boss gets a corner office: a new core area,** in every layout template | A fixed home base, like the reception or the kitchen. Templates still produce the same spots |
+| 10 | **Readability comes first, at every hour.** Day and night change the mood (color, contrast, what glows), but each has a brightness floor: at night lit rooms stay close to their daytime brightness, rooms with their lights off stay readable, and characters and their markers are clear at any hour | You use the office at night too. A faithful dark office would just be a black screen |
+| 11 | **Day and night use exposure, not just dimming.** A pure `exposureAt(ambient)` curve (`core/daylight.ts`) drives the tone mapping exposure, like an eye adjusting: the sky and the outside get darker at night, the exposure comes up, and lamps light the rooms | Dimming every light at once is why night is so dark today. This keeps contrast without losing detail |
+| 12 | **Rooms with their lights off are lit by daylight during the day.** The light switch only matters when it's dark outside: by day a dark room loses about 10%, at night it falls to a dim but readable level | An empty room at noon should still look like noon |
+| 13 | **Windows are glass that reflects the sky and the sun,** from a small environment map rebuilt from the sky colors whenever the time of day moves on, plus a sun glint that follows the sun's position | Real reflections of the scene (planar or screen-space) are too costly for the budget, and the fixed isometric camera doesn't need them |
 
 ## Open questions for you
 
@@ -68,6 +77,10 @@ The budget leaves room for more: 72 draw calls for 38 agents and 6 rooms (`docs/
 4. **Should you be able to drive the Boss** (click a spot to walk there, follow-cam)? The plan keeps that as a
    stretch task at the end.
 5. **Does the Boss show in the compact widget?** The plan says no: the widget stays a status view.
+6. **How dark should night get?** The plan keeps lit rooms at about 85% of their daytime brightness and rooms with
+   their lights off at about 45%, while the outside goes deep blue. A "Night brightness" slider in Settings (40–100%)
+   lets you tune it. Alternatively, night could be a mood only
+   (colors and glowing lamps, no darker at all).
 
 ## The Boss
 
@@ -128,6 +141,53 @@ Rules that keep it calm with 30 agents:
   sidewalk, grass, planters and a few trees around the building.
 - `high` tier: SSAO, bloom (screens, Edison bulbs, neon), SMAA, through a small pass chain in
   `render3d/postfx.ts`, off unless the tier is `high`.
+
+### Daylight, night and windows
+
+**Why it looks wrong today** (`render3d/scene.ts` `applyDaylight`, `render3d/building.ts`):
+
+- By day, the light is even but flat: soft fill light, a sun that casts no shadows and never reaches inside, no
+  tone mapping, and a grey-blue background. Nothing says "sunny". On top of that, a room whose light is off (while it's
+  being set up, or after its session ends) is drawn at 32% brightness, even at noon.
+- At night, every light is turned down at once (sky light to 50%, the sun to 28% as a bluish moon), the background
+  goes near-black, and dark rooms fall to 18%. Nothing makes up for it: lamps are only colors that don't dim, and
+  they light nothing around them.
+- There's no tone mapping, so there's no way to "adjust the eye" between day and night, and bright areas clip.
+
+**The new day/night model:**
+
+- **Exposure curve.** `exposureAt(ambient)` in `core/daylight.ts` (pure, tested) sets the tone mapping exposure for
+  each hour. Day is bright, with crisp shadows. At dusk the light warms and the exposure starts to rise. At night the
+  outside is deep blue and the exposure is higher, so interiors stay readable.
+- **Brightness floors, tested.** `lightLevelsAt(ambient, roomLight)` returns the brightness of the sky light, the sun
+  or moon, the lamps and each room, and the tests pin the floors: at night, a lit room at least 85% and a dark room at
+  least 45% of a lit room's daytime brightness. By day, a room with its light off loses only about 10%. The Settings slider scales
+  the night values.
+- **Lamps that light things.** At night, a lit room's ceiling fixtures and desk lamps cast soft warm pools of light
+  onto the floor and desks (additive decals in the merged area mesh, so no extra draw calls). Screens glow onto the
+  faces of the agents in front of them. On `high`, a few real point lights per lit room, within budget.
+- **Characters always read.** At night characters get a slight rim light and their status markers keep full
+  brightness, so a raised hand is never lost in the dark.
+- **A sky that matches.** The background gradient and the light colors come from the same day/night keys, so the
+  outside, the light and the windows always agree.
+
+**Windows that reflect the sun:**
+
+- Window glass becomes a reflective material (low roughness, Fresnel: more reflective at grazing angles) with an
+  environment map made from the current sky gradient and sun. It's a tiny cube map rebuilt (through `PMREMGenerator`)
+  only when the ambient changes noticeably, about once a minute, not every frame.
+- **Sun glints.** A bright highlight on each window that faces the sun, positioned from `sunAt(hour)`, so it slides
+  across the glass as the sun crosses the sky: cool white at midday, gold at dusk, gone at night. On `high`, bloom
+  makes it glow.
+- **Sunlight coming in.** By day, a patch of sunlight falls on the floor below each window, its angle and length
+  following the sun (long and orange in the evening, short at noon), drawn as a soft decal. On `high`, a faint
+  light shaft through the air.
+- **At night, it turns around.** From outside, the glass of a lit room glows warm. Inside, the glass goes dark and
+  shows a faint reflection of the room's lamps.
+- Windows on the building's outer walls (P10-06) and the glass partitions of the open-plan templates use the same
+  material.
+- Everything is driven by the same `Ambient` the rest of day/night uses, so `?hour=18:30` shows a dusk glint in
+  screenshots and tests.
 
 ### Furniture ("kit v2")
 
@@ -200,12 +260,20 @@ character tasks (07–09) wait for P10-01.
 - **P10-15 Presence** (S) — page visibility and input in the browser; `powerMonitor` idle time through the desktop
   preload (validated IPC, a number only).
 - **P10-16 Interactive tie-in** (S) — approve, answer and message from the office send the Boss to that agent.
+- **P10-19 Day/night rework** (M, after P10-03) — `exposureAt` and `lightLevelsAt` in `core/daylight.ts` with tested
+  brightness floors, daylight in rooms with their lights off, lamp light pools, rim light at night, the Night brightness
+  setting; golden shots at 08:00, 13:30, 18:30 and 22:30, and a check in `npm run shot` that their average brightness
+  stays within the target range.
+- **P10-20 Reflective windows and sunlight** (M, after P10-19) — reflective glass from a sky environment map, sun
+  glints that follow `sunAt`, sunlight patches on the floor, lit windows glowing at night; the same material for
+  partitions.
 - **P10-17 (stretch) Drive the Boss** — click to walk, follow-cam.
 - **P10-18 Performance and close** (M) — re-measure `docs/perf.md` (30 agents, 15 rooms, each tier), soak, new README
   screenshot, CHANGELOG, ASSETS, ADR list, CLAUDE.md.
 
 **Exit:** humans by default (the robot as a setting), the Boss in their office reacting to your work, all five themes
-updated, golden shots reviewed by you, and at `medium` at most 300 draw calls for 30 agents and 15 rooms in CI and
+updated, day and night both easy to read with windows that catch the sun, golden shots reviewed by you, and at
+`medium` at most 300 draw calls for 30 agents and 15 rooms in CI and
 60 fps on your integrated GPU.
 
 ## Risks
@@ -216,5 +284,7 @@ updated, golden shots reviewed by you, and at `medium` at most 300 draw calls fo
   your machine can check this. `medium` is designed to fit, `high` is opt-in, and `low` stays as today.
 - **The Boss getting annoying.** With many agents a busy Boss is noise. The queue, cooldown and priority rules
   above, plus a "Boss stays in the office" setting, keep it in check.
+- **Night still too dark, or too bright, on your screen.** Monitors differ a lot. The brightness floors are measured
+  in the screenshots, but the last word is your eyes, so the Night brightness slider is part of the task, not an extra.
 - **Layout change.** A third core column moves every project room one column east. Rooms are placed by slot, so the
   sim and the camera fit handle it, but every screenshot and test that assumes two core columns needs updating.

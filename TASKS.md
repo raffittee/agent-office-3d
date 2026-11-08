@@ -25,7 +25,7 @@ The plan, phase by phase. [CLAUDE.md](CLAUDE.md) has the design, contracts and r
 | 7. Interact | Approve, answer, message, read-only conversation view | Local-only actions work, with tests |
 | 8. Release | Security, accessibility, docs, packaging | v0.1.0 tagged |
 | 9. Distribution | Release pipeline, Windows desktop app and widget | Installer built, tested and published by the pipeline |
-| 10. Look & the Boss | Lighting, furniture, rooms, human agents, UI polish, and the Boss (you) | Humans by default, the Boss reacts to your work, budget met at `medium` |
+| 10. Look & the Boss | Lighting, day/night, reflective windows, furniture, rooms, human agents, UI polish, and the Boss (you) | Humans by default, the Boss reacts to your work, day and night easy to read, budget met at `medium` |
 
 **Dependencies:**
 
@@ -715,11 +715,17 @@ open questions and your go-ahead**. The plan has the decisions, the Boss's behav
   queue and cooldown, cosmetic reactions only.
 - [ ] **P10-15 Presence** (S) — page visibility and input; desktop idle time through the preload.
 - [ ] **P10-16 Interactive tie-in** (S) — approving, answering and messaging send the Boss to the agent.
+- [ ] **P10-19 Day/night rework** (M, after P10-03) — exposure curve and tested brightness floors in
+  `core/daylight.ts`, daylight in unlit rooms, lamp light pools, rim light at night, a Night brightness setting,
+  golden shots at four hours with a brightness check.
+- [ ] **P10-20 Reflective windows and sunlight** (M, after P10-19) — glass that reflects a sky environment map, sun
+  glints that follow the sun, sunlight patches on the floor, lit windows glowing at night.
 - [ ] **P10-17 (stretch) Drive the Boss** — click to walk, follow-cam.
 - [ ] **P10-18 Performance and close** (M) — `docs/perf.md` per tier, soak, screenshots, CHANGELOG, ASSETS, ADRs.
 
 **Exit:** humans by default (the robot as a setting), the Boss in their office reacting to your work, all five themes
-updated, golden shots reviewed by you, and at `medium` at most 300 draw calls for 30 agents and 15 rooms in CI and
+updated, day and night both easy to read with windows that catch the sun, golden shots reviewed by you, and at
+`medium` at most 300 draw calls for 30 agents and 15 rooms in CI and
 60 fps on an integrated GPU.
 
 ---

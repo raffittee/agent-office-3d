@@ -15,7 +15,9 @@ import { seasonalEntry, seasonFor, type Season, type SeasonMode } from '../theme
 import type { SoundCue } from '../audio/scheduler';
 import { SoundCues, type SoundView } from '../core/sound-cues';
 import { EffectsView } from './effects';
+import { LampView } from './lamps';
 import { ModelView } from './models';
+import { rimAt } from './rim';
 import { loadRigModel, RigView } from './rig';
 import { ambientAt, approachAmbient, clampNightBrightness, effectiveHour, lightLevelsAt, NIGHT_BRIGHTNESS_DEFAULT, parseHourParam, type Ambient, type DaylightMode } from '../core/daylight';
 import { updateGlass } from './glass';
@@ -119,7 +121,8 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
   };
   const screens = new ScreenView();
   const effects = new EffectsView();
-  scene.add(building.root, models.root, chars.root, screens.mesh, effects.root);
+  const lamps = new LampView();
+  scene.add(building.root, models.root, chars.root, screens.mesh, effects.root, lamps.root);
   const applyTheme = (next: ThemeEntry) => {
     theme = next;
     applyLighting(parts, next.look);
@@ -153,7 +156,12 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
     building.setAmbient(levels, ambient.inside);
     models.levels = levels;
     chars.setGain(levels.charGain);
-    if (rig) rig.gain = levels.charGain;
+    chars.rim = rimAt(levels.glassGlow);
+    if (rig) {
+      rig.gain = levels.charGain;
+      rig.rim = rimAt(levels.glassGlow);
+    }
+    lamps.setLevels(levels);
     updateGlass(ambient, levels, parts.sun.color, parts.sky.colors.sunDir);
   };
   const offThemes = onThemesChanged(() => applyTheme(themeFor(theme.look.id)));
@@ -332,6 +340,7 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
     building.sync(sim, rig2d.yaw, options.cutaway, now);
     models.sync(sim, now);
     screens.sync(sim, now);
+    lamps.sync(sim, theme.look, now);
     const onScreen = (c: { x: number; y: number }) => {
       tmpV.set(mx(c.x), 0.8, mz(c.y));
       rig2d.project(tmpV, pt);
@@ -462,6 +471,7 @@ export function createWorld(canvas: HTMLCanvasElement, overlayParent: HTMLElemen
       models.dispose();
       effects.dispose();
       screens.dispose();
+      lamps.dispose();
       chars.dispose();
       parts.dispose();
     },

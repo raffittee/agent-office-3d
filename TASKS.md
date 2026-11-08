@@ -721,10 +721,12 @@ open questions and your go-ahead**. The plan has the decisions, the Boss's behav
   queue and cooldown, cosmetic reactions only.
 - [ ] **P10-15 Presence** (S) — page visibility and input; desktop idle time through the preload.
 - [ ] **P10-16 Interactive tie-in** (S) — approving, answering and messaging send the Boss to the agent.
-- [ ] **P10-19 Day/night rework** (M, after P10-03) — mostly done: `lightLevelsAt` with tested brightness floors
-  (`core/daylight.ts`), a sunnier day, daylight in unlit rooms, a Night brightness setting, and
-  `npm run shot -- --golden` (four hours, a measured brightness floor each; CI). **Still open:** warm lamp light pools
-  at night, and a rim light on characters.
+- [x] **P10-19 Day/night rework** (M, after P10-03) — done: `lightLevelsAt` with tested brightness floors
+  (`core/daylight.ts`), a sunnier day, daylight in unlit rooms, a Night brightness setting, `npm run shot -- --golden`
+  (four hours, a measured brightness floor each; CI); at night a lit room's floor lamps and ceiling fixtures cast warm
+  pools on the floor and nearby desks (one instanced additive mesh, +1 draw call, clipped to the room;
+  `render3d/lamps.ts`, `lamps-model.ts`), and characters get a fresnel rim light (`rim.ts`, `rig.ts`, `characters.ts`).
+  Strength was tuned by eye on software WebGL: check it on a real GPU.
 - [x] **P10-20 Reflective windows and sunlight** (M, after P10-19) — glass that reflects a sky environment map, sun
   glints that follow the sun, sunlight patches on the floor, lit windows glowing at night — done: `render3d/glass.ts`
   (reflective glass, sun glint band that follows `sunAt`, warm glow in lit rooms after dark), the sun's path in

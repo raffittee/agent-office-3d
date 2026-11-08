@@ -11,8 +11,11 @@ import type { RoomState } from '../core/sim/room-state';
 import type { Sim } from '../core/sim/sim';
 import { FURNITURE, TILE, type FurnitureKind } from '../core/vocab';
 import type { Look, SurfacePattern } from '../themes/look';
-import { busySpans, decorFor, type FullWall } from './decor';
+import { busyAbove, busySpans, decorFor, doorParts, fixturesFor, switchBoxes, windowBoxes, type DecorBox, type FullWall } from './decor';
+import { exteriorBoxes, mixHex } from './exterior';
 import { furnitureParts, wallItemShape, type PartMaterial } from './kit';
+import { SignView, type SignStyle } from './signs';
+import { besideDoor, pickSpan, signLabel, signSize, type SignSpec } from './signs-model';
 import { CUT_H, mx, mz, TILE_M, UNIT_M } from './units';
 
 /** Wall display: walls facing the camera cut to CUT_H ('cut') or almost removed ('hide'). */
@@ -120,6 +123,8 @@ export interface AreaView {
   solid: THREE.MeshLambertMaterial;
   glass: THREE.MeshLambertMaterial;
   glow: THREE.MeshBasicMaterial;
+  /** Plaques for the area's name (backing built into the meshes; the lettering is drawn by SignView). */
+  signs: { spec: SignSpec; style: SignStyle }[];
   dispose(): void;
 }
 
@@ -155,12 +160,40 @@ function runs(x: number, w: number, doorways: { x: number; w: number }[] | undef
   return out;
 }
 
-/** Builds one area's meshes. */
-export function buildArea(area: AreaLayout, ctx: BuildCtx): AreaView {
+/** The cap stone of an outer wall: its trim, lightened. */
+function copingColor(trim: string): string {
+  return mixHex(trim, '#ffffff', 0.3);
+}
+
+/** An open door leaf (hinge at the jamb, swung into the room) as a box geometry. */
+function leafGeometry(l: NonNullable<ReturnType<typeof doorParts>['leaf']>): THREE.BufferGeometry {
+  const g = new THREE.BoxGeometry(l.len, l.h, 0.04).translate(l.len / 2, l.h / 2 + 0.02, 0);
+  g.rotateY(-l.roomSide * l.angle);
+  g.translate(l.hx, 0, l.hz);
+  return colored(g, l.color);
+}
+
+const pushBoxes = (out: THREE.BufferGeometry[] | Bucket, boxes: readonly DecorBox[]): void => {
+  for (const d of boxes) (Array.isArray(out) ? out : out[d.mat]).push(box(d.x0, d.x1, d.y0, d.y1, d.z0, d.z1, d.color));
+};
+
+/** Builds one area's meshes. `accent` = the room's accent color (door leaves); default the theme's. */
+export function buildArea(area: AreaLayout, ctx: BuildCtx, accent: string = ctx.look.pack.palette.accent): AreaView {
   const bucket: Bucket = { solid: [], glass: [], glow: [] };
 
   const look = ctx.look;
   const H = look.wallHeight;
+  // plaques with the area's name: the backing is built here, the lettering by SignView
+  const signs: AreaView['signs'] = [];
+  const signStyle: SignStyle = { bg: '#33373d', fg: '#f4f1ea', accent };
+  const plaque = (kind: SignSpec['kind'], cx: number, y: number, plane: number, dir: 1 | -1, h: number): void => {
+    const q = signSize(h);
+    const z0 = Math.min(plane, plane + dir * 0.035);
+    const z1 = Math.max(plane, plane + dir * 0.035);
+    bucket.solid.push(box(cx - q.w / 2 - 0.03, cx + q.w / 2 + 0.03, y - h / 2 - 0.03, y + h / 2 + 0.03, z0, z1, signStyle.bg));
+    signs.push({ spec: { kind, x: cx, y, z: plane + dir * 0.04, nx: 0, nz: dir, w: q.w, h: q.h }, style: signStyle });
+  };
+  const hasSignItem = area.wallItems.some((i) => i.kind === 'sign');
   // ---- floors and rugs
   for (const f of area.floors) {
     const { color, pattern } = look.floor(area.kind, f.kind, f.tint);
@@ -172,8 +205,15 @@ export function buildArea(area: AreaLayout, ctx: BuildCtx): AreaView {
   // ---- walls
   const fullWalls: WallSegment[] = [];
   const decorWalls: FullWall[] = [];
+  /** Cut north-wall runs (room side up), for a name plaque when there is no full wall to hang it on. */
+  const cutFaces: { a0: number; a1: number; plane: number; h: number }[] = [];
   const wainscot = look.decor.find((d) => d.kind === 'wainscot' && (d.on === 'everywhere' || (d.on === 'rooms') === (area.kind === 'room')));
   const widthOf = (k: FurnitureKind) => FURNITURE[k].footprint.w;
+  /** How high a wall item reaches (m). */
+  const topOf = (k: FurnitureKind): number => {
+    const s = wallItemShape(k);
+    return s ? s.y + s.h / 2 : 0;
+  };
   let wallSeed = 0;
   for (const w of area.walls) {
     wallSeed++;
@@ -209,18 +249,56 @@ export function buildArea(area: AreaLayout, ctx: BuildCtx): AreaView {
       }
       wallBox(bucket.solid, x0, x1, h, z0, z1, base, wl.pattern, area.id.length * 31 + wallSeed);
       bucket.solid.push(box(x0, x1, h, h + 0.02, z0, z1, trim));
+      // the roof edge of an outer wall facing away from the camera: a coping that overhangs a little
+      if (full) bucket.solid.push(box(x0 - 0.05, x1 + 0.05, h + 0.02, h + 0.07, z0 - 0.05, z1 + 0.05, copingColor(trim)));
       if (w.kind !== 'cap') {
         // skirting on the room side
         const zs = w.kind === 'face' ? z1 : z0;
         bucket.solid.push(box(x0, x1, 0, Math.min(h, 0.1), zs - 0.012, zs + 0.012, trim));
         if (wainscot) bucket.solid.push(box(x0, x1, 0.1, Math.max(0.12, Math.min(h - 0.04, 0.95)), zs - 0.014, zs + 0.014, wainscot.color ?? '#8a6a4a'));
       }
-      if (!full) continue;
+      if (!full) {
+        if (w.kind === 'face' && ctx.cutaway === 'cut') cutFaces.push({ a0: x0, a1: x1, plane: z1, h });
+        continue;
+      }
       // full walls carry the theme's wall decor
       if (w.kind === 'face') decorWalls.push({ axis: 'x', a0: x0, a1: x1, plane: z1, normal: 1, busy: busySpans(area, 'face', widthOf) });
       else if (w.kind === 'south') decorWalls.push({ axis: 'x', a0: x0, a1: x1, plane: z0, normal: -1, busy: busySpans(area, 'south', widthOf) });
       else if (x0 <= 0.5) decorWalls.push({ axis: 'z', a0: z0, a1: z1, plane: x1, normal: 1, busy: [] });
       else decorWalls.push({ axis: 'z', a0: z0, a1: z1, plane: x0, normal: -1, busy: [] });
+    }
+
+    // ---- doorways: jambs and a lintel (a post on each side of a glass or low partition), an open door, a plaque
+    if (w.kind === 'cap') continue;
+    const depth = w.kind === 'face' ? 2 * TILE : TILE;
+    const wz0 = mz(w.y);
+    const wz1 = mz(w.y + depth);
+    const roomSide: 1 | -1 = w.kind === 'face' ? 1 : -1;
+    for (const dw of w.doorways ?? []) {
+      const dx0 = mx(dw.x);
+      const dx1 = mx(dw.x + dw.w);
+      // the name by the door of a room: on the camera side of a cut wall or a partition, or inside a full south wall
+      const pw = signSize(0.22).w + 0.06;
+      const run = { a0: mx(w.x), a1: mx(w.x + w.w) };
+      const named = area.kind !== 'corridor';
+      if (partition) {
+        const cz = (wz0 + wz1) / 2;
+        const ph = partition === 'glass' ? 1.22 : 0.54;
+        bucket.solid.push(box(dx0, dx0 + 0.05, 0, ph, cz - 0.05, cz + 0.05, trim), box(dx1 - 0.05, dx1, 0, ph, cz - 0.05, cz + 0.05, trim));
+        const a = named ? besideDoor({ x0: dx0, x1: dx1 }, run, [], pw) : null;
+        if (a !== null) plaque('door', a + pw / 2, partition === 'glass' ? 0.62 : 0.3, cz + 0.04, 1, 0.22);
+        continue;
+      }
+      const parts = doorParts({ x0: dx0, x1: dx1, z0: wz0, z1: wz1, h, full, wallHeight: H, base, trim, coping: copingColor(trim), leaf: accent, roomSide });
+      pushBoxes(bucket, parts.boxes);
+      if (parts.leaf) bucket.solid.push(leafGeometry(parts.leaf));
+      if (named && full && w.kind === 'south') {
+        const a = besideDoor({ x0: dx0, x1: dx1 }, run, busySpans(area, 'south', widthOf), pw);
+        if (a !== null) plaque('door', a + pw / 2, 1.75, wz0, -1, 0.22);
+      } else if (named && !full && ctx.cutaway === 'cut') {
+        const a = besideDoor({ x0: dx0, x1: dx1 }, run, [], pw);
+        if (a !== null) plaque('door', a + pw / 2, h / 2, wz1, 1, 0.22);
+      }
     }
   }
 
@@ -233,6 +311,22 @@ export function buildArea(area: AreaLayout, ctx: BuildCtx): AreaView {
     const onFull = fullWalls.some((w) => (w.kind === 'face') === (it.on === 'face') && it.cx >= w.x && it.cx <= w.x + w.w && Math.abs((w.kind === 'face' ? w.y + 2 * TILE : w.y) - (it.on === 'face' ? it.baseY : it.baseY - TILE)) < 1);
     if (!onFull && !shape.low) continue;
     const half = (FURNITURE[it.kind].footprint.w * TILE_M) / 2 - 0.05;
+    const dir: 1 | -1 = it.on === 'face' ? 1 : -1;
+    if (onFull && it.kind === 'window') {
+      // a framed window with a sill, mullions and a pane set back from the frame
+      const wall = fullWalls[0];
+      const trim = wall ? look.wall(area.kind, wall.style).trim : '#9aa3ad';
+      pushBoxes(bucket, windowBoxes({ cx: mx(it.cx), y: shape.y, w: half * 2, h: shape.h, plane: z, dir, frame: shade(trim, 0.9), sky: mixHex('#8fc4ea', look.lighting.sky, 0.25) }));
+      continue;
+    }
+    if (onFull && it.kind === 'sign') {
+      plaque('wall', mx(it.cx), shape.y, z, dir, 0.3);
+      continue;
+    }
+    if (onFull && it.kind === 'light_switch') {
+      pushBoxes(bucket, switchBoxes(mx(it.cx), z, dir, it.variant !== 'off'));
+      continue;
+    }
     const dz = it.on === 'face' ? 0.03 : -0.03;
     bucket[shape.mat ?? 'solid'].push(box(mx(it.cx) - half, mx(it.cx) + half, shape.y - shape.h / 2, shape.y + shape.h / 2, Math.min(z, z + dz), Math.max(z, z + dz), shape.color));
     if (it.kind === 'whiteboard') bucket.solid.push(box(mx(it.cx) - half - 0.03, mx(it.cx) + half + 0.03, shape.y - shape.h / 2 - 0.04, shape.y - shape.h / 2, z, z + 0.06, '#9aa3ad'));
@@ -248,6 +342,34 @@ export function buildArea(area: AreaLayout, ctx: BuildCtx): AreaView {
 
   // ---- theme decor
   for (const d of decorFor(area, decorWalls, look.decor, { wallHeight: H, accent: look.pack.palette.accent, practical: look.lighting.practical })) bucket[d.mat].push(box(d.x0, d.x1, d.y0, d.y1, d.z0, d.z1, d.color));
+
+  // ---- the area's name where it has no sign item or named doorway: on the widest free stretch of a full north wall
+  if (!hasSignItem && !signs.length && area.kind !== 'corridor') {
+    const q = signSize(0.3);
+    const py = Math.min(2.35, H - 0.4);
+    const faces = decorWalls.filter((fw) => fw.axis === 'x' && fw.normal === 1).sort((a, b) => b.a1 - b.a0 - (a.a1 - a.a0));
+    for (const fw of faces) {
+      // only what reaches up to the plaque's height is in its way
+      const a = pickSpan(fw.a0, fw.a1, busyAbove(area, 'face', widthOf, py - 0.18, topOf), q.w + 0.06);
+      if (a === null) continue;
+      plaque('wall', a + (q.w + 0.06) / 2, py, fw.plane, 1, 0.3);
+      break;
+    }
+    // no full wall (the south row): low on the camera side of a cut one, like a door plaque
+    if (!signs.length) {
+      const pw = signSize(0.22).w + 0.06;
+      for (const cf of [...cutFaces].sort((a, b) => b.a1 - b.a0 - (a.a1 - a.a0))) {
+        const a = pickSpan(cf.a0, cf.a1, [], pw);
+        if (a === null) continue;
+        plaque('door', a + pw / 2, cf.h / 2, cf.plane, 1, 0.22);
+        break;
+      }
+    }
+  }
+
+  // ---- light fixtures hanging from the far walls (clear of the items that reach up there)
+  const lampWalls: FullWall[] = decorWalls.map((fw) => ({ ...fw, busy: fw.axis === 'x' ? busyAbove(area, fw.normal === 1 ? 'face' : 'south', widthOf, H - 0.85, topOf) : [] }));
+  pushBoxes(bucket, fixturesFor(lampWalls, look.decor, { wallHeight: H, accent: look.pack.palette.accent, practical: look.lighting.practical }));
 
   const group = new THREE.Group();
   group.name = area.id;
@@ -273,6 +395,7 @@ export function buildArea(area: AreaLayout, ctx: BuildCtx): AreaView {
     solid,
     glass,
     glow,
+    signs,
     dispose() {
       group.traverse((o) => {
         if (o instanceof THREE.Mesh) o.geometry.dispose();
@@ -307,9 +430,13 @@ export class BuildingView {
   private views = new Map<string, { key: string; layout: AreaLayout; view: AreaView }>();
   private doors: THREE.Mesh[] = [];
   private doorMat = new THREE.MeshLambertMaterial({ color: '#9aa4ae' });
-  private ground: THREE.Mesh;
-  private groundMat = new THREE.MeshLambertMaterial({ color: '#cbc6bc' });
-  private cols = -1;
+  /** The surroundings (foundation, sidewalk, lawn, lamps, trees): one solid mesh and one glow mesh, rebuilt with the cutaway side. */
+  private exterior: THREE.Mesh[] = [];
+  private exteriorMat = new THREE.MeshLambertMaterial({ vertexColors: true });
+  private exteriorGlow = new THREE.MeshBasicMaterial({ vertexColors: true });
+  private exteriorKey = '';
+  /** The room name plaques: one instanced quad for all of them. */
+  private signs = new SignView();
   private look: Look;
   private lookRev = 0;
   private modelled: ReadonlySet<FurnitureKind> = new Set();
@@ -325,11 +452,8 @@ export class BuildingView {
   constructor(look: Look) {
     this.root.name = 'building';
     this.look = look;
-    // a ground plate under the building, so it reads as a diorama
-    this.ground = new THREE.Mesh(new THREE.BoxGeometry(1, 0.3, 1), this.groundMat);
-    this.ground.position.y = -0.151;
-    this.root.add(this.ground);
-    this.groundMat.color.set(look.groundColor);
+    // the plaques sit in the scene root's space: their matrices follow each room's build animation themselves
+    this.root.add(this.signs.mesh);
   }
 
   /** A new theme (or the same one, reloaded): every area is rebuilt on the next sync. */
@@ -337,7 +461,31 @@ export class BuildingView {
     this.look = look;
     this.modelled = modelled;
     this.lookRev++;
-    this.groundMat.color.set(look.groundColor);
+  }
+
+  /** (Re)builds the surroundings: a diorama base with a foundation strip, sidewalk, curb, lawn, lamps and trees. */
+  private buildExterior(w: number, d: number, far: ReturnType<typeof farSides>): void {
+    for (const m of this.exterior) {
+      this.root.remove(m);
+      m.geometry.dispose();
+    }
+    this.exterior = [];
+    const boxes = exteriorBoxes({ w, d, ground: this.look.groundColor, practical: this.look.lighting.practical, far });
+    const solid: THREE.BufferGeometry[] = [];
+    const glow: THREE.BufferGeometry[] = [];
+    for (const b of boxes) (b.mat === 'glow' ? glow : solid).push(box(b.x0, b.x1, b.y0, b.y1, b.z0, b.z1, b.color));
+    for (const [parts, mat] of [[solid, this.exteriorMat], [glow, this.exteriorGlow]] as const) {
+      if (!parts.length) continue;
+      const geo = mergeGeometries(parts);
+      for (const p of parts) p.dispose();
+      if (!geo) continue;
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.name = 'exterior';
+      mesh.matrixAutoUpdate = false;
+      mesh.receiveShadow = true;
+      this.exterior.push(mesh);
+      this.root.add(mesh);
+    }
   }
 
   /** Brings meshes in line with the sim; call every frame (cheap when nothing changed). */
@@ -349,6 +497,7 @@ export class BuildingView {
     if (b.edge) areas.push({ layout: b.edge });
     for (const room of sim.rooms.values()) if (room.present) areas.push({ layout: room.layout, room });
     const seen = new Set<string>();
+    this.signs.begin();
     for (const { layout, room } of areas) {
       const key = `${b.cols}|${quad}|${cutaway}|${room?.version ?? 0}|${this.lookRev}`;
       seen.add(layout.id);
@@ -358,7 +507,7 @@ export class BuildingView {
           this.root.remove(cur.view.group);
           cur.view.dispose();
         }
-        cur = { key, layout, view: buildArea(layout, ctx) };
+        cur = { key, layout, view: buildArea(layout, ctx, room?.theme.accent) };
         this.views.set(layout.id, cur);
         this.root.add(cur.view.group);
       }
@@ -375,20 +524,28 @@ export class BuildingView {
         cur.view.solid.color.copy(this.inside);
         cur.view.glass.color.copy(this.inside);
       }
+      // the area's name on its plaques (a room's own name; the core areas' fixed names)
+      if (cur.view.signs.length) {
+        const label = signLabel(layout.id, room?.info.name);
+        if (label) for (const s of cur.view.signs) this.signs.add(s.spec, label, s.style, g.scale.y, cur.view.solid.color);
+      }
     }
+    this.signs.end();
     for (const [id, cur] of this.views) {
       if (seen.has(id)) continue;
       this.root.remove(cur.view.group);
       cur.view.dispose();
       this.views.delete(id);
     }
-    if (b.cols !== this.cols) {
-      this.cols = b.cols;
-      const w = b.rect.w * TILE_M;
-      const d = b.rect.h * TILE_M;
-      this.ground.scale.set(w + 1.2, 1, d + 1.2);
-      this.ground.position.set(w / 2, -0.151, d / 2);
+    const w = b.rect.w * TILE_M;
+    const d = b.rect.h * TILE_M;
+    const extKey = `${w}|${d}|${quad}|${this.lookRev}`;
+    if (extKey !== this.exteriorKey) {
+      this.exteriorKey = extKey;
+      this.buildExterior(w, d, farSides(yawDeg));
     }
+    // street lamps are brighter at night
+    this.exteriorGlow.color.setScalar(0.6 + 0.4 * this.night);
     this.syncDoors(sim);
   }
 
@@ -425,6 +582,10 @@ export class BuildingView {
     for (const cur of this.views.values()) cur.view.dispose();
     this.views.clear();
     this.doorMat.dispose();
-    this.groundMat.dispose();
+    for (const m of this.exterior) m.geometry.dispose();
+    this.exterior = [];
+    this.exteriorMat.dispose();
+    this.exteriorGlow.dispose();
+    this.signs.dispose();
   }
 }

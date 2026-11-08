@@ -670,9 +670,19 @@ real agent folders.
   `.zip` and `.tar.gz` with `SHA256SUMS`. `scripts/package-smoke.mjs` unpacks the archive on Linux, Windows and macOS
   and runs the server and the installer; normal CI runs it on Linux and Windows. Also fixed `/api/health` always
   reporting `demo: false`.
-- [ ] **P9-02 Desktop widget** (L) — proposed, not started (waiting for your go-ahead): an Electron shell with a compact,
-  always-on-top window, a tray badge for agents that need you, and installers (`.exe`, `.dmg`, AppImage) built by the
-  same pipeline.
+- [ ] **Desktop app and widget** (L) — planned in [docs/plans/desktop-widget.md](docs/plans/desktop-widget.md), waiting
+  for approval: an Electron shell with a compact always-on-top widget, a tray badge for agents that need you, and a
+  Windows installer built by the release pipeline.
+  - [ ] **P9-02 Scaffold** (ADR 0007, `desktop/` package, `npm run desktop:dev`)
+  - [ ] **P9-03 Server host** (port, adopt or spawn the server, single instance)
+  - [ ] **P9-04 Window and hardening** (preload, navigation and permission locks, remembered bounds)
+  - [ ] **P9-05 Widget mode** (compact page, frameless, always on top, click-through, auto-fit)
+  - [ ] **P9-06 Tray and attention** (tray menu, overlay dot, notifications, hide to tray)
+  - [ ] **P9-07 Integrations** (install hooks from the app; explain the Node-on-PATH limit)
+  - [ ] **P9-08 Packaging** (NSIS per-user installer, icon, bundled release package)
+  - [ ] **P9-09 Pipeline** (Electron smoke test in CI; installer in the `release` workflow)
+  - [ ] **P9-10 Docs and close**
+  - [ ] **P9-11 (later) macOS and Linux**
 
 ---
 

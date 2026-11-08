@@ -94,12 +94,14 @@ export function releaseNotes(version: string, section: string): string {
 
 ## Install
 
-You need Node.js 22.12 or newer. Download the package for your system, unpack it and run the installer:
+- **Windows desktop app (no Node.js needed):** \`Agent-Office-Setup-${version}.exe\`. It installs for your user only and
+  adds a window, a small always-on-top widget and a tray icon. Windows may warn about an unknown publisher because the
+  installer is not signed yet: choose *More info*, then *Run anyway*.
+- **Command line package (needs Node.js 22.12 or newer):**
+  - Windows: \`${name}.zip\`, then \`powershell -ExecutionPolicy Bypass -File .\\install.ps1\`
+  - Linux and macOS: \`${name}.tar.gz\`, then \`./install.sh\`
 
-- **Windows:** \`${name}.zip\`, then \`powershell -ExecutionPolicy Bypass -File .\\install.ps1\`
-- **Linux and macOS:** \`${name}.tar.gz\`, then \`./install.sh\`
-
-\`SHA256SUMS\` lists the checksums. Details are in the package's README.md.
+\`SHA256SUMS\` lists the checksums. Details are in the package's README.md and in docs/desktop.md.
 `;
 }
 

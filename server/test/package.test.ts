@@ -55,6 +55,7 @@ describe('package', () => {
     expect(notes.startsWith('Body.\n')).toBe(true);
     expect(notes).toContain('agent-office-0.1.0.zip');
     expect(notes).toContain('agent-office-0.1.0.tar.gz');
+    expect(notes).toContain('Agent-Office-Setup-0.1.0.exe');
     expect(notes).toContain('SHA256SUMS');
   });
 

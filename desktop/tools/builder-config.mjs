@@ -22,7 +22,8 @@ export function builderConfig({ version, packageDir, editExecutable = true, elec
     extraResources: [{ from: packageDir, to: 'package' }],
     win: {
       target: [{ target: 'nsis', arch: ['x64'] }],
-      icon: 'assets/icon.png',
+      // a ready-made .ico: with a .png electron-builder converts it with a helper it downloads from GitHub
+      icon: 'assets/icon.ico',
       signAndEditExecutable: editExecutable,
       artifactName: 'Agent-Office-Setup-${version}.${ext}',
     },

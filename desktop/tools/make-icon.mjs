@@ -104,6 +104,26 @@ function png(size, rgba) {
   return Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), chunk('IHDR', ihdr), chunk('IDAT', deflateSync(raw, { level: 9 })), chunk('IEND', Buffer.alloc(0))]);
 }
 
+/** A Windows .ico made of PNG images (supported since Windows Vista): the app icon in the sizes Windows asks for. */
+function ico(sizes, spec) {
+  const images = sizes.map((size) => png(size, render(size, spec)));
+  const head = Buffer.alloc(6 + 16 * sizes.length);
+  head.writeUInt16LE(1, 2); // type: icon
+  head.writeUInt16LE(sizes.length, 4);
+  let offset = head.length;
+  sizes.forEach((size, i) => {
+    const e = 6 + 16 * i;
+    head[e] = size >= 256 ? 0 : size; // 0 means 256
+    head[e + 1] = size >= 256 ? 0 : size;
+    head.writeUInt16LE(1, e + 4); // planes
+    head.writeUInt16LE(32, e + 6); // bits per pixel
+    head.writeUInt32LE(images[i].length, e + 8);
+    head.writeUInt32LE(offset, e + 12);
+    offset += images[i].length;
+  });
+  return Buffer.concat([head, ...images]);
+}
+
 mkdirSync(OUT, { recursive: true });
 const files = {
   'icon.png': [512, layers({ background: true })],
@@ -115,3 +135,5 @@ for (const [name, [size, spec]] of Object.entries(files)) {
   writeFileSync(join(OUT, name), png(size, render(size, spec)));
   console.log(`wrote desktop/assets/${name} (${size}x${size})`);
 }
+writeFileSync(join(OUT, 'icon.ico'), ico([16, 24, 32, 48, 64, 128, 256], layers({ background: true })));
+console.log('wrote desktop/assets/icon.ico (16 to 256)');

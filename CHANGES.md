@@ -850,6 +850,8 @@ Branch `phase-1`. One commit per task, each pushed. At the end of the phase ther
 - **In the pipeline.** The `release` workflow now also builds the installer, installs it silently, starts it, drives it
   and uninstalls it, and publishes it with the other files. Normal CI builds the app on Windows and runs the same test.
 - **Also:** the server shuts down cleanly when its parent app asks (needed on Windows); `/api/health`-based adoption.
+- **Builds without needless downloads.** The app reuses the Electron files npm already fetched and ships a ready-made `.ico`,
+  so building it no longer depends on extra GitHub downloads, which were timing out (504) during this work.
 - **Needs your machine:** how it looks and behaves on a real desktop (widget on top, click-through, tray and taskbar
   badge, notifications, high-DPI screens). Windows will warn about an unknown publisher: the installer is unsigned.
 

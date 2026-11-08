@@ -30,6 +30,13 @@ if (!argv.includes('--skip-package')) {
 const packageDir = join(root, 'release', `agent-office-${version}`);
 run('node', ['build.mjs'], desktop);
 
+// electron-builder crashes on a failed download without saying which one: say it
+process.on('uncaughtException', (err) => {
+  const url = err?.options?.url ?? err?.response?.url;
+  console.error(`desktop: ${err?.message ?? err}${url ? `\n  while fetching ${url}` : ''}`);
+  process.exit(1);
+});
+
 const { build, Platform } = createRequire(join(desktop, 'package.json'))('electron-builder');
 const targets = argv.includes('--dir') ? Platform.current().createTarget('dir') : Platform.WINDOWS.createTarget(['nsis']);
 // the unpacked build is for testing: no icon or version info in the .exe, so no helper tools to download from GitHub

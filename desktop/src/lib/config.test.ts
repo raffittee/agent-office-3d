@@ -19,6 +19,23 @@ describe('installer config', () => {
     expect(builderConfig({ version: '1.2.3', packageDir: '/x', editExecutable: false }).win.signAndEditExecutable).toBe(false);
   });
 
+  it('uses a ready-made .ico, so no icon converter has to be downloaded', () => {
+    expect(config.win.icon).toBe('assets/icon.ico');
+    const file = readFileSync(fileURLToPath(new URL('../../assets/icon.ico', import.meta.url)));
+    expect(file.readUInt16LE(2)).toBe(1); // an icon
+    const count = file.readUInt16LE(4);
+    const sizes = Array.from({ length: count }, (_, i) => file[6 + 16 * i] || 256);
+    expect(sizes).toContain(256);
+    expect(sizes).toEqual([...sizes].sort((a, b) => a - b));
+    // every image is a PNG that lies inside the file
+    for (let i = 0; i < count; i++) {
+      const size = file.readUInt32LE(6 + 16 * i + 8);
+      const offset = file.readUInt32LE(6 + 16 * i + 12);
+      expect(offset + size).toBeLessThanOrEqual(file.length);
+      expect(file.subarray(offset, offset + 4).toString('latin1')).toBe('\x89PNG');
+    }
+  });
+
   it('can reuse the Electron files npm installed instead of downloading them again', () => {
     expect(config.electronDist).toBeUndefined();
     expect(builderConfig({ version: '1.2.3', packageDir: '/x', electronDist: '/d/node_modules/electron/dist' }).electronDist).toBe('/d/node_modules/electron/dist');

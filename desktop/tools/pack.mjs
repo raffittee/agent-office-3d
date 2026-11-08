@@ -32,5 +32,7 @@ run('node', ['build.mjs'], desktop);
 
 const { build, Platform } = createRequire(join(desktop, 'package.json'))('electron-builder');
 const targets = argv.includes('--dir') ? Platform.current().createTarget('dir') : Platform.WINDOWS.createTarget(['nsis']);
-await build({ targets, config: builderConfig({ version, packageDir }), projectDir: desktop, publish: 'never' });
+// the unpacked build is for testing: no icon or version info in the .exe, so no helper tools to download from GitHub
+const editExecutable = !argv.includes('--dir');
+await build({ targets, config: builderConfig({ version, packageDir, editExecutable }), projectDir: desktop, publish: 'never' });
 console.log(`desktop: built Agent Office ${version} in desktop/out`);

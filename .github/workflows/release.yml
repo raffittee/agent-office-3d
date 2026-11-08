@@ -151,7 +151,7 @@ jobs:
       - name: Install Electron and electron-builder
         run: node desktop/tools/retry.mjs 3 20 -- npm run desktop:install
       - name: Build the installer
-        run: node desktop/tools/retry.mjs 4 30 -- node desktop/tools/pack.mjs
+        run: node desktop/tools/retry.mjs 6 60 -- node desktop/tools/pack.mjs
 
       - name: Checksum
         shell: bash

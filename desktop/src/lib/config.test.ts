@@ -14,6 +14,11 @@ describe('installer config', () => {
     expect(config.win.artifactName).toBe('Agent-Office-Setup-${version}.${ext}');
   });
 
+  it('edits the exe (icon, version info) only for the real installer', () => {
+    expect(config.win.signAndEditExecutable).toBe(true);
+    expect(builderConfig({ version: '1.2.3', packageDir: '/x', editExecutable: false }).win.signAndEditExecutable).toBe(false);
+  });
+
   it('bundles the release package as real files', () => {
     expect(config.extraResources).toEqual([{ from: '/x/release/agent-office-1.2.3', to: 'package' }]);
     expect(config.extraMetadata).toEqual({ version: '1.2.3', main: 'dist/main.cjs' });

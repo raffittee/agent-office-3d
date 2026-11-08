@@ -24,6 +24,8 @@ The plan, phase by phase. [CLAUDE.md](CLAUDE.md) has the design, contracts and r
 | 6. Life & atmosphere | Social life, day/night, effects, sounds, notifications | The office feels alive (subjective review) |
 | 7. Interact | Approve, answer, message, read-only conversation view | Local-only actions work, with tests |
 | 8. Release | Security, accessibility, docs, packaging | v0.1.0 tagged |
+| 9. Distribution | Release pipeline, Windows desktop app and widget | Installer built, tested and published by the pipeline |
+| 10. Look & the Boss | Lighting, furniture, rooms, human agents, UI polish, and the Boss (you) | Humans by default, the Boss reacts to your work, budget met at `medium` |
 
 **Dependencies:**
 
@@ -31,6 +33,7 @@ The plan, phase by phase. [CLAUDE.md](CLAUDE.md) has the design, contracts and r
 - Phase 3 can start once P2-07 is done, and runs alongside Phase 4.
 - Phase 5 can start once Phase 1 is done.
 - Phases 6 and 7 need Phase 2.
+- In Phase 10, the human character tasks (P10-07..09) need the P10-01 spike; the rest can start right away.
 
 ---
 
@@ -688,11 +691,44 @@ real agent folders.
 
 ---
 
+## Phase 10: Look & feel, human agents, the Boss
+
+Planned in [docs/plans/graphics-and-boss.md](docs/plans/graphics-and-boss.md), **waiting for your answers to its
+open questions and your go-ahead**. The plan has the decisions, the Boss's behavior rules and the details per task.
+
+- [ ] **P10-01 Spike: the human pack** (M) — Universal Base Characters + Universal Animation Library: bones, clips,
+  triangles, 30 in the renderer; `docs/spikes/humans.md`, ADR 0008 (supersedes ADR 0005). Needs the download.
+- [ ] **P10-02 Art direction** (S) — `docs/art-direction.md`, golden shots (`npm run shot -- --golden`).
+- [ ] **P10-03 Renderer and lighting** (M) — tone mapping, Standard-lite materials, tiered sun shadows, sky; ADR 0009.
+- [ ] **P10-04 Post-fx on high** (M) — SSAO, bloom, SMAA; theme `postfx` honored on the `high` tier.
+- [ ] **P10-05 Kit v2** (L) — beveled furniture, details, baked AO and contact shadows, hero props as models.
+- [ ] **P10-06 Rooms and the building** (L) — windows, doors, ceiling fixtures, room signs, KTX2 textures, exterior.
+- [ ] **P10-07 Human character build** (M) — pipeline entry, profile, palette slots, LOD, budget tests.
+- [ ] **P10-08 Appearance v2** (M) — seed → body, skin, hair, outfit, accessories; theme dress codes.
+- [ ] **P10-09 Animation polish** (M) — library clips, retuned layers, blinking, stride matching.
+- [ ] **P10-10 Theme refresh** (M) — all five packs, thumbnails, `theme:check`.
+- [ ] **P10-11 UI polish** (M) — design tokens, dark mode, consistent panels and labels, Boss chip.
+- [ ] **P10-12 The Boss's office** (M) — `core:boss` area in every template, `boss_desk`/`boss_chair` kinds.
+- [ ] **P10-13 The Boss's look and settings** (M) — Settings → Boss editor (the backlog's character editor), saved
+  locally, never from account data.
+- [ ] **P10-14 The Boss director** (L) — pure `client/src/core/boss/director.ts`: errands from snapshot changes,
+  queue and cooldown, cosmetic reactions only.
+- [ ] **P10-15 Presence** (S) — page visibility and input; desktop idle time through the preload.
+- [ ] **P10-16 Interactive tie-in** (S) — approving, answering and messaging send the Boss to the agent.
+- [ ] **P10-17 (stretch) Drive the Boss** — click to walk, follow-cam.
+- [ ] **P10-18 Performance and close** (M) — `docs/perf.md` per tier, soak, screenshots, CHANGELOG, ASSETS, ADRs.
+
+**Exit:** humans by default (the robot as a setting), the Boss in their office reacting to your work, all five themes
+updated, golden shots reviewed by you, and at `medium` at most 300 draw calls for 30 agents and 15 rooms in CI and
+60 fps on an integrated GPU.
+
+---
+
 ## Backlog (unscheduled)
 
 - Day timelapse (**Ref:** `server/history/timeline.ts`, `shared/timeline.ts`, `client/src/ui/timelapse.ts`).
 - "My day" stats (**Ref:** `shared/daystats.ts`, `server/history/daystats.ts`).
-- Character editor (**Ref:** `client/src/ui/character-editor.ts`).
+- Character editor (**Ref:** `client/src/ui/character-editor.ts`). Planned as P10-13 for the Boss.
 - Phone access with a login (**Ref:** `server/remote/*`).
 - Multi-floor buildings, with elevators between floors.
 - A WebXR / VR walk-through.

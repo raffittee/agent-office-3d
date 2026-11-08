@@ -1,6 +1,6 @@
 # Agent Office — guide for AI agents
 
-> **Status: Phases 0–9 done (Phase 9: the Windows desktop app and widget; macOS and Linux builds are P9-11, later), v0.1.0 prepared (pending on the user's machine: a live Gemini CLI check, the frame-rate checks, the Claude usage tap, a look and listen at Phase 6, the Phase 7 hook and plugin on a real session, Docker against real agent folders, and the desktop app on a real desktop: widget, tray, notifications). Next: the backlog in TASKS.md.** The phased plan lives in [TASKS.md](TASKS.md).
+> **Status: Phases 0–9 done (Phase 9: the Windows desktop app and widget; macOS and Linux builds are P9-11, later), v0.1.0 prepared (pending on the user's machine: a live Gemini CLI check, the frame-rate checks, the Claude usage tap, a look and listen at Phase 6, the Phase 7 hook and plugin on a real session, Docker against real agent folders, and the desktop app on a real desktop: widget, tray, notifications). Next: Phase 10 (look and feel, human agents, the Boss), planned in [docs/plans/graphics-and-boss.md](docs/plans/graphics-and-boss.md) and waiting for approval.** The phased plan lives in [TASKS.md](TASKS.md).
 > Provider facts: [docs/providers/](docs/providers/). Decisions: [docs/adr/](docs/adr/). Spike results:
 > [docs/spikes/](docs/spikes/).
 

@@ -81,7 +81,7 @@ its own and sends no telemetry; updates are a manual download. See [security.md]
 
 ```bash
 npm ci
-npm run desktop:install      # Electron and electron-builder, in desktop/ (about 150 MB)
+npm run desktop:install      # Electron and electron-builder, in desktop/, then Electron's own installer (about 250 MB)
 npm run desktop:dev          # build the web app and the package, then start the app (AGENT_OFFICE_DEMO=1 for demo agents)
 npm run desktop:build        # the Windows installer: desktop/out/Agent-Office-Setup-<version>.exe (on Windows)
 node desktop/tools/pack.mjs --dir    # just the unpacked app, which the smoke test runs

@@ -44,5 +44,6 @@ const editExecutable = !argv.includes('--dir');
 // Electron itself was downloaded and checked by `npm ci` (in desktop/): reuse it instead of downloading it again
 const dist = join(desktop, 'node_modules', 'electron', 'dist');
 const electronDist = existsSync(join(dist, process.platform === 'win32' ? 'electron.exe' : 'electron')) ? dist : undefined;
+if (!electronDist) console.warn('desktop: no Electron files in desktop/node_modules/electron/dist (run npm run desktop:install): electron-builder will download them');
 await build({ targets, config: builderConfig({ version, packageDir, editExecutable, electronDist }), projectDir: desktop, publish: 'never' });
 console.log(`desktop: built Agent Office ${version} in desktop/out`);

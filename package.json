@@ -35,7 +35,7 @@
     "release": "tsx scripts/release.ts",
     "package": "tsx scripts/package.ts",
     "package:smoke": "node scripts/package-smoke.mjs",
-    "desktop:install": "npm ci --prefix desktop",
+    "desktop:install": "npm ci --prefix desktop && node desktop/node_modules/electron/install.js",
     "desktop:dev": "node desktop/tools/dev.mjs",
     "desktop:build": "node desktop/tools/pack.mjs",
     "desktop:typecheck": "npm run typecheck --prefix desktop"

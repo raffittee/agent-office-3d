@@ -15,6 +15,8 @@ function run(cmd, args, cwd) {
 }
 
 if (!existsSync(join(desktop, 'node_modules', 'electron'))) run('npm', ['ci'], desktop);
+// Electron no longer downloads its binary when installed from npm: this does it (once)
+if (!existsSync(join(desktop, 'node_modules', 'electron', 'dist'))) run('node', [join('node_modules', 'electron', 'install.js')], desktop);
 run('npm', ['run', 'build'], root);
 run('npm', ['run', 'package'], root);
 run('node', ['build.mjs'], desktop);

@@ -865,3 +865,10 @@ Branch `phase-1`. One commit per task, each pushed. At the end of the phase ther
   runner with no graphics card (the widget itself passed every check), and cleaning up a locked temp file then crashed the
   test before it could report. Screenshots are now best-effort and the cleanup waits for Windows to release the file.
 
+### Fix: the hooks dialog no longer says Node.js is missing when it is only slow — 2026-11-08 20:12
+
+- The desktop app's "Hooks and integrations" dialog started `node --version` and treated any error, a slow start included,
+  as "Node.js not found". It now looks for the `node` file on the PATH, reads its version with a longer limit and one retry,
+  and says so plainly if Node is there but its version can't be read. This failed once in the release pipeline, right after
+  installing the app, when Windows was busy scanning the new files.
+

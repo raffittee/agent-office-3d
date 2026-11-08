@@ -21,7 +21,7 @@ export function glintPhase(hour: number): number {
 
 /** Updates the shared sun uniforms from the ambient and the light levels. */
 export function updateGlass(a: Ambient, levels: LightLevels, sunColor: THREE.Color, sunDir: THREE.Vector3): void {
-  glassShared.uGlint.value.copy(sunColor).multiplyScalar(levels.glint * 1.6);
+  glassShared.uGlint.value.copy(sunColor).multiplyScalar(levels.glint * 2.1);
   glassShared.uGlintPhase.value = glintPhase(a.hour);
   glassShared.uSunDir.value.copy(sunDir).normalize();
 }

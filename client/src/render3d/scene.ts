@@ -173,6 +173,15 @@ export function applyLighting(parts: SceneParts, look: Look): void {
   applyDaylight(parts, look, a, lightLevelsAt(a, { hemi: look.lighting.intensity, sun: look.lighting.sunIntensity }));
 }
 
+/**
+ * The sun's offset from the building's centre, in metres. East (+x) at sunrise, west (−x) at sunset, and always on the
+ * camera's side (+z) and a little to the left at noon, so that the shadows fall away from the viewer sideways, where
+ * the isometric camera sees them. About 55° above the horizon at noon, low at dawn and dusk (long shadows).
+ */
+export function sunPosition(azimuth: number, elevation: number): { x: number; y: number; z: number } {
+  return { x: Math.cos(azimuth) * 40 - 10 * elevation, y: 8 + elevation * 24, z: 22 };
+}
+
 const NIGHT_SKY = new THREE.Color('#7e8fd0');
 const DAWN_SUN = new THREE.Color('#ffb070');
 const MOON = new THREE.Color('#9fb4ff');
@@ -217,8 +226,8 @@ export function applyDaylight(parts: SceneParts, look: Look, a: Ambient, levels:
   const sun = sunAt(a.hour);
   const target = parts.sun.target.position;
   if (sun.up && n < 0.95) {
-    const el = 0.2 + 0.8 * sun.elevation;
-    parts.sun.position.set(target.x + Math.cos(sun.azimuth) * 42, target.y + 14 + el * 42, target.z + 14 + 8 * (1 - sun.elevation));
+    const p = sunPosition(sun.azimuth, sun.elevation);
+    parts.sun.position.set(target.x + p.x, target.y + p.y, target.z + p.z);
   } else parts.sun.position.set(target.x - 20, target.y + 45, target.z + 25);
   // the sky: a clear blue by day, warm at the horizon at dawn and dusk, deep blue at night
   const out = tmpB.setRGB(a.outside[0] / 255, a.outside[1] / 255, a.outside[2] / 255, THREE.SRGBColorSpace);

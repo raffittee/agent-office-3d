@@ -186,7 +186,7 @@ function irradiance(l: Pick<LightLevels, 'hemi' | 'sun' | 'exposure'>, base: Bas
 export function lightLevelsAt(a: Ambient, base: BaseLight, nightBrightness: number = NIGHT_BRIGHTNESS_DEFAULT): LightLevels {
   const n = clamp(a.night, 0, 1);
   const s = clampNightBrightness(nightBrightness);
-  const day = { hemi: 0.78, sun: 1.6, exposure: 1.06 };
+  const day = { hemi: 0.8, sun: 2.1, exposure: 1.14 };
   const globals = { hemi: lerp(day.hemi, 0.42, n), sun: lerp(day.sun, 0.32, n), exposure: lerp(day.exposure, 1.18, n) };
   const ref = irradiance(day, base);
   const now = Math.max(1e-6, irradiance(globals, base));

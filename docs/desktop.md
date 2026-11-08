@@ -87,6 +87,10 @@ npm run desktop:build        # the Windows installer: desktop/out/Agent-Office-S
 node desktop/tools/pack.mjs --dir    # just the unpacked app, which the smoke test runs
 ```
 
+If a download fails with `504 Gateway Time-out` (GitHub's release downloads do that now and then), run the command again: the
+downloads are cached, so it picks up where it stopped. `node desktop/tools/retry.mjs 4 30 -- npm run desktop:build` does
+that for you; CI uses it too.
+
 How it is built and why: [ADR 0007](adr/0007-desktop-app.md). The release pipeline builds and tests the installer too
 ([releasing.md](releasing.md)).
 

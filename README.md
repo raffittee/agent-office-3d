@@ -20,7 +20,13 @@ open session becomes a room, and each agent is a character in it:
   - never opens credential files;
   - masks secrets and sends no telemetry.
 
-## Install a release
+## Desktop app (Windows)
+
+Download `Agent-Office-Setup-<version>.exe` from the [Releases page](../../releases): no Node.js needed. It gives you a
+window, a small always-on-top **widget** and a **tray icon** that shows when an agent needs you. Windows may warn
+about an unknown publisher because the installer isn't signed yet. Details: [docs/desktop.md](docs/desktop.md).
+
+## Install a release (command line)
 
 Download the package from the [Releases page](../../releases) (`.zip` for Windows, `.tar.gz` for Linux and macOS), unpack
 it and run the installer. You need Node.js 22.12 or newer.

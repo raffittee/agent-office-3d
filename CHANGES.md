@@ -832,3 +832,28 @@ Branch `phase-1`. One commit per task, each pushed. At the end of the phase ther
 - **Fixed:** `/api/health` always said `demo: false`, even in demo mode.
 - Still open: the desktop widget (P9-02) is proposed, not started.
 
+### P9-02 to P9-10 Desktop app and widget — done, 2026-11-08 18:03
+
+- **A Windows desktop app.** `Agent-Office-Setup-<version>.exe` installs for your user (no administrator prompt, no
+  Node.js needed) and runs the office in its own window. See [docs/desktop.md](docs/desktop.md).
+- **A widget.** Switch to a small frameless window with one slim bar (how many agents need you or work, plus buttons to
+  keep it on top, frame the office, open the full window, minimize and close). It stays on top if you want, can be made
+  see-through to the mouse with `Ctrl+Alt+C`, remembers where you put it, and keeps the whole office in view.
+- **A tray icon.** It gets a red dot, the taskbar button an overlay dot, and a notification appears, when an agent starts
+  waiting for you. The close button hides the app to the tray. Optional: start with Windows.
+- **Hooks from the app.** A dialog installs and removes the Gemini CLI, Codex, Claude Code and plan-usage hooks, and says
+  when Node.js is missing (those hooks need it; Claude Code does not).
+- **Safe by default.** The window can only show the app's own local page; the page has no Node access and talks to the
+  app through a few checked messages; only notifications are allowed as a permission; the app makes no network calls.
+- **Already running?** If Agent Office is already running (say, started from a terminal), the app uses it instead of
+  starting a second one. If the server it started stops, the app restarts it a few times.
+- **In the pipeline.** The `release` workflow now also builds the installer, installs it silently, starts it, drives it
+  and uninstalls it, and publishes it with the other files. Normal CI builds the app on Windows and runs the same test.
+- **Also:** the server shuts down cleanly when its parent app asks (needed on Windows); `/api/health`-based adoption.
+- **Needs your machine:** how it looks and behaves on a real desktop (widget on top, click-through, tray and taskbar
+  badge, notifications, high-DPI screens). Windows will warn about an unknown publisher: the installer is unsigned.
+
+### Phase 9 closed — 2026-11-08 18:03
+
+- P9-02 to P9-10 are ticked; P9-11 (macOS and Linux builds) is left for later. Pull request `phase-9` → `main`.
+

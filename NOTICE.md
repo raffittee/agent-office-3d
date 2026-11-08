@@ -36,3 +36,9 @@ SOFTWARE.
 ## Assets
 
 Third-party 3D models, textures and sounds are listed in `ASSETS.md` with their source, author and license.
+
+## Desktop app
+
+The Windows installer bundles [Electron](https://www.electronjs.org/) (MIT) and Chromium (BSD-style and other
+licenses). Their license files (`LICENSE.electron.txt`, `LICENSES.chromium.html`) are installed next to the app.
+

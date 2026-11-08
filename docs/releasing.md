@@ -9,6 +9,7 @@ The pipeline is [`.github/workflows/release.yml`](../.github/workflows/release.y
 | --- | --- |
 | `agent-office-<version>.zip` | Windows (also fine anywhere) |
 | `agent-office-<version>.tar.gz` | Linux and macOS |
+| `Agent-Office-Setup-<version>.exe` | The Windows desktop app ([desktop.md](desktop.md)): no Node.js needed |
 | `SHA256SUMS` | Checking the downloads |
 
 Both archives hold the same package: the built server and client, the hook shims, the two installers (bundled, so
@@ -45,10 +46,13 @@ A pre-release version (`0.2.0-rc.1`) is published as a GitHub pre-release.
    demo mode, checks `/api/health`, the page, its script, the snapshot and the Host-header guard, runs the bundled
    hook installers, and runs the package's own installer: install, upgrade, run the installed command, uninstall.
    Normal CI runs the same smoke test on Linux and Windows on every push, so problems show up before release day.
-3. **publish** (Linux): only if 1 and 2 passed. It re-verifies the checksums, refuses to overwrite an existing tag,
-   and creates the tag on the exact commit that was tested, with the release notes and the three files.
+3. **desktop** (Windows): builds the installer, installs it silently, starts the installed app and drives it (server
+   up, widget mode, no Node access in the page, integrations listed), then uninstalls it and checks nothing is left.
+   Normal CI builds the unpacked app and runs the same smoke test on every push.
+4. **publish** (Linux): only if 1, 2 and 3 passed. It re-verifies the checksums of every file, refuses to overwrite an existing tag,
+   and creates the tag on the exact commit that was tested, with the release notes and the files.
 
-Running **Actions › Release › Run workflow** by hand does steps 1 and 2 only, from any branch, without publishing.
+Running **Actions › Release › Run workflow** by hand does steps 1 to 3 only, from any branch, without publishing.
 Tick "Publish" (and run it from `release`) to publish.
 
 ## If something goes wrong

@@ -43,7 +43,11 @@ Read [docs/interactive.md](docs/interactive.md) for setup and risks.
 
 ### Run it
 
-- **Install a release:** download the `.zip` (Windows) or `.tar.gz` (Linux, macOS), unpack it, and run `install.ps1` or
+- **Windows desktop app:** `Agent-Office-Setup-<version>.exe` installs for your user (no administrator prompt, no
+  Node.js needed). It has a full window, a small always-on-top **widget**, a tray icon that shows when an agent needs
+  you, notifications, and a dialog to install the Gemini CLI, Codex and Claude Code hooks. Windows may warn about an
+  unknown publisher: the installer isn't signed yet. See [docs/desktop.md](docs/desktop.md).
+- **Install a release (command line):** download the `.zip` (Windows) or `.tar.gz` (Linux, macOS), unpack it, and run `install.ps1` or
   `install.sh`. It sets up an `agent-office` command and, on Windows, a Start Menu shortcut. Details are in the package's
   README.
 - **From source:**

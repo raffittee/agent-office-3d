@@ -29,3 +29,10 @@ and P3-01 ([ADR 0005](docs/adr/0005-interim-character.md)). `npm run assets:fetc
 | `themes/modern/thumb.png` | Own work: a screenshot of the office in this theme, rendered by `npm run shot -- --thumbs` | CC0 1.0 |
 | `themes/startup/thumb.png` | Own work: a screenshot of the office in this theme, rendered by `npm run shot -- --thumbs` | CC0 1.0 |
 | `themes/traditional/thumb.png` | Own work: a screenshot of the office in this theme, rendered by `npm run shot -- --thumbs` | CC0 1.0 |
+
+## Desktop app icons
+
+| File | Source | License |
+| --- | --- | --- |
+| `desktop/assets/icon.png`, `tray.png`, `tray-alert.png`, `overlay.png` | Original artwork drawn by `desktop/tools/make-icon.mjs` (an isometric cube, a lamp dot, a red alert dot). Nothing third-party. | MIT, same as the project |
+

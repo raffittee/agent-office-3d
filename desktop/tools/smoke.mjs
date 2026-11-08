@@ -70,7 +70,7 @@ let browser = null;
 const log = [];
 
 try {
-  app = spawn(exe, [`--remote-debugging-port=${debugPort}`, `--user-data-dir=${join(data, 'user')}`], {
+  app = spawn(exe, [`--remote-debugging-port=${debugPort}`, `--user-data-dir=${join(data, 'user')}`, '--use-angle=swiftshader', '--ignore-gpu-blocklist'], {
     env: { ...process.env, HOME: data, USERPROFILE: data, AGENT_OFFICE_DATA_DIR: join(data, 'office'), AGENT_OFFICE_DEMO: '1', AGENT_OFFICE_PORT: String(port) },
     stdio: ['ignore', 'pipe', 'pipe'],
     windowsHide: false,

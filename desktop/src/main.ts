@@ -17,6 +17,10 @@ import { nextAction } from './lib/supervisor';
 import { fitBounds, MIN_SIZE, type Mode } from './lib/windowState';
 
 const APP_ID = 'com.agentoffice.desktop';
+
+// On a computer with no usable GPU (a virtual machine, a remote desktop) Chromium refuses WebGL unless software
+// rendering is explicitly allowed. This only permits the fallback: with a GPU nothing changes.
+app.commandLine.appendSwitch('enable-unsafe-swiftshader');
 const HOTKEY_TOGGLE = 'CommandOrControl+Alt+O';
 const HOTKEY_CLICK_THROUGH = 'CommandOrControl+Alt+C';
 

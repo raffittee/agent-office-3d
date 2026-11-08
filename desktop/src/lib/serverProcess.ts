@@ -59,7 +59,8 @@ export async function startServer(o: ServerOptions): Promise<ServerHandle> {
 
   let stopping = false;
   const exited = new Promise<{ code: number | null; signal: NodeJS.Signals | null }>((resolve) => {
-    child.once('exit', (code, signal) => resolve({ code, signal }));
+    // 'close', not 'exit': it comes after the output pipes are drained, so the last lines are in `tail`
+    child.once('close', (code, signal) => resolve({ code, signal }));
     child.once('error', (err) => {
       push(`spawn error: ${err.message}`);
       resolve({ code: null, signal: null });

@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import type { Character } from '../core/sim/character';
 import type { HeldItem } from '../core/vocab';
 import { dirYaw, HIP_Y, lookColors, poseRig, turnTowards } from './pose';
+import { addRim, type RimUniform } from './rim';
 import { mx, mz } from './units';
 
 const HELD_COLORS: Partial<Record<HeldItem, string>> = {
@@ -68,8 +69,16 @@ export class CharacterView {
     this.mat.color.setScalar(gain);
   }
 
+  /** Night rim light (P10-19): the same fresnel outline glow the rigged characters get (rim.ts), so they match. */
+  set rim(v: number) {
+    this.rimUniform.value = v;
+  }
+
+  private readonly rimUniform: RimUniform = { value: 0 };
+
   constructor() {
     this.root.name = 'characters';
+    addRim(this.mat, this.rimUniform);
     this.ensure(32);
   }
 

@@ -11,6 +11,7 @@ import type { CharacterProfile, RigBone, RigClip } from '../../../shared/charact
 import type { Character } from '../core/sim/character';
 import type { HeldItem, Pose } from '../core/vocab';
 import { dirYaw, isSeatedPose, lookColors, poseRig, turnTowards } from './pose';
+import { addRim, type RimUniform } from './rim';
 import { mx, mz } from './units';
 
 export interface RigModel {
@@ -54,7 +55,7 @@ varying float vTint;
 `;
 
 /** One material per character: vertex colors, with the `_tint` mask recolored by `uTint`. */
-function tintedMaterial(base: THREE.Material, tint: THREE.Color): THREE.MeshLambertMaterial {
+function tintedMaterial(base: THREE.Material, tint: THREE.Color, rim: RimUniform): THREE.MeshLambertMaterial {
   const m = new THREE.MeshLambertMaterial({ vertexColors: true });
   if ('color' in base && base.color instanceof THREE.Color) m.color.copy(base.color);
   const uTint = { value: tint };
@@ -65,6 +66,8 @@ function tintedMaterial(base: THREE.Material, tint: THREE.Color): THREE.MeshLamb
       'uniform vec3 uTint;\nvarying float vTint;\n' + shader.fragmentShader.replace('#include <color_fragment>', '#include <color_fragment>\n diffuseColor.rgb *= mix(vec3(1.0), uTint, vTint);');
   };
   m.customProgramCacheKey = () => 'agent-office-tint';
+  // the night rim light (rim.ts): one more term in the same shader, still one material per character
+  addRim(m, rim);
   return m;
 }
 
@@ -154,6 +157,14 @@ export class RigView {
   private frame = 0;
   /** Day and night (P10-19): brightness gain on every character, so they stay readable after dark. */
   gain = 1;
+  /** Night rim light (P10-19): a fresnel glow on every outline (0 = off, see `rimAt`), so people stand out from dark floors. */
+  readonly rimUniform: RimUniform = { value: 0 };
+  get rim(): number {
+    return this.rimUniform.value;
+  }
+  set rim(v: number) {
+    this.rimUniform.value = v;
+  }
   /** The sun casts shadows: characters cast them (set before the first sync). */
   castShadows = false;
 
@@ -201,7 +212,7 @@ export class RigView {
     if (!mesh) throw new Error('character model has no skinned mesh');
     const sm = mesh as THREE.SkinnedMesh;
     const look = lookColors(c.info.seed, c.info.kind === 'sub');
-    const material = tintedMaterial(sm.material as THREE.Material, new THREE.Color(look.shirt));
+    const material = tintedMaterial(sm.material as THREE.Material, new THREE.Color(look.shirt), this.rimUniform);
     sm.material = material;
     sm.frustumCulled = false;
     sm.castShadow = this.castShadows;

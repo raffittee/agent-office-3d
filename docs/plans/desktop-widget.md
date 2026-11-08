@@ -1,6 +1,6 @@
 # Plan: Agent Office as a desktop app and widget (Phase 9)
 
-Status: **plan, awaiting approval**. Nothing here is built yet. Written 2026-11-08.
+Status: **plan, decisions made, awaiting your go-ahead to build**. Nothing here is built yet. Written 2026-11-08.
 
 ## Goal
 
@@ -25,7 +25,7 @@ Windows first. macOS (`.dmg`) and Linux (AppImage) use the same code and are a l
 | 5 | **Separate `desktop/` package** with its own `package.json` and lockfile (Electron and electron-builder are devDependencies there only) | Keeps `npm ci` at the repo root and in normal CI free of a ~100 MB Electron download. This amends D11 ("one npm package"); it gets ADR 0007. |
 | 6 | Installer: **NSIS, per user** (electron-builder), x64 | No admin prompt, easy uninstall, standard. MSI and the Store are not needed. |
 | 7 | **Hardened by default:** `contextIsolation`, `sandbox`, no `nodeIntegration`, the window can load only `http://127.0.0.1:<port>`, new windows and navigation blocked, external links open in the default browser (http/https only), every permission denied except notifications | The page is local and trusted, but the app must not become a way to load anything else. Same rules as `docs/security.md`. |
-| 8 | The app adds **no network calls** and no telemetry. Updates are a **manual download** in v1 | Keeps the "no outbound calls" promise. Opt-in auto-update is a possible later step (open question 2). |
+| 8 | The app adds **no network calls** and no telemetry. Updates are a **manual download** in v1 | Keeps the "no outbound calls" promise. Opt-in auto-update is a possible later step (decision 2 below: manual). |
 
 ## How it fits together
 
@@ -98,7 +98,7 @@ The cloud session may not be able to download the Electron binary; if so, the re
 2. **Transparent windows plus WebGL** can glitch on some GPUs and drivers. Widget mode ships opaque by default; a
    transparent background is an opt-in setting.
 3. **Unsigned installer.** Windows SmartScreen shows "unknown publisher" until the app is signed and has reputation
-   (open question 1).
+   (decision 1 below: unsigned for now).
 4. **Electron's bundled Node must be 22.12 or newer** (the server needs it). I check `process.versions.node` in the
    smoke test and pin the exact Electron version.
 5. **Port clash or stale server.** Covered by adopting a healthy server and by the saved port; the health response
@@ -116,9 +116,9 @@ The cloud session may not be able to download the Electron binary; if so, the re
 - Uninstall removes the app and the hooks, and keeps `~/.agent-office`.
 - The release pipeline publishes the installer next to the existing `.zip` and `.tar.gz`, only after its tests pass.
 
-## Open questions for you
+## Decisions you made
 
-1. **Code signing.** Unsigned (free; SmartScreen warns on first run) or signed (needs a certificate, or Azure Artifact
-   Signing at roughly $10 a month)? Recommended: unsigned for now; it can be added later without redoing anything.
-2. **Updates.** Manual download (matches "no outbound calls") or an opt-in "check for updates" that contacts GitHub
-   Releases? Recommended: manual in v1.
+1. **Code signing: unsigned for now.** SmartScreen will warn on first run; `docs/desktop.md` will say what to click.
+   Signing can be added later without redoing anything.
+2. **Updates: manual download.** The app makes no network calls of its own. An opt-in update check stays on the
+   backlog.

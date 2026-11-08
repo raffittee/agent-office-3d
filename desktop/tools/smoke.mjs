@@ -69,6 +69,15 @@ let app = null;
 let browser = null;
 const log = [];
 const pageLog = [];
+/** A screenshot is evidence, not a check: on a runner without a GPU a frame can take longer than any timeout. */
+async function shoot(page, name) {
+  if (!out) return;
+  try {
+    await page.screenshot({ path: join(out, name), timeout: 15_000 });
+  } catch (err) {
+    console.log(`! could not take ${name}: ${String(err instanceof Error ? err.message : err).split('\n')[0]}`);
+  }
+}
 /** Remember what a page prints, throws and when it crashes: shown when a check fails. */
 function watch(page) {
   if (page.__watched) return page;
@@ -117,7 +126,7 @@ try {
   await page.waitForFunction(() => (window.agentOffice.store.snapshot?.agents.length ?? 0) > 0, null, { timeout: 30_000 });
   check('demo agents reach the page', true);
   await page.waitForTimeout(1500);
-  if (out) await page.screenshot({ path: join(out, 'desktop-window.png') });
+  await shoot(page, 'desktop-window.png');
   const top = await page.evaluate(() => getComputedStyle(document.querySelector('.ui-topbar')).display);
   check('the top bar is shown in window mode', top !== 'none');
 
@@ -142,7 +151,7 @@ try {
   check('the widget is small', size.w <= 600 && size.h <= 450, JSON.stringify(size));
   await waitEval(page, () => (window.agentOffice?.store.snapshot?.agents.length ?? 0) > 0, 'agents in the widget');
   await sleep(1500);
-  if (out) await page.screenshot({ path: join(out, 'desktop-widget.png') });
+  await shoot(page, 'desktop-widget.png');
   const wstate = await page.evaluate(() => window.agentOfficeShell.getState());
   check('the shell reports widget mode, kept on top', wstate?.mode === 'widget' && wstate?.pinned === true, JSON.stringify(wstate));
 
@@ -173,7 +182,12 @@ try {
   }
   await sleep(1500);
   check('the server went away with the app', (await health(port)) === null);
-  rmSync(data, { recursive: true, force: true });
+  try {
+    // Windows may still hold a file of the app's cache for a moment: wait, and never let cleanup hide the result
+    rmSync(data, { recursive: true, force: true, maxRetries: 10, retryDelay: 500 });
+  } catch (err) {
+    console.log(`! could not remove ${data}: ${err instanceof Error ? err.message : err}`);
+  }
 }
 const failed = checks.filter((c) => !c.ok);
 console.log(failed.length ? `\n${failed.length} of ${checks.length} checks failed.` : `\nAll ${checks.length} checks passed.`);

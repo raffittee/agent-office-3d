@@ -859,3 +859,9 @@ Branch `phase-1`. One commit per task, each pushed. At the end of the phase ther
 
 - P9-02 to P9-10 are ticked; P9-11 (macOS and Linux builds) is left for later. Pull request `phase-9` → `main`.
 
+### Fix: desktop smoke test flake on `main` — 2026-11-08 19:30
+
+- The Windows desktop test failed once on `main` after the merge: a screenshot of the widget took longer than 30 s on a
+  runner with no graphics card (the widget itself passed every check), and cleaning up a locked temp file then crashed the
+  test before it could report. Screenshots are now best-effort and the cleanup waits for Windows to release the file.
+

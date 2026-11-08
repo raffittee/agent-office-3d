@@ -10,7 +10,7 @@ window. Everything in [README.md](../README.md) about providers, hooks and priva
 
 1. Download `Agent-Office-Setup-<version>.exe` from the [Releases page](../../releases).
 2. Run it. It installs **for your user only** (no administrator prompt) under
-   `%LOCALAPPDATA%\Programs\Agent Office` and starts the app.
+   `%LOCALAPPDATA%\Programs\agent-office-desktop` and starts the app.
 3. Windows may say **"Windows protected your PC"** or "unknown publisher". The installer isn't signed yet. Choose
    *More info*, then *Run anyway*. The checksum is on the release page (`SHA256SUMS`) if you want to verify the file:
    `Get-FileHash Agent-Office-Setup-<version>.exe`.

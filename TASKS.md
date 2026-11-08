@@ -708,7 +708,12 @@ open questions and your go-ahead**. The plan has the decisions, the Boss's behav
   (`sky.ts`). Still open: the Standard-lite materials (the building is still Lambert) and ADR 0009.
 - [ ] **P10-04 Post-fx on high** (M) — SSAO, bloom, SMAA; theme `postfx` honored on the `high` tier.
 - [ ] **P10-05 Kit v2** (L) — beveled furniture, details, baked AO and contact shadows, hero props as models.
-- [ ] **P10-06 Rooms and the building** (L) — windows, doors, ceiling fixtures, room signs, KTX2 textures, exterior.
+- [x] **P10-06 Rooms and the building** (L) — done (procedural, no new assets): framed windows with a recessed pane,
+  door frames with lintels and open leaves, light switch plates, wall-hung lamps that glow at night, room-name plaques
+  (one atlas draw call), a coping on the far outer walls, and a foundation, sidewalk, curb, lawn, lamp posts, planters
+  and trees round the building (`render3d/{building,decor,exterior,signs,signs-model}.ts`). Not done: KTX2 floor and wall
+  textures (no texture source reachable from here). Known: plaque text is small at the full overview zoom; an open door
+  leaf can clip a character standing at the jamb.
 - [ ] **P10-07 Human character build** (M) — pipeline entry, profile, palette slots, LOD, budget tests.
 - [ ] **P10-08 Appearance v2** (M) — seed → body, skin, hair, outfit, accessories; theme dress codes.
 - [ ] **P10-09 Animation polish** (M) — library clips, retuned layers, blinking, stride matching.

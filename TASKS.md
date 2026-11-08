@@ -700,6 +700,9 @@ open questions and your go-ahead**. The plan has the decisions, the Boss's behav
   triangles, 30 in the renderer; `docs/spikes/humans.md`, ADR 0008 (supersedes ADR 0005). Needs the download.
 - [ ] **P10-02 Art direction** (S) — `docs/art-direction.md`, golden shots (`npm run shot -- --golden`).
 - [ ] **P10-03 Renderer and lighting** (M) — tone mapping, Standard-lite materials, tiered sun shadows, sky; ADR 0009.
+  Partly done: Neutral tone mapping with exposure from the day/night levels, sun shadows by tier (off on low, 2048 px
+  every 2nd frame on medium, 4096 px every frame on high; `scene.ts`), the sky gradient and the sky environment map
+  (`sky.ts`). Still open: the Standard-lite materials (the building is still Lambert) and ADR 0009.
 - [ ] **P10-04 Post-fx on high** (M) — SSAO, bloom, SMAA; theme `postfx` honored on the `high` tier.
 - [ ] **P10-05 Kit v2** (L) — beveled furniture, details, baked AO and contact shadows, hero props as models.
 - [ ] **P10-06 Rooms and the building** (L) — windows, doors, ceiling fixtures, room signs, KTX2 textures, exterior.
@@ -718,8 +721,15 @@ open questions and your go-ahead**. The plan has the decisions, the Boss's behav
 - [ ] **P10-19 Day/night rework** (M, after P10-03) — exposure curve and tested brightness floors in
   `core/daylight.ts`, daylight in unlit rooms, lamp light pools, rim light at night, a Night brightness setting,
   golden shots at four hours with a brightness check.
-- [ ] **P10-20 Reflective windows and sunlight** (M, after P10-19) — glass that reflects a sky environment map, sun
-  glints that follow the sun, sunlight patches on the floor, lit windows glowing at night.
+  Partly done: `lightLevelsAt` with tested brightness floors, a brighter and sunnier day, daylight in unlit rooms, the
+  Night brightness setting, hue-only tints at night. Still open: lamp light pools, rim light at night, golden shots with
+  the brightness check in `npm run shot`.
+- [x] **P10-20 Reflective windows and sunlight** (M, after P10-19) — glass that reflects a sky environment map, sun
+  glints that follow the sun, sunlight patches on the floor, lit windows glowing at night — done: `render3d/glass.ts`
+  (reflective glass, sun glint band that follows `sunAt`, warm glow in lit rooms after dark), the sun's path in
+  `scene.ts` (`sunPosition`, about 55° at noon so shadows are long enough to see). Sunlight patches are not drawn: the
+  windows are on the far walls and the sun shines from the camera's side, so the sun's real shadows give the light in
+  rooms instead.
 - [ ] **P10-17 (stretch) Drive the Boss** — click to walk, follow-cam.
 - [ ] **P10-18 Performance and close** (M) — `docs/perf.md` per tier, soak, screenshots, CHANGELOG, ASSETS, ADRs.
 

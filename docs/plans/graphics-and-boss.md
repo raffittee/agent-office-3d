@@ -179,9 +179,10 @@ Rules that keep it calm with 30 agents:
 - **Sun glints.** A bright highlight on each window that faces the sun, positioned from `sunAt(hour)`, so it slides
   across the glass as the sun crosses the sky: cool white at midday, gold at dusk, gone at night. On `high`, bloom
   makes it glow.
-- **Sunlight coming in.** By day, a patch of sunlight falls on the floor below each window, its angle and length
-  following the sun (long and orange in the evening, short at noon), drawn as a soft decal. On `high`, a faint
-  light shaft through the air.
+- **Sunlight coming in.** Decided against floor decals: the windows are on the far (north) walls and the sun shines
+  from the camera's side, so a patch below a window would be lit from the wrong side. The sun's real shadows (casters
+  and receivers on medium and high) give the light in rooms: long and orange at dawn and dusk, shorter at noon (the
+  sun stands about 55° up, so shadows stay visible). On `high`, a faint light shaft through the air stays a stretch idea.
 - **At night, it turns around.** From outside, the glass of a lit room glows warm. Inside, the glass goes dark and
   shows a faint reflection of the room's lamps.
 - Windows on the building's outer walls (P10-06) and the glass partitions of the open-plan templates use the same
@@ -265,7 +266,7 @@ character tasks (07–09) wait for P10-01.
   setting; golden shots at 08:00, 13:30, 18:30 and 22:30, and a check in `npm run shot` that their average brightness
   stays within the target range.
 - **P10-20 Reflective windows and sunlight** (M, after P10-19) — reflective glass from a sky environment map, sun
-  glints that follow `sunAt`, sunlight patches on the floor, lit windows glowing at night; the same material for
+  glints that follow `sunAt`, real sun shadows in place of floor patches, lit windows glowing at night; the same material for
   partitions.
 - **P10-17 (stretch) Drive the Boss** — click to walk, follow-cam.
 - **P10-18 Performance and close** (M) — re-measure `docs/perf.md` (30 agents, 15 rooms, each tier), soak, new README

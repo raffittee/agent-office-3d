@@ -102,3 +102,20 @@ so this was mostly invisible, but a burst of short subagents could trigger it.
 
 Frame timing in software rendering (SwiftShader) is meaningless here, so the 60 fps check stays on the target machine
 (`?stats=1`).
+
+## Sun shadows (P10-03)
+
+The sun's shadow map is one extra pass over the casters (the merged room meshes, the furniture and the characters).
+`?quality=` picks the tier: `low` has no shadow pass, `medium` a 2048 px map refreshed every second frame, `high` a
+4096 px map refreshed every frame. Measured with `look.mjs`-style screenshots (12 sessions, 6 rooms, 13:30) and
+`npm run shot` (30 sessions):
+
+| Tier | Draw calls (12 sessions) | Triangles | Software render time |
+| --- | --- | --- | --- |
+| low (no shadows) | 35 | 40 k | 4.5 ms |
+| medium | 54 | 79 k | 78 ms |
+| high | 54 | 79 k | 144 ms |
+
+`npm run shot` at 30 sessions on medium: 70 draw calls, 124 k triangles, well under the 300 budget. The shadow pass
+adds about 19 draw calls and doubles the triangles. The times come from SwiftShader and say nothing about a GPU; check
+the frame rate with `?stats=1` on the target machine.

@@ -81,7 +81,12 @@ you leave out falls back to the default look. Colors are always `#rrggbb`.
 "lighting": { "ambient": "#ffe9d0", "ground": "#8a7a68", "ambientIntensity": 2.1, "sun": { "color": "#ffe2b8", "intensity": 1.3 }, "practicals": "edison-bulbs" }
 ```
 
-`ambient` and `ground` are the sky and floor colors of the soft fill light. `sun` is the directional light.
+`ambient` and `ground` are the sky and floor colors of the soft fill light. `sun` is the directional light. Both
+intensities are the values at midday; the renderer scales them through the day and night (`lightLevelsAt`), so don't
+bake the time of day into them. The fill sets how dark a shadow is and the sun's intensity how strong it is: a high
+`sun.intensity` over a low `ambientIntensity` gives deep, contrasty shadows, the reverse a flat look. The sun casts
+real shadows on the medium and high graphics quality (none on low); its direction is fixed by the simulation, not
+by the theme.
 `practicals` sets the color of bulbs and light strips in your decor: `edison-bulbs` (amber), `fluorescent` (cool
 white), `warm`, `neon` (your accent) or `none`. A dark office reads badly from far away, so keep `ambientIntensity`
 near 2.

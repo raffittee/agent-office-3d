@@ -92,9 +92,11 @@ Furniture is keyed by **semantic kind**: `desk`, `desk_back`, `office_chair`, `o
 `stool`, `sofa`, `armchair`, `coffee_machine`, `water_cooler`, `bookshelf`, `plant_tall` and so on. The preview page
 labels every kind. For each kind you can do one of three things, from least to most work.
 
-1. **Recolor it.** The built-in boxes have *part roles*: `body`, `top` (desk and table tops), `frame` (legs and
-   metal), `seat` (upholstery), `accent` (small details like books), `foliage`, `pot` and `screen`. Set them for
-   every kind at once with `kit`, or per kind with `colors`:
+1. **Recolor it.** The built-in shapes (boxes, chamfered boxes, cylinders, domes; furniture kit v2) have *part
+   roles*: `body`, `top` (desk and table tops), `frame` (legs and metal), `seat` (upholstery), `accent`,
+   `foliage`, `pot` and `screen`. Set them for every kind at once with `kit`, or per kind with `colors`. Small props
+   (keyboards, mugs, books, handles, lit panels) keep their own colors, so `accent` only touches what a look marks
+   as its accent. Cushions, drawer fronts and the like are a shade of their role's color, so they follow too:
 
    ```json
    "kit": { "frame": "#2b2d30", "top": "#a77b4f" },

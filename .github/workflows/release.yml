@@ -1,0 +1,168 @@
+name: Release
+
+# Push to the `release` branch to publish the version in package.json as a GitHub release:
+#   1. package: checks, build, the release package, archives (.zip, .tar.gz) and checksums
+#   2. smoke:   unpack the archive on Linux, Windows and macOS, run the server, run the installer
+#   3. publish: create tag v<version> and the release, only if 1 and 2 passed
+# Run it by hand (Actions > Release > Run workflow) to build and test without publishing. Docs: docs/releasing.md.
+on:
+  push:
+    branches: [release]
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: 'Publish the release (only from the release branch); otherwise build and test only'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+# One release at a time, and never cancel one halfway through publishing.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+env:
+  # A push to `release` publishes; a manual run publishes only when asked, and only from `release`.
+  PUBLISH: ${{ github.ref == 'refs/heads/release' && (github.event_name == 'push' || inputs.publish) }}
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22.12'
+          cache: npm
+
+      - id: version
+        run: |
+          version=$(node -p "require('./package.json').version")
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          case "$version" in *-*) echo "prerelease=true" >> "$GITHUB_OUTPUT" ;; *) echo "prerelease=false" >> "$GITHUB_OUTPUT" ;; esac
+
+      # Fail early, before the long steps, if this version was already released.
+      - name: Check the tag is free
+        if: env.PUBLISH == 'true'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if git ls-remote --exit-code --tags origin "refs/tags/v${VERSION}" > /dev/null 2>&1; then
+            echo "::error::Tag v${VERSION} already exists. Bump the version (npm run release -- <new version>), merge it, and push again."
+            exit 1
+          fi
+
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run theme:check
+      - run: npm test
+      - run: npm run build
+      - run: npm run package
+
+      - name: Archive
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          cd release
+          name="agent-office-${VERSION}"
+          epoch=$(git log -1 --format=%ct)
+          # same input, same bytes: fixed owner, order and times
+          find "$name" -exec touch -d "@${epoch}" {} +
+          tar --sort=name --owner=0 --group=0 --numeric-owner --mtime="@${epoch}" -cf - "$name" | gzip -n > "${name}.tar.gz"
+          zip -X -r -q "${name}.zip" "$name"
+          sha256sum "${name}.zip" "${name}.tar.gz" > SHA256SUMS
+          ls -l "${name}.zip" "${name}.tar.gz" SHA256SUMS
+          cat SHA256SUMS
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: agent-office-package
+          path: |
+            release/*.zip
+            release/*.tar.gz
+            release/SHA256SUMS
+            release/RELEASE_NOTES.md
+          if-no-files-found: error
+          retention-days: 14
+
+  smoke:
+    needs: package
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22.12'
+
+      - name: Download the package
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh run download "$GITHUB_RUN_ID" --name agent-office-package --dir dl
+
+      # Test the archive people will download, not the build folder.
+      - name: Unpack (Windows .zip)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: Expand-Archive -Path (Get-Item dl/agent-office-*.zip).FullName -DestinationPath unpacked
+
+      - name: Unpack (.tar.gz)
+        if: runner.os != 'Windows'
+        run: mkdir unpacked && tar -xzf dl/agent-office-*.tar.gz -C unpacked
+
+      - name: Smoke test
+        shell: bash
+        env:
+          VERSION: ${{ needs.package.outputs.version }}
+        run: node scripts/package-smoke.mjs "unpacked/agent-office-${VERSION}" --installer
+
+  publish:
+    needs: [package, smoke]
+    if: github.ref == 'refs/heads/release' && (github.event_name == 'push' || inputs.publish)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      actions: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      VERSION: ${{ needs.package.outputs.version }}
+    steps:
+      - name: Download the package
+        run: gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --name agent-office-package --dir dl
+
+      - name: Verify checksums
+        run: cd dl && sha256sum -c SHA256SUMS
+
+      - name: Create the release
+        run: |
+          if gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/v${VERSION}" > /dev/null 2>&1; then
+            echo "::error::Tag v${VERSION} already exists. Bump the version and push again."
+            exit 1
+          fi
+          flags=()
+          if [ "${{ needs.package.outputs.prerelease }}" = "true" ]; then flags+=(--prerelease); fi
+          url=$(gh release create "v${VERSION}" dl/*.zip dl/*.tar.gz dl/SHA256SUMS \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "Agent Office ${VERSION}" \
+            --notes-file dl/RELEASE_NOTES.md \
+            "${flags[@]}")
+          echo "Published ${url}"
+          echo "Published [Agent Office ${VERSION}](${url})" >> "$GITHUB_STEP_SUMMARY"

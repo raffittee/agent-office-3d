@@ -32,7 +32,9 @@
     "soak": "node --expose-gc --import tsx scripts/soak.ts",
     "docker:up": "tsx scripts/docker-up.ts",
     "docker:down": "tsx scripts/docker-up.ts down",
-    "release": "tsx scripts/release.ts"
+    "release": "tsx scripts/release.ts",
+    "package": "tsx scripts/package.ts",
+    "package:smoke": "node scripts/package-smoke.mjs"
   },
   "devDependencies": {
     "@gltf-transform/core": "4.5.1",

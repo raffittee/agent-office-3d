@@ -661,6 +661,19 @@ On your machine: install the permission hook and the messages plugin and try the
 Still to check on your machine: the 60 fps budget on a real GPU (`?stats=1`) and the Docker image against your
 real agent folders.
 
+## Phase 9: Distribution
+
+- [x] **P9-01 Release pipeline** (M) — done: a push to the `release` branch builds, tests and publishes the version in
+  `package.json` as a GitHub release (`.github/workflows/release.yml`, [docs/releasing.md](docs/releasing.md)). The
+  package (`npm run package`, `scripts/package.ts`) holds the built server and client, hooks, bundled installers, the
+  messages plugin, an `agent-office` command (`packaging/bin`) and `install.sh` / `install.ps1`; the archives are
+  `.zip` and `.tar.gz` with `SHA256SUMS`. `scripts/package-smoke.mjs` unpacks the archive on Linux, Windows and macOS
+  and runs the server and the installer; normal CI runs it on Linux and Windows. Also fixed `/api/health` always
+  reporting `demo: false`.
+- [ ] **P9-02 Desktop widget** (L) — proposed, not started (waiting for your go-ahead): an Electron shell with a compact,
+  always-on-top window, a tray badge for agents that need you, and installers (`.exe`, `.dmg`, AppImage) built by the
+  same pipeline.
+
 ---
 
 ## Backlog (unscheduled)

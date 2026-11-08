@@ -426,6 +426,7 @@ Update this table as commands land. *(planned)* marks the ones that don't exist 
 | `npm run soak -- --hours 8` | Accelerated soak: demo, reducer and client sim on a simulated clock; heap and per-frame cost (P8-02) |
 | `npm run docker:up` · `npm run docker:down` | Docker with read-only mounts of only what the office reads (`-- --dry-run` prints them) |
 | `npm run release -- <version>` | Checks, then sets the version in package.json, the lockfile and the plugin; needs a CHANGELOG.md section |
+| `npm run package` · `npm run package:smoke -- <folder> [--installer]` | Build the release package into `release/` (after `npm run build`) · unpack-and-run test of it; the `release` branch pipeline ([docs/releasing.md](docs/releasing.md)) publishes it |
 | `/preview.html?theme=<id>` | Every furniture kind of a theme side by side (hot-reloads under `npm run dev`) |
 | `npm run shot -- --themes` · `-- --thumbs` | Screenshot every theme (CI) · rewrite the theme picker thumbnails |
 

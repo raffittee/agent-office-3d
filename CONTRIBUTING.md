@@ -56,3 +56,9 @@ target.
 - Record decisions as short ADRs in `docs/adr/`.
 - Code ported from Habblaud starts with `// Ported from habblaud <path> (MIT, © 2026 Márcio Junior)`. Never port
   or contact Habblaud World, and don't use Habblaud's brand.
+
+## Releases
+
+A push to the `release` branch publishes a release. The steps and the pipeline are in
+[docs/releasing.md](docs/releasing.md). `npm run package` builds the package locally and `npm run package:smoke`
+tests it; normal CI does both on every push.

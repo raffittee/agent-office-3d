@@ -43,6 +43,9 @@ Read [docs/interactive.md](docs/interactive.md) for setup and risks.
 
 ### Run it
 
+- **Install a release:** download the `.zip` (Windows) or `.tar.gz` (Linux, macOS), unpack it, and run `install.ps1` or
+  `install.sh`. It sets up an `agent-office` command and, on Windows, a Start Menu shortcut. Details are in the package's
+  README.
 - **From source:**
   - `npm ci && npm run build && npm start`;
   - `npm run demo` shows simulated agents.

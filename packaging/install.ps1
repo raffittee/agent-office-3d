@@ -21,7 +21,14 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $here = $PSScriptRoot
-$shortcut = Join-Path ([Environment]::GetFolderPath('Programs')) 'Agent Office.lnk'
+
+# The Start Menu shortcut's path, or $null when this account has no Start Menu folder to put it in.
+function Get-ShortcutPath {
+  $programs = [Environment]::GetFolderPath('Programs')
+  if (-not $programs -and $env:APPDATA) { $programs = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs' }
+  if (-not $programs) { return $null }
+  return (Join-Path $programs 'Agent Office.lnk')
+}
 
 function Test-Ours([string]$dir) {
   $pkg = Join-Path $dir 'package.json'
@@ -41,7 +48,8 @@ if ($Uninstall) {
   if ((Test-Path -LiteralPath $cli) -and (Get-Command node -ErrorAction SilentlyContinue)) {
     & node $cli hooks uninstall --all
   }
-  if (Test-Path -LiteralPath $shortcut) { Remove-Item -LiteralPath $shortcut -Force }
+  $shortcut = Get-ShortcutPath
+  if ($shortcut -and (Test-Path -LiteralPath $shortcut)) { Remove-Item -LiteralPath $shortcut -Force }
   Remove-FromPath $Prefix
   if (Test-Path -LiteralPath $Prefix) { Remove-Item -LiteralPath $Prefix -Recurse -Force }
   Write-Host 'Agent Office removed. Its data in ~\.agent-office was kept.'
@@ -76,7 +84,9 @@ Set-Content -LiteralPath (Join-Path $Prefix 'agent-office.cmd') -Encoding Ascii 
   'exit /b %ERRORLEVEL%'
 )
 
-if (-not $NoShortcut) {
+$shortcut = if ($NoShortcut) { $null } else { Get-ShortcutPath }
+if ($shortcut) {
+  New-Item -ItemType Directory -Force -Path (Split-Path -Parent $shortcut) | Out-Null
   $ws = New-Object -ComObject WScript.Shell
   $lnk = $ws.CreateShortcut($shortcut)
   $lnk.TargetPath = $node.Source
@@ -99,7 +109,7 @@ $version = & node (Join-Path $Prefix 'bin\agent-office.mjs') version
 Write-Host "Installed Agent Office $version in $Prefix"
 Write-Host ''
 Write-Host 'Next:'
-if (-not $NoShortcut) { Write-Host '  Start Menu > Agent Office                                     run the office' }
+if ($shortcut) { Write-Host '  Start Menu > Agent Office                                     run the office' }
 Write-Host "  & `"$Prefix\agent-office.cmd`" start --open                     run the office from a terminal"
 Write-Host "  & `"$Prefix\agent-office.cmd`" hooks install --provider gemini-cli   (optional) watch Gemini CLI"
 Write-Host "  & `"$Prefix\agent-office.cmd`" hooks install --provider codex        (optional) live Codex activity"

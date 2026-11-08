@@ -11,3 +11,4 @@ never renumber. Supersede an ADR with a new one instead of rewriting it.
 | [0004](0004-assets.md) | Asset sources and pipeline | accepted |
 | [0005](0005-interim-character.md) | Interim character model and a model-agnostic rig | accepted |
 | [0006](0006-otlp.md) | No OTLP receiver in v1 | accepted |
+| [0007](0007-desktop-app.md) | The desktop app is an Electron shell in its own package | accepted |

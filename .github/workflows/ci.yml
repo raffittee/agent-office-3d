@@ -34,6 +34,14 @@ jobs:
       - run: npm test
       - run: npm run build
 
+      # The release package (what the `release` branch pipeline publishes): built, unpacked and run for real, with
+      # its installer, so a packaging problem shows up here and not on release day.
+      - name: Package and smoke-test
+        shell: bash
+        run: |
+          npm run package
+          node scripts/package-smoke.mjs "release/agent-office-$(node -p "require('./package.json').version")" --installer
+
       # P2-11: render the demo office in Chrome (software WebGL) and keep the screenshots.
       - if: matrix.os == 'ubuntu-latest'
         run: npm run shot -- --out artifacts --themes

@@ -815,3 +815,20 @@ Branch `phase-1`. One commit per task, each pushed. At the end of the phase ther
   - `npm run docker:up` against your real agent folders;
   - the earlier checks: live Gemini CLI, the Claude usage tap, the look and sound of Phase 6, and the Phase 7 hook
     and plugin.
+
+## Phase 9: Distribution (branch `release-pipeline`)
+
+### P9-01 Release pipeline — done, 2026-11-08 16:54
+
+- **Install from a release:** pushing to the new `release` branch builds, tests and publishes a GitHub release. It
+  has a `.zip` (Windows), a `.tar.gz` (Linux, macOS) and a checksum file. See [docs/releasing.md](docs/releasing.md).
+- **What you get:** unpack it and run `install.ps1` (Windows, with a Start Menu shortcut) or `install.sh`. This
+  installs an `agent-office` command: `start --open`, `hooks install|uninstall|status`, `usage ...`. You need only
+  Node.js 22.12 or newer; there is no `npm install` step. Upgrading means unpacking a newer package and running its
+  installer again; uninstalling removes the hooks too and keeps your data in `~/.agent-office`.
+- **Nothing is published unless every test passes:** the archive is unpacked and run on Linux, Windows and macOS
+  first, including the installer. The release never overwrites an existing version: bump the version if the tag
+  exists. Normal CI now runs the same package test on every push.
+- **Fixed:** `/api/health` always said `demo: false`, even in demo mode.
+- Still open: the desktop widget (P9-02) is proposed, not started.
+

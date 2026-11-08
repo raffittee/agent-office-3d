@@ -110,6 +110,7 @@ const api = createApiHandler({
   office,
   hub,
   version: config.version,
+  demo: () => config.demo,
   sources: () => adapters.sources(),
   providers,
   ingest,

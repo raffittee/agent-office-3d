@@ -20,7 +20,23 @@ open session becomes a room, and each agent is a character in it:
   - never opens credential files;
   - masks secrets and sends no telemetry.
 
-## Try it
+## Install a release
+
+Download the package from the [Releases page](../../releases) (`.zip` for Windows, `.tar.gz` for Linux and macOS), unpack
+it and run the installer. You need Node.js 22.12 or newer.
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\install.ps1      # Windows: also adds a Start Menu shortcut
+```
+
+```bash
+./install.sh                                                # Linux and macOS
+```
+
+Then `agent-office start --open` (or the Start Menu shortcut). The package's own README lists every command. How
+releases are made: [docs/releasing.md](docs/releasing.md).
+
+## Try it from source
 
 You need Node.js 22.12 or newer.
 

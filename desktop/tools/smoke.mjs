@@ -68,6 +68,20 @@ const debugPort = await freePort();
 let app = null;
 let browser = null;
 const log = [];
+const pageLog = [];
+/** Remember what a page prints, throws and when it crashes: shown when a check fails. */
+function watch(page) {
+  if (page.__watched) return page;
+  page.__watched = true;
+  page.on('console', (m) => pageLog.push(`console.${m.type()}: ${m.text()}`.slice(0, 300)));
+  page.on('pageerror', (e) => pageLog.push(`pageerror: ${e.message}`.slice(0, 300)));
+  page.on('crash', () => pageLog.push('PAGE CRASHED'));
+  return page;
+}
+/** Polls with evaluate(): unlike waitForFunction it doesn't depend on animation frames, which a hidden window never gets. */
+async function waitEval(page, fn, what, ms = 30_000) {
+  return until(what, () => page.evaluate(fn), ms);
+}
 
 try {
   app = spawn(exe, [`--remote-debugging-port=${debugPort}`, `--user-data-dir=${join(data, 'user')}`, '--use-angle=swiftshader', '--ignore-gpu-blocklist'], {
@@ -88,12 +102,13 @@ try {
   browser = await until('the DevTools port', () => chromium.connectOverCDP(`http://127.0.0.1:${debugPort}`), 30_000);
   const pageOf = async (needle) =>
     until(`a page with ${needle}`, async () => {
-      for (const c of browser.contexts()) for (const p of c.pages()) if (p.url().includes(needle)) return p;
+      for (const c of browser.contexts()) for (const p of c.pages()) if (p.url().includes(needle)) return watch(p);
       return null;
     });
 
   // ---- window mode
   let page = await pageOf(`127.0.0.1:${port}/?shell=desktop&mode=window`);
+  watch(page);
   await page.waitForFunction(() => !!window.agentOfficeShell && !!window.agentOffice, null, { timeout: 30_000 });
   check('the page has the shell bridge', true);
   const state = await page.evaluate(() => window.agentOfficeShell.getState());
@@ -121,12 +136,12 @@ try {
   // the window is replaced, so the page that asks goes away before it can see an answer
   await page.evaluate(() => void window.agentOfficeShell.setMode('widget')).catch(() => {});
   page = await pageOf('mode=widget');
-  await page.waitForFunction(() => document.documentElement.classList.contains('shell-widget'), null, { timeout: 30_000 });
+  await waitEval(page, () => document.documentElement.classList.contains('shell-widget'), 'the widget layout');
   check('widget mode swaps the panels for one bar', await page.evaluate(() => !!document.querySelector('.ui-shellbar') && getComputedStyle(document.querySelector('.ui-topbar')).display === 'none'));
   const size = await page.evaluate(() => ({ w: innerWidth, h: innerHeight }));
   check('the widget is small', size.w <= 600 && size.h <= 450, JSON.stringify(size));
-  await page.waitForFunction(() => (window.agentOffice.store.snapshot?.agents.length ?? 0) > 0, null, { timeout: 30_000 });
-  await page.waitForTimeout(1500);
+  await waitEval(page, () => (window.agentOffice?.store.snapshot?.agents.length ?? 0) > 0, 'agents in the widget');
+  await sleep(1500);
   if (out) await page.screenshot({ path: join(out, 'desktop-widget.png') });
   const wstate = await page.evaluate(() => window.agentOfficeShell.getState());
   check('the shell reports widget mode, kept on top', wstate?.mode === 'widget' && wstate?.pinned === true, JSON.stringify(wstate));
@@ -136,7 +151,16 @@ try {
   await pageOf('mode=window');
   check('it can switch back to the window', true);
 } catch (err) {
-  check('smoke test ran to the end', false, `${err instanceof Error ? err.message : String(err)}\n--- app output ---\n${log.join('').slice(-1500)}`);
+  const state = await Promise.all(
+    (browser?.contexts() ?? []).flatMap((c) => c.pages()).map((p) => p.evaluate(() => ({ url: location.href, ready: document.readyState, classes: document.documentElement.className, bridge: typeof window.agentOfficeShell, app: typeof window.agentOffice, w: innerWidth, h: innerHeight, hidden: document.hidden })).catch((e) => `unreadable: ${e.message}`)),
+  ).catch(() => []);
+  let appLog = '';
+  try {
+    appLog = readFileSync(join(data, 'user', 'logs', 'desktop.log'), 'utf8').split('\n').slice(-25).join('\n');
+  } catch {
+    appLog = '(no app log)';
+  }
+  check('smoke test ran to the end', false, `${err instanceof Error ? err.message : String(err)}\n--- pages ---\n${JSON.stringify(state, null, 1)}\n--- page console ---\n${pageLog.slice(-25).join('\n')}\n--- app log ---\n${appLog}\n--- app output ---\n${log.join('').slice(-1200)}`);
 } finally {
   try {
     await browser?.close();

@@ -16,6 +16,7 @@ import { busyAbove, busySpans, decorFor, doorParts, fixturesFor, switchBoxes, wi
 import { exteriorBoxes, mixHex } from './exterior';
 import { createGlassMaterial, setGlassGlow, type GlassMaterial } from './glass';
 import { furnitureParts, wallItemShape, type PartMaterial } from './kit';
+import { partGeometry } from './kit-shapes';
 import { SignView, type SignStyle } from './signs';
 import { besideDoor, pickSpan, signLabel, signSize, type SignSpec } from './signs-model';
 import { CUT_H, mx, mz, TILE_M, UNIT_M } from './units';
@@ -343,7 +344,7 @@ export function buildArea(area: AreaLayout, ctx: BuildCtx, accent: string = ctx.
     if (ctx.modelled.has(f.kind)) continue;
     const ox = f.tx * TILE_M + (f.dx ?? 0) * UNIT_M;
     const oz = f.ty * TILE_M + (f.dy ?? 0) * UNIT_M;
-    for (const p of furnitureParts(f.kind, f.variant, look.kit)) bucket[p.mat ?? 'solid'].push(box(ox + p.x0, ox + p.x1, p.y0, p.y1, oz + p.z0, oz + p.z1, p.color));
+    for (const p of furnitureParts(f.kind, f.variant, look.kit)) bucket[p.mat ?? 'solid'].push(partGeometry(p, ox, oz));
   }
 
   // ---- theme decor

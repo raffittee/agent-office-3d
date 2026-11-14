@@ -707,7 +707,11 @@ open questions and your go-ahead**. The plan has the decisions, the Boss's behav
   every 2nd frame on medium, 4096 px every frame on high; `scene.ts`), the sky gradient and the sky environment map
   (`sky.ts`). Still open: the Standard-lite materials (the building is still Lambert) and ADR 0009.
 - [ ] **P10-04 Post-fx on high** (M) — SSAO, bloom, SMAA; theme `postfx` honored on the `high` tier.
-- [ ] **P10-05 Kit v2** (L) — beveled furniture, details, baked AO and contact shadows, hero props as models.
+- [x] **P10-05 Kit v2** (L) — done (procedural): furniture drawn with chamfered, round and domed shapes
+  (`render3d/kit-shapes.ts`, `kit.ts`), props on desks, shelves and kitchens (monitors with stands, keyboards, mugs,
+  books, jugs, carafes), and baked floor shadows, all within the same three merged buckets (30-session overview +35%
+  triangles, +5 draw calls); tests in `kit-shapes.test.ts`. Not done: hero props as CC0 models (no source reachable from
+  here), and wall items (whiteboard, clock, poster, TV) are still plain boxes.
 - [x] **P10-06 Rooms and the building** (L) — done (procedural, no new assets): framed windows with a recessed pane,
   door frames with lintels and open leaves, light switch plates, wall-hung lamps that glow at night, room-name plaques
   (one atlas draw call), a coping on the far outer walls, and a foundation, sidewalk, curb, lawn, lamp posts, planters
